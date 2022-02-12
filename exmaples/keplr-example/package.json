@@ -1,0 +1,50 @@
+{
+  "name": "rango-keplr-example",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@cosmjs/launchpad": "^0.27.1",
+    "@cosmjs/stargate": "^0.25.6",
+    "@keplr-wallet/common": "^0.9.9",
+    "@keplr-wallet/cosmos": "^0.9.9",
+    "@keplr-wallet/crypto": "^0.9.9",
+    "@keplr-wallet/hooks": "^0.9.9",
+    "@keplr-wallet/provider": "^0.9.9",
+    "@keplr-wallet/provider-mock": "^0.9.9",
+    "@keplr-wallet/stores": "^0.9.9",
+    "@keplr-wallet/types": "^0.9.9",
+    "@keplr-wallet/unit": "^0.9.9",
+    "@keplr-wallet/wc-client": "^0.9.9",
+    "@types/node": "^12.20.15",
+    "@types/react": "^17.0.11",
+    "@types/react-dom": "^17.0.8",
+    "babel-jest": "^26.6.0",
+    "rango-sdk": "^0.0.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3",
+    "typescript": "^4.3.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
