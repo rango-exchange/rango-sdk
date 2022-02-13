@@ -76,7 +76,7 @@ export const App = () => {
     try {
       connectedWallets = await getUserWallet()
     } catch (err) {
-      setError('Error connecting to MetMask. Please check Metamask and try again.')
+      setError('Error connecting to Keplr. Please check Keplr and try again.')
       return
     }
 
