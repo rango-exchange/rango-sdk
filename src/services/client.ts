@@ -1,17 +1,19 @@
 import { v4 } from 'uuid'
 
 import { httpService } from './httpService'
-import type { MetaResponse } from '../types/api/meta'
-import type { BestRouteRequest, BestRouteResponse } from '../types/api/routing'
-import type {
+import {
+  MetaResponse,
+  BestRouteRequest,
+  BestRouteResponse,
   CheckApprovalResponse,
   CheckTxStatusRequest,
+  TransactionStatusResponse,
   CreateTransactionRequest,
   CreateTransactionResponse,
   ReportTransactionRequest,
-  TransactionStatusResponse,
-} from '../types/api/transactions'
-import type { WalletDetailsResponse } from '../types/api/balance'
+  WalletDetailsResponse
+} from "../types"
+
 
 type WalletAddresses = { blockchain: string; address: string }[]
 
