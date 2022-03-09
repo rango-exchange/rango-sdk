@@ -72,7 +72,7 @@ export type SwapExplorerUrl = {
 /**
  * Request body of check tx status
  *
- * @property {string} requestId - The unique ID which is generated in best route endpoint
+ * @property {string} requestId - The unique ID which is generated in the best route endpoint
  * @property {number} step - 1-based step number of a complex multi-step swap, example: 1, 2, ...
  * @property {number} txId - Tx hash that wallet returned, example: 0xa1a37ce2063c4764da27d990a22a0c89ed8ac585286a77a...
  *
@@ -86,10 +86,11 @@ export type CheckTxStatusRequest = {
 /**
  * Request body of createTransaction endpoint
  *
- * @property {string} requestId - The unique ID which is generated in best route endpoint
+ * @property {string} requestId - The unique ID which is generated in the best route endpoint
  * @property {number} step - 1-based step number of a complex multi-step swap, example: 1, 2, ...
- * @property {UserSettings} userSettings - user settings for swap
- * @property {CreateTransactionValidation} validations - validation checks we are interested to check by Rango before starting swap
+ * @property {UserSettings} userSettings - user settings for the swap
+ * @property {CreateTransactionValidation} validations - the validation checks we are interested to check by Rango
+ * before starting the swap
  *
  */
 export type CreateTransactionRequest = {
@@ -127,17 +128,17 @@ export enum TransactionStatus {
 /**
  * Response of check transaction status containing the latest status of transaction
  *
- * @property {TransactionStatus | null} status - Status of the transaction, while the status is running or null, client
- * should retry until it turns into success or fail
+ * @property {TransactionStatus | null} status - Status of the transaction, while the status is running or null, the
+ * client should retry until it turns into success or failed
  * @property {number} timestamp - The timestamp of the executed transaction. Beware that timestamp can be null even if
  * the status is successful or failed, example: 1635271424813
- * @property {string | null} extraMessage - A message in case of failure, that can be shown to user
+ * @property {string | null} extraMessage - A message in case of failure, that could be shown to the user
  * @property {string | null} outputAmount - The output amount of the transaction if it was successful, exmaple: 0.28
- * @property {GenericTransaction | null} newTx - if a transaction needs more than one-step transaction to by signed by
- * user, next step transaction will be returned in this field.
- * @property {string | null} diagnosisUrl - In some special cases [ex: AnySwap], user should follow some steps outside
- * Rango to get its assets. You can show this link to user to help him
- * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer urls for the transactions that happened in this step.
+ * @property {GenericTransaction | null} newTx - if a transaction needs more than one-step transaction to be signed by
+ * the user, the next step transaction will be returned in this field.
+ * @property {string | null} diagnosisUrl - In some special cases [e.g. AnySwap], the user should follow some steps
+ * outside Rango to get its assets back (refund). You can show this link to the user to help him
+ * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions that happened in this step.
  * @property {TransactionStatusReferral[] | null} referrals - List of referral reward for the dApp and Rango
  *
  */
@@ -167,7 +168,7 @@ export type CheckApprovalResponse = {
  * @see https://rango.exchange/apis/docs/tx-example
  *
  * @property {string | null} error - Error message about the incident if ok == false
- * @property {boolean} ok - If true, Rango has created a non-null transaction and error message is null
+ * @property {boolean} ok - If true, Rango has created a non-null transaction and the error message is null
  * @property {GenericTransaction | null} transaction - Transaction's raw data
  *
  */

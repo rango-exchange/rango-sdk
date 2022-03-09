@@ -132,8 +132,8 @@ export const App = () => {
     // In multi step swaps, you should loop over routeResponse.route array and create transaction per each item
     let evmTransaction
     try {
-      // A transaction might needs multiple approval (e.g. in harmony bridge),
-      // you should create transaction and check approval again and again until `isApprovalTx` fields turns to false
+      // A transaction might needs multiple approval txs (e.g. in harmony bridge),
+      // you should create transaction and check approval again and again until `isApprovalTx` field turns to false
       while (true) {
         const transactionResponse = await rangoClient.createTransaction({
           requestId: routeResponse.requestId,
