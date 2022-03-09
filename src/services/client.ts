@@ -24,16 +24,20 @@ export class RangoClient {
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
-    if (window != undefined) {
-      const deviceId = localStorage.getItem('deviceId')
-      if (deviceId) {
-        this.deviceId = deviceId
+    try {
+      if (typeof window !== 'undefined') {
+        const deviceId = localStorage.getItem('deviceId')
+        if (deviceId) {
+          this.deviceId = deviceId
+        } else {
+          const generatedId = v4()
+          localStorage.setItem('deviceId', generatedId)
+          this.deviceId = generatedId
+        }
       } else {
-        const generatedId = v4()
-        localStorage.setItem('deviceId', generatedId)
-        this.deviceId = generatedId
+        this.deviceId = v4()
       }
-    } else {
+    } catch (e) {
       this.deviceId = v4()
     }
   }
