@@ -43,7 +43,7 @@ export const App = () => {
 
   const getUserWallet = async () => {
     if (status === WalletStatus.WALLET_NOT_CONNECTED)
-      connect(ConnectType.CHROME_EXTENSION)
+      connect(ConnectType.EXTENSION)
     return wallets[0].terraAddress
   }
 
