@@ -91,6 +91,7 @@ export type BlockchainValidationStatus = {
  * @property {string[]} [blockchains] - List of all accepted blockchains, an empty list means no filter is required
  * @property {string[]} [swappers] - List of all accepted swappers, an empty list means no filter is required
  * @property {string[]} [transactionTypes] - List of all accepted transaction types including [EVM, TRANSFER, COSMOS]
+ * @property {number} [transactionTypes] - Maximum number of steps in a route
  *
  */
 export type BestRouteRequest = {
@@ -105,6 +106,7 @@ export type BestRouteRequest = {
   blockchains?: string[]
   swappers?: string[]
   transactionTypes?: TransactionType[]
+  maxLength?: number
 }
 
 /**
