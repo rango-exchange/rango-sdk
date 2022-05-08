@@ -1,9 +1,10 @@
 import type { AssetWithTicker } from '../common'
-import type { GenericTransaction } from '../transactions'
+import {TransactionType} from "../transactions";
 
 /**
  * TransferTransaction. This type of transaction is used for non-EVM and non-Cosmos blockchains including BTC, LTC, BCH
  *
+ * @property {TransactionType} type - This fields equals to TransactionType.TRANSFER for all TransferTransactions
  * @property {string} method - The method that should be passed to wallet. examples: deposit, transfer
  * @property {AssetWithTicker} asset
  * @property {string} amount - The machine-readable amount of transaction, example: 1000000000000000000
@@ -13,7 +14,8 @@ import type { GenericTransaction } from '../transactions'
  * @property {string | null} memo - The memo of transaction, can be null
  *
  */
-export interface Transfer extends GenericTransaction {
+export interface Transfer {
+  type: TransactionType
   method: string
   asset: AssetWithTicker
   amount: string

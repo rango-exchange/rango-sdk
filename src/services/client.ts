@@ -3,15 +3,15 @@ import { v4 } from 'uuid'
 import { httpService } from './httpService'
 import {
   MetaResponse,
-  BestRouteRequest,
-  BestRouteResponse,
+  QuoteRequest,
+  QuoteResponse,
   CheckApprovalResponse,
-  CheckTxStatusRequest,
-  TransactionStatusResponse,
-  CreateTransactionRequest,
-  CreateTransactionResponse,
+  StatusRequest,
+  StatusResponse,
+  SwapRequest,
+  SwapResponse,
   ReportTransactionRequest,
-  WalletDetailsResponse
+  WalletDetailsResponse, assetToString
 } from "../types"
 
 
@@ -42,49 +42,68 @@ export class RangoClient {
     }
   }
 
-  public async getAllMetadata(): Promise<MetaResponse> {
+  public async meta(): Promise<MetaResponse> {
     const axiosResponse = await httpService.get<MetaResponse>(
-      `/meta?apiKey=${this.apiKey}`
+      `/basic/meta?apiKey=${this.apiKey}`
     )
     return axiosResponse.data
   }
 
-  public async getBestRoute(
-    requestBody: BestRouteRequest
-  ): Promise<BestRouteResponse> {
-    const axiosResponse = await httpService.post<BestRouteResponse>(
-      `/routing/best?apiKey=${this.apiKey}`,
-      requestBody,
-      { headers: { 'X-Rango-Id': this.deviceId } }
+  public async quote(
+    quoteRequest: QuoteRequest
+  ): Promise<QuoteResponse> {
+    const body = {
+      ...quoteRequest,
+      from: assetToString(quoteRequest.from),
+      to: assetToString(quoteRequest.to),
+    }
+    const axiosResponse = await httpService.get<QuoteResponse>(
+      `/basic/quote?apiKey=${this.apiKey}`, {
+        params: body,
+        headers: { 'X-Rango-Id': this.deviceId }
+      }
     )
     return axiosResponse.data
   }
 
-  public async checkApproval(
-    requestId: string
+  public async isApproved(
+    requestId: string,
+    txId: string
   ): Promise<CheckApprovalResponse> {
     const axiosResponse = await httpService.get<CheckApprovalResponse>(
-      `/tx/${requestId}/check-approval?apiKey=${this.apiKey}`
+      `/basic/is-approved?apiKey=${this.apiKey}`, {
+        params: { requestId, txId },
+        headers: { 'X-Rango-Id': this.deviceId }
+      }
     )
     return axiosResponse.data
   }
 
-  public async checkStatus(
-    requestBody: CheckTxStatusRequest
-  ): Promise<TransactionStatusResponse> {
-    const axiosResponse = await httpService.post<TransactionStatusResponse>(
-      `/tx/check-status?apiKey=${this.apiKey}`,
-      requestBody
+  public async status(
+    statusRequest: StatusRequest
+  ): Promise<StatusResponse> {
+    const axiosResponse = await httpService.get<StatusResponse>(
+      `/basic/status?apiKey=${this.apiKey}`, {
+        params: statusRequest,
+        headers: { 'X-Rango-Id': this.deviceId }
+      }
     )
     return axiosResponse.data
   }
 
-  public async createTransaction(
-    requestBody: CreateTransactionRequest
-  ): Promise<CreateTransactionResponse> {
-    const axiosResponse = await httpService.post<CreateTransactionResponse>(
-      `/tx/create?apiKey=${this.apiKey}`,
-      requestBody
+  public async swap(
+    swapRequest: SwapRequest
+  ): Promise<SwapResponse> {
+    const body = {
+      ...swapRequest,
+      from: assetToString(swapRequest.from),
+      to: assetToString(swapRequest.to),
+    }
+    const axiosResponse = await httpService.get<SwapResponse>(
+      `/basic/swap?apiKey=${this.apiKey}`, {
+        params: body,
+        headers: { 'X-Rango-Id': this.deviceId }
+      }
     )
     return axiosResponse.data
   }

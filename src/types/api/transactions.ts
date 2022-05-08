@@ -1,3 +1,8 @@
+import {Asset, QuoteSimulationResult} from "./common";
+import {CosmosTransaction, EvmTransaction, Transfer} from "./txs";
+import {Token} from "./meta";
+
+
 /**
  * The type of transaction
  */
@@ -8,53 +13,12 @@ export enum TransactionType {
 }
 
 /**
- * Parent model for all types of transactions
+ * Transaction object
  * Check EvmTransaction, TransferTransaction and CosmosTransaction models for more details
  *
  */
-export type GenericTransaction = {
-  type: TransactionType
-}
+export type GenericTransaction = EvmTransaction | CosmosTransaction | Transfer
 
-/**
- * Data of referral rewards of a transaction
- *
- * @property {string} blockChain - The blockchain that reward is generated in, example: BSC
- * @property {string | null} address - The smart contract address of rewarded asset, null for native assets
- * @property {string} symbol - The symbol of the asset that is rewarded, example: ADA
- * @property {number} decimals - The decimals of the rewarded asset, example: 18
- * @property {string} amount - The machine-readable amount of the reward, example: 1000000000000000000
- *
- */
-export type TransactionStatusReferral = {
-  blockChain: string
-  address: string | null
-  symbol: string
-  decimals: number
-  amount: string
-}
-
-/**
- * Settings of user for swaps
- *
- * @property {string} slippage - Amount of users' preferred slippage in percent
- *
- */
-export type UserSettings = {
-  slippage: string
-}
-
-/**
- * List of validations that Rango should do
- *
- * @property {boolean} balance - If true [Recommended], Rango will check that user has the required balance for swap
- * @property {boolean} fee - If true [Recommended], Rango will check that user has the required fees in the wallet
- *
- */
-export type CreateTransactionValidation = {
-  balance: boolean
-  fee: boolean
-}
 
 /**
  * A transaction's url that can be displayed to advanced user to track the progress
@@ -73,31 +37,40 @@ export type SwapExplorerUrl = {
  * Request body of check tx status
  *
  * @property {string} requestId - The unique ID which is generated in the best route endpoint
- * @property {number} step - 1-based step number of a complex multi-step swap, example: 1, 2, ...
  * @property {number} txId - Tx hash that wallet returned, example: 0xa1a37ce2063c4764da27d990a22a0c89ed8ac585286a77a...
  *
  */
-export type CheckTxStatusRequest = {
+export type StatusRequest = {
   requestId: string
-  step: number
   txId: string
 }
 
 /**
- * Request body of createTransaction endpoint
+ * Request body of swap endpoint
  *
- * @property {string} requestId - The unique ID which is generated in the best route endpoint
- * @property {number} step - 1-based step number of a complex multi-step swap, example: 1, 2, ...
- * @property {UserSettings} userSettings - user settings for the swap
- * @property {CreateTransactionValidation} validations - the validation checks we are interested to check by Rango
- * before starting the swap
+ * @property {Asset} from - The source asset
+ * @property {Asset} to - The destination asset
+ * @property {string} amount - The human-readable amount of asset X that is going to be swapped, example: 0.28
+ * @property {string[]} [swappers] - List of all accepted swappers, an empty list means no filter is required
+ * @property {string} fromAddress - User source wallet address
+ * @property {string} toAddress - User destination wallet address
+ * @property {string | number} referrerAddress - Referrer address
+ * @property {string | number} referrerFee - Referrer fee in percent, (e.g. 0.3 means: 0.3% fee based on input amount)
+ * @property {boolean} disableEstimate - check pre-requests of a swap before creating tx (e.g. check having enough balance)
+ * @property {string} slippage - User slippage for this swap (e.g. 5.0 which means 5% slippage)
  *
  */
-export type CreateTransactionRequest = {
-  requestId: string
-  step: number
-  userSettings: UserSettings
-  validations: CreateTransactionValidation
+export type SwapRequest = {
+  from: Asset
+  to: Asset
+  amount: string
+  swappers?: string[]
+  fromAddress: string
+  toAddress: string
+  referrerAddress: string | null
+  referrerFee: string | null
+  disableEstimate: boolean
+  slippage: string
 }
 
 /**
@@ -126,31 +99,35 @@ export enum TransactionStatus {
 }
 
 /**
- * Response of check transaction status containing the latest status of transaction
+ * The final received asset and amount for a swap
+ *
+ * @property {string} amount - received token amount
+ * @property {Token} receivedToken - received token asset
+ * @property {string} type - type of received token
+ *
+ */
+export type StatusOutput = {
+  amount: string
+  receivedToken: Token
+  type: "REVERTED_TO_INPUT" | "MIDDLE_ASSET_IN_SRC" | "MIDDLE_ASSET_IN_DEST" | "DESIRED_OUTPUT"
+}
+
+/**
+ * Response of check transaction status containing the latest status of transaction in blockchain
  *
  * @property {TransactionStatus | null} status - Status of the transaction, while the status is running or null, the
  * client should retry until it turns into success or failed
- * @property {number} timestamp - The timestamp of the executed transaction. Beware that timestamp can be null even if
- * the status is successful or failed, example: 1635271424813
- * @property {string | null} extraMessage - A message in case of failure, that could be shown to the user
- * @property {string | null} outputAmount - The output amount of the transaction if it was successful, exmaple: 0.28
- * @property {GenericTransaction | null} newTx - if a transaction needs more than one-step transaction to be signed by
- * the user, the next step transaction will be returned in this field.
- * @property {string | null} diagnosisUrl - In some special cases [e.g. AnySwap], the user should follow some steps
- * outside Rango to get its assets back (refund). You can show this link to the user to help him
- * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions that happened in this step.
- * @property {TransactionStatusReferral[] | null} referrals - List of referral reward for the dApp and Rango
+ * @property {string | null} error - A message in case of failure, that could be shown to the user
+ * @property {StatusOutput | null} output - The output asset and amount, it could be different from destination asset in
+ * case of failures and refund
+ * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions of this swap.
  *
  */
-export type TransactionStatusResponse = {
+export type StatusResponse = {
   status: TransactionStatus | null
-  timestamp: number | null
-  extraMessage: string | null
-  outputAmount: string | null
-  newTx: GenericTransaction | null
-  diagnosisUrl: string | null
+  error: string | null
+  output: StatusOutput | null
   explorerUrl: SwapExplorerUrl[] | null
-  referrals: TransactionStatusReferral[] | null
 }
 
 /**
@@ -164,16 +141,21 @@ export type CheckApprovalResponse = {
 }
 
 /**
- * Response body of create transaction, to see a list of example transactions
- * @see https://rango.exchange/apis/docs/tx-example
+ * Response body of swap API
+ * @see https://docs.rango.exchange/integration/rango-sdk/sample-transactions
  *
- * @property {string | null} error - Error message about the incident if ok == false
- * @property {boolean} ok - If true, Rango has created a non-null transaction and the error message is null
- * @property {GenericTransaction | null} transaction - Transaction's raw data
+ * @property {string} requestId - The unique requestId which is generated for this request by the server. It should be
+ * passed down to all other endpoints if this swap continues on. e.g. d10657ce-b13a-405c-825b-b47f8a5016ad
+ * @property {string} resultType - Type of result (OK or error type)
+ * @property {QuoteSimulationResult | null} route - Suggested route
+ * @property {string | null} error - Error message
+ * @property {GenericTransaction | null} transaction - Transaction data
  *
  */
-export type CreateTransactionResponse = {
+export type SwapResponse = {
+  requestId: string
+  resultType: "OK" | "HIGH_IMPACT" | "INPUT_LIMIT_ISSUE" | "NO_ROUTE"
+  route: QuoteSimulationResult | null
   error: string | null
-  ok: boolean
-  transaction: GenericTransaction | null
+  tx: GenericTransaction | null
 }

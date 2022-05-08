@@ -1,3 +1,5 @@
+import {SwapperMetaDto, Token} from "./meta"
+
 /**
  * An asset which is unique by (blockchain, symbol, address)
  *
@@ -10,6 +12,13 @@ export type Asset = {
   blockchain: string
   address: string | null
   symbol: string
+}
+
+export function assetToString(asset: Asset): string {
+  if (!!asset.address)
+    return `${asset.blockchain}.${asset.symbol}-${asset.address}`
+  else
+    return `${asset.blockchain}.${asset.symbol}`
 }
 
 /**
@@ -25,17 +34,6 @@ export type Amount = {
   decimals: number
 }
 
-/**
- * Minimum required slippage of a step
- *
- * @property {boolean} error - If true, means that Rango failed to compute slippage for this step.
- * @property {number} slippage - The slippage amount in percent, example: 5
- *
- */
-export type RecommendedSlippage = {
-  error: boolean
-  slippage: number
-}
 
 /**
  * A fee unit, including the type of asset and the amount of fee
@@ -54,153 +52,64 @@ export type SwapFee = {
 }
 
 /**
- * Source or destination asset of a route step
+ * A quote path from asset x (from) to asset y (to)
  *
- * @property {string} blockchain - Blockchain of the source/destination asset of this step
- * @property {string} symbol - Symbol of the source/destination asset of this step, example: OSMO
- * @property {string | number} address - Contract address of the source/dest asset of this step, null for native token
- * @property {number} decimals - Decimals of the source/destination asset of this step, example: 18
- * @property {string} logo - Absolute path of the logo of the source/destination asset of this step
+ * @property {Token} from - The source asset
+ * @property {Token} to - The destination asset
+ * @property {SwapperMetaDto} swapper - Swapper for this path
+ * @property {"BRIDGE" | "DEX" | "COMPOSER"} swapperType - Type of swapper
+ * @property {string} expectedOutput - Expected output
  *
  */
-export type SwapResultAsset = {
-  blockchain: string
-  address: string | null
-  symbol: string
-  logo: string
-  decimals: number
+export type QuotePath = {
+  from: Token
+  to: Token
+  swapper: SwapperMetaDto
+  swapperType: "BRIDGE" | "DEX" | "COMPOSER"
+  expectedOutput: string
 }
 
 /**
- * A node of the swap path
+ * Limitations on input amount for requested route
  *
- * @property {string | null} marketId - Id of the market
- * @property {string | null} marketName - Name of the market, example: Uniswap
- * @property {number} percent - Percent of the allocation to this path, example: 45
- *
- */
-export type SwapNode = {
-  marketId: string | null
-  marketName: string
-  percent: number
-}
-
-/**
- * A swap path from asset x (from) to asset y (to)
- *
- * @property {string} from - Symbol of the source asset
- * @property {string | null} fromAddress - Contract address of source asset, null for native tokens
- * @property {string} fromBlockchain - Blockchain of the source asset
- * @property {string} fromLogo - Absolute path of logo of the source asset
- *
- * @property {string} to - Symbol of the destination asset
- * @property {string | null} toAddress - Contract address of destination asset, null for native tokens
- * @property {string} toBlockchain - Blockchain of the destination asset
- * @property {string} toLogo - Absolute path of logo of the destination asset
- *
- * @property {SwapNode[]} nodes - List of intermediate nodes in a swap path
+ * @property {string | null} min - Limitation on minimum input amount for this route
+ * @property {string | null} max - Limitation on maximum input amount for this route
+ * @property {'INCLUSIVE' | 'EXCLUSIVE'} type - type of limitation
  *
  */
-export type SwapSuperNode = {
-  from: string
-  fromAddress: string | null
-  fromBlockchain: string
-  fromLogo: string
-  to: string
-  toAddress: string | null
-  toBlockchain: string
-  toLogo: string
-  nodes: SwapNode[]
-}
-
-/**
- * Internal mechanism of a step
- *
- * @property {SwapSuperNode[] | null} nodes - List of parallel paths that splitting happens
- *
- */
-export type SwapRoute = {
-  nodes: SwapSuperNode[] | null
-}
-
-/**
- * Time estimation details for a step of swap route
- *
- * @property {number} min - The minimum duration (in seconds) that usually takes for related step
- * @property {number} avg - The average duration (in seconds) that usually takes for related step
- * @property {number} max - The maximum duration (in seconds) that usually takes for related step
- *
- */
-export type TimeStat = {
-  min: number
-  avg: number
-  max: number
+export type AmountRestriction = {
+  min: string | null
+  max: string | null
+  type: 'INCLUSIVE' | 'EXCLUSIVE'
 }
 
 /**
  * A step of a multi-step swap route
  *
- * @property {string} swapperId - Unique Id of swapper. example: 1INCH_BSC, TERRASWAP
+ * @property {string} outputAmount - The estimation of Rango from output amount of Y
  *
- * @property {string} swapperType - Type of swapper. example: BRIDGE, DEX
+ * @property {SwapperMetaDto} swapper - Swapper suggested for this path
  *
- * @property {SwapResultAsset} from - The source asset
- *
- * @property {SwapResultAsset} to - The destination asset
- *
- * @property {string} fromAmount - Estimated input amount of this step. Can be used for previewing to user and should
- * not be used for real computation, since it may change when the real transaction happens due to volatility of the market
- *
- * @property {string} toAmount - Estimated output amount of this step. Can be used for previewing to user and should
- * not be used for real computation, since it may change when the real transaction happens due to volatility of the market
- *
- * @property {SwapRoute[] | null} routes - The internal routing of this step showing how the initial swap request will
+ * @property {QuotePath[] | null} path - The internal routing of this step showing how the initial swap request will
  * be split and executed. This can be used for previewing purpose to give the user a sense of what's going to happen.
  * Null indicates that there is no internal mechanism and swapping is simple and straight-forward.
  *
  * @property {SwapFee[]} fee - List of fees that are taken from user in this step
  *
- * @property {number | null} fromAmountMinValue - The minimum amount unit, the precision that will be applied to
- * transaction amount in create transaction endpoint automatically by Rango. This field is informational and there is
- * no need to apply it in client-side.
- *
- * @property {number | null} fromAmountMaxValue - Exactly the same as fromAmountMinValue, but for the maximum limit
- *
- * @property {number | null} fromAmountPrecision - The minimum amount unit, the precision that will be applied to
- * transaction amount in create transaction endpoint automatically by Rango. This field is informational and there
- * is no need to apply it in client-side
- *
- * @property {string} fromAmountRestrictionType - Specifies range for fromAmount (Min / Max) Value. for example if value
- * is EXCLUSIVE and fromAmountMinValue is 20, user can execute transaction if inputValue > 20, but for INCLUSIVE
- * inputValue >= 20 is valid. possible values: INCLUSIVE / EXCLUSIVE
+ * @property {AmountRestriction | null} amountRestriction - restrictions on input amount. This field is informational
+ * and there is no need to apply it in client-side
  *
  * @property {number} estimatedTimeInSeconds - The estimated time (in seconds) that this step might take, beware that
  * this number is just an estimation and should be used only for user preview, example: 15
  *
- * @property {TimeStat | null} timeStat - The minimum, avg and max estimation time for this step
- *
- * @property {RecommendedSlippage | null} recommendedSlippage
- *
- * @property {string[] | null} warnings - List of warnings for this swap step, usually null or empty
- *
  */
-export type SwapResult = {
-  swapperId: string
-  swapperType: string
-  from: SwapResultAsset
-  to: SwapResultAsset
-  fromAmount: string
-  toAmount: string
-  routes: SwapRoute[] | null
+export type QuoteSimulationResult = {
+  outputAmount: string
+  swapper: SwapperMetaDto
+  path: QuotePath[] | null
   fee: SwapFee[]
-  fromAmountMaxValue: number | null
-  fromAmountMinValue: number | null
-  fromAmountPrecision: number | null
-  fromAmountRestrictionType: 'EXCLUSIVE' | 'INCLUSIVE'
+  amountRestriction: AmountRestriction | null
   estimatedTimeInSeconds: number
-  timeStat: TimeStat | null
-  recommendedSlippage: RecommendedSlippage | null
-  warnings: string[] | null
 }
 
 /**
