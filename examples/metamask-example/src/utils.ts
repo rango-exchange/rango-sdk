@@ -17,12 +17,15 @@ export function prepareEvmTransaction(evmTransaction: EvmTransaction, isApprove:
   let tx = {}
   if (!!manipulatedTx.from)
     tx = { ...tx, from: manipulatedTx.from }
-  if (!!manipulatedTx.to)
-    tx = { ...tx, to: manipulatedTx.to }
   if (isApprove) {
-    if (!!manipulatedTx.approveData)
-      tx = { ...tx, data: manipulatedTx.approveData }
+    if (!!manipulatedTx.approveTo)
+      tx = {...tx, to: manipulatedTx.approveTo}
+    if (!!manipulatedTx.approveData) {
+      tx = {...tx, data: manipulatedTx.approveData}
+    }
   } else {
+    if (!!manipulatedTx.txTo)
+      tx = { ...tx, to: manipulatedTx.txTo }
     if (!!manipulatedTx.txData)
       tx = { ...tx, data: manipulatedTx.txData }
     if (!!manipulatedTx.value)

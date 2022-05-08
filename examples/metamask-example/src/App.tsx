@@ -8,7 +8,8 @@ import {
   TransactionStatus,
   QuoteResponse,
   StatusResponse,
-  Asset
+  Asset,
+  SwapResponse
 } from "rango-sdk-basic/lib"
 import {checkApprovalSync, prepareEvmTransaction, sleep} from "./utils";
 import BigNumber from "bignumber.js";
@@ -40,26 +41,26 @@ export const App = () => {
   }, [rangoClient])
 
   // 1inch sample: POLYGON.USDT -> POLYGON.MATIC
-  const sourceChainId = 137
-  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
-  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
+  // const sourceChainId = 137
+  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
+  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
 
   // 1inch sample: BSC.BAKE -> BSC.BNB
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === "0xe02df9e3e622debdd69fb838bb799e3f168902c5")
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
+  const sourceChainId = 56
+  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === "0xe02df9e3e622debdd69fb838bb799e3f168902c5")
+  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
 
   // anyswap sample: POLYGON.USDT to BSC.USDT
   // const sourceChainId = 137
   // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
 
-  // aggregator sample 1 BSC.BNB to FTM.USDT
+  // aggregator sample 1: BSC.BNB to FTM.USDT
   // const sourceChainId = 56
   // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
 
-  // aggregator sample 2 BSC.BNB to FTM.FTM
+  // aggregator sample 2: BSC.BNB to FTM.FTM
   // const sourceChainId = 56
   // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
@@ -133,8 +134,9 @@ export const App = () => {
     if (!sourceToken || !destinationToken)
       return
 
+    let swapResponse: SwapResponse | null = null
     try {
-      const swapResponse = await rangoClient.swap({
+      swapResponse = await rangoClient.swap({
         from,
         to,
         amount: inputAmount,
@@ -160,6 +162,7 @@ export const App = () => {
       if (!!evmTransaction.approveData) {
         // try to approve
         const finalTx = prepareEvmTransaction(evmTransaction, true)
+        console.log("approve tx", {finalTx})
         const txHash = (await signer.sendTransaction(finalTx)).hash
         await checkApprovalSync(swapResponse.requestId, txHash, rangoClient)
         console.log("transaction approved successfully")
@@ -174,11 +177,13 @@ export const App = () => {
       setLoadingSwap(false)
       setError(rawMessage)
       // report transaction failure to server if something went wrong in client for signing and sending the transaction
-      // await rangoClient.reportFailure({
-      //   data: { message: rawMessage },
-      //   eventType: 'TX_FAIL',
-      //   requestId: routeResponse.requestId,
-      // })
+      if (!!swapResponse) {
+        await rangoClient.reportFailure({
+          data: { message: rawMessage },
+          eventType: 'TX_FAIL',
+          requestId: swapResponse.requestId,
+        })
+      }
     }
   }
 

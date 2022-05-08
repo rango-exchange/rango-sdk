@@ -15,7 +15,7 @@ import {
 } from "../types"
 
 
-type WalletAddresses = { blockchain: string; address: string }[]
+type WalletAddress = { blockchain: string; address: string }
 
 export class RangoClient {
   private readonly deviceId: string
@@ -111,19 +111,19 @@ export class RangoClient {
   public async reportFailure(
     requestBody: ReportTransactionRequest
   ): Promise<void> {
-    await httpService.post(`/tx/report-tx?apiKey=${this.apiKey}`, requestBody)
+    await httpService.post(`/basic/report-tx?apiKey=${this.apiKey}`, requestBody, {
+      headers: { 'X-Rango-Id': this.deviceId }
+    })
   }
 
-  public async getWalletsDetails(
-    walletAddresses: WalletAddresses
+  public async balance(
+    walletAddress: WalletAddress
   ): Promise<WalletDetailsResponse> {
-    let walletAddressesQueryParams = ''
-    for (let i = 0; i < walletAddresses.length; i++) {
-      const walletAddress = walletAddresses[i]
-      walletAddressesQueryParams += `&address=${walletAddress.blockchain}.${walletAddress.address}`
-    }
     const axiosResponse = await httpService.get<WalletDetailsResponse>(
-      `/wallets/details?apiKey=${this.apiKey}${walletAddressesQueryParams}`
+      `/basic/balance?apiKey=${this.apiKey}`, {
+        params: walletAddress,
+        headers: { 'X-Rango-Id': this.deviceId }
+      }
     )
     return axiosResponse.data
   }
