@@ -16,7 +16,7 @@ export type Asset = {
 
 export function assetToString(asset: Asset): string {
   if (!!asset.address)
-    return `${asset.blockchain}.${asset.symbol}-${asset.address}`
+    return `${asset.blockchain}.${asset.symbol}--${asset.address}`
   else
     return `${asset.blockchain}.${asset.symbol}`
 }
