@@ -1,6 +1,6 @@
 import {Asset, QuoteSimulationResult} from "./common";
-import {CosmosTransaction, EvmTransaction, Transfer} from "./txs";
 import {Token} from "./meta";
+import {CosmosTransaction, EvmTransaction, Transfer} from "./txs";
 
 
 /**
@@ -11,14 +11,6 @@ export enum TransactionType {
   TRANSFER = 'TRANSFER',
   COSMOS = 'COSMOS',
 }
-
-/**
- * Transaction object
- * Check EvmTransaction, TransferTransaction and CosmosTransaction models for more details
- *
- */
-export type GenericTransaction = EvmTransaction | CosmosTransaction | Transfer
-
 
 /**
  * A transaction's url that can be displayed to advanced user to track the progress
@@ -149,7 +141,7 @@ export type CheckApprovalResponse = {
  * @property {string} resultType - Type of result (OK or error type)
  * @property {QuoteSimulationResult | null} route - Suggested route
  * @property {string | null} error - Error message
- * @property {GenericTransaction | null} transaction - Transaction data
+ * @property {EvmTransaction | CosmosTransaction | Transfer | null} transaction - Transaction data
  *
  */
 export type SwapResponse = {
@@ -157,5 +149,5 @@ export type SwapResponse = {
   resultType: "OK" | "HIGH_IMPACT" | "INPUT_LIMIT_ISSUE" | "NO_ROUTE"
   route: QuoteSimulationResult | null
   error: string | null
-  tx: GenericTransaction | null
+  tx: EvmTransaction | CosmosTransaction | Transfer | null
 }
