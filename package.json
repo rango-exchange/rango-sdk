@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/rango-exchange/rango-sdk.git"
   },
-  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "homepage": "https://github.com/rango-exchange/rango-sdk/tree/basic-api",
   "bugs": {
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },

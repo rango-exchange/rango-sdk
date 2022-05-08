@@ -1,6 +1,6 @@
-# Rango Exchange SDK (BETA)
+# Rango Exchange Basic SDK (BETA)
 
-[![npm version](https://badge.fury.io/js/rango-sdk.svg)](https://badge.fury.io/js/rango-sdk)
+[![npm version](https://badge.fury.io/js/rango-sdk-basic.svg)](https://badge.fury.io/js/rango-sdk-basic)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/rango-exchange/rango-sdk/blob/master/LICENSE)
 
 
@@ -14,7 +14,7 @@ This is the first phase of Rango SDK which only wraps Rest API calls. In the nex
 ## Installation
 
 ```shell
-  npm install rango-sdk --save
+  npm install rango-sdk-basic --save
 ```
 
 ## Usage

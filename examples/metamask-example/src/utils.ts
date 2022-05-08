@@ -1,8 +1,4 @@
-import {
-  RangoClient,
-  EvmTransaction,
-  Amount
-} from "rango-sdk-basic/lib";
+import {RangoClient, EvmTransaction, Amount} from "rango-sdk-basic";
 import {TransactionRequest} from "@ethersproject/abstract-provider/src.ts/index";
 import BigNumber from "bignumber.js";
 

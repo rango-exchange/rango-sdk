@@ -10,7 +10,7 @@ import {
   StatusResponse,
   Asset,
   SwapResponse
-} from "rango-sdk-basic/lib"
+} from "rango-sdk-basic"
 import {checkApprovalSync, prepareEvmTransaction, sleep} from "./utils";
 import BigNumber from "bignumber.js";
 import React from 'react';
