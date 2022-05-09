@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk-basic",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Rango Exchange Basic SDK for dApps",
   "main": "lib/index.js",
   "types": "lib",

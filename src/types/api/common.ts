@@ -39,15 +39,15 @@ export type Amount = {
  * A fee unit, including the type of asset and the amount of fee
  *
  * @property {string} name - A display name for this fee, example: Network Fee
- * @property {Asset} asset - Underlying asset for paying fee, example: BNB for BSC blockchain
- * @property {string} amount - The human readable amount of fee, example: 0.004
+ * @property {Token} token - Underlying token for paying fee, example: BNB for BSC blockchain
  * @property {string} expenseType - Type of the fee, example: FROM_SOURCE_WALLET
+ * @property {string} amount - The human readable amount of fee, example: 0.004
  *
  */
 export type SwapFee = {
   name: string
-  expenseType: 'FROM_SOURCE_WALLET' | 'DECREASE_FROM_OUTPUT'
-  asset: Asset
+  token: Token
+  expenseType: 'FROM_SOURCE_WALLET' | 'DECREASE_FROM_OUTPUT' | 'FROM_DESTINATION_WALLET'
   amount: string
 }
 
