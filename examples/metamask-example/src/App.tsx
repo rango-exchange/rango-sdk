@@ -46,9 +46,9 @@ export const App = () => {
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
 
   // 1inch sample: BSC.BAKE -> BSC.BNB
-  const sourceChainId = 56
-  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === "0xe02df9e3e622debdd69fb838bb799e3f168902c5")
-  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
+  // const sourceChainId = 56
+  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === "0xe02df9e3e622debdd69fb838bb799e3f168902c5")
+  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
 
   // anyswap sample: POLYGON.USDT to BSC.USDT
   // const sourceChainId = 137
@@ -61,9 +61,9 @@ export const App = () => {
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
 
   // aggregator sample 2: BSC.BNB to FTM.FTM
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
+  const sourceChainId = 56
+  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
+  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
 
   const getUserWallet = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
