@@ -1,6 +1,6 @@
 import './App.css';
-import {useEffect, useMemo, useState} from "react"
-import {ethers} from 'ethers'
+import { useEffect, useMemo, useState } from "react"
+import { ethers } from 'ethers'
 import {
   EvmTransaction,
   MetaResponse,
@@ -11,7 +11,7 @@ import {
   Asset,
   SwapResponse
 } from "rango-sdk-basic"
-import {checkApprovalSync, prepareEvmTransaction, sleep} from "./utils";
+import { checkApprovalSync, prepareEvmTransaction, sleep } from "./utils";
 import BigNumber from "bignumber.js";
 import React from 'react';
 
@@ -56,14 +56,14 @@ export const App = () => {
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
 
   // aggregator sample 1: BSC.BNB to FTM.USDT
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
-
-  // aggregator sample 2: BSC.BNB to FTM.FTM
   const sourceChainId = 56
   const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
+  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
+
+  // aggregator sample 2: BSC.BNB to FTM.FTM
+  // const sourceChainId = 56
+  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
+  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
 
   const getUserWallet = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
@@ -78,7 +78,7 @@ export const App = () => {
     let userAddress = ''
     try {
       userAddress = await getUserWallet()
-      console.log({userAddress})
+      console.log({ userAddress })
     } catch (err) {
       setError('Error connecting to MetMask. Please check Metamask and try again.')
       return
@@ -106,8 +106,8 @@ export const App = () => {
       return
 
     setLoadingSwap(true)
-    const from: Asset = {blockchain: sourceToken?.blockchain, symbol: sourceToken?.symbol, address: sourceToken.address}
-    const to: Asset = {blockchain: destinationToken?.blockchain, symbol: destinationToken?.symbol, address: destinationToken.address}
+    const from: Asset = { blockchain: sourceToken?.blockchain, symbol: sourceToken?.symbol, address: sourceToken.address }
+    const to: Asset = { blockchain: destinationToken?.blockchain, symbol: destinationToken?.symbol, address: destinationToken.address }
     const amount: string = (new BigNumber(inputAmount)).shiftedBy(sourceToken.decimals).toString()
 
     const quoteResponse = await rangoClient.quote({
@@ -116,7 +116,7 @@ export const App = () => {
       to,
     })
     setQuote(quoteResponse)
-    console.log({quoteResponse})
+    console.log({ quoteResponse })
 
     if (!quoteResponse || !quoteResponse?.route || quoteResponse.resultType !== "OK") {
       setError(`Invalid quote response: ${quoteResponse.resultType}, please try again.`)
@@ -147,7 +147,7 @@ export const App = () => {
         referrerFee: null,
         slippage: '1.0'
       })
-      console.log({swapResponse})
+      console.log({ swapResponse })
 
       if (!!swapResponse.error || swapResponse.resultType === "NO_ROUTE" || swapResponse.resultType === "INPUT_LIMIT_ISSUE") {
         setError(`Error swapping, error message: ${swapResponse.error}, result type: ${swapResponse.resultType}`)
@@ -156,13 +156,13 @@ export const App = () => {
       }
 
       const evmTransaction = swapResponse.tx as EvmTransaction
-      console.log({evmTransaction})
+      console.log({ evmTransaction })
 
       // if approve data is not null, it means approve needed, otherwise it's already approved.
       if (!!evmTransaction.approveData) {
         // try to approve
         const finalTx = prepareEvmTransaction(evmTransaction, true)
-        console.log("approve tx", {finalTx})
+        console.log("approve tx", { finalTx })
         const txHash = (await signer.sendTransaction(finalTx)).hash
         await checkApprovalSync(swapResponse.requestId, txHash, rangoClient)
         console.log("transaction approved successfully")
@@ -170,7 +170,8 @@ export const App = () => {
       const finalTx = prepareEvmTransaction(evmTransaction, false)
       const txHash = (await signer.sendTransaction(finalTx)).hash
       const txStatus = await checkTransactionStatusSync(swapResponse.requestId, txHash, rangoClient)
-      console.log("transaction finished", {txStatus})
+      console.log("transaction finished", { txStatus })
+      console.log("bridged data?", txStatus.bridgeData)
       setLoadingSwap(false)
     } catch (e) {
       const rawMessage = JSON.stringify(e).substring(0, 90) + '...'
@@ -192,15 +193,20 @@ export const App = () => {
       const txStatus = await rangoClient.status({
         requestId: requestId,
         txId: txHash,
+      }).catch((error: any) => {
+        console.log(error)
       })
-      setTxStatus(txStatus)
-      console.log({txStatus})
-      if (!!txStatus.status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(txStatus.status)) {
-        return txStatus
+      if (!!txStatus) {
+        setTxStatus(txStatus)
+        console.log({ txStatus })
+        if (!!txStatus.status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(txStatus.status)) {
+          return txStatus
+        }
       }
       await sleep(3000)
     }
   }
+
   return (
     <div className="container">
       {!RANGO_API_KEY && (
@@ -208,8 +214,8 @@ export const App = () => {
       )}
       <div className="tokens-container">
         <div className="from">
-          {loadingMeta && (<div className="loading"/>)}
-          {!loadingMeta && (<img src={sourceToken?.image} alt="USDT" height="50px"/>)}
+          {loadingMeta && (<div className="loading" />)}
+          {!loadingMeta && (<img src={sourceToken?.image} alt="USDT" height="50px" />)}
           <div>
             <input
               type="number"
@@ -227,45 +233,100 @@ export const App = () => {
         </div>
         <div className="swap-details-container">
           <div className="swap-details">
-            <img src="./img/arrow.png" className="arrow" alt="to"/>
+            <img src="./img/arrow.png" className="arrow" alt="to" />
             {quote && <div className='green-text'>
-              {quote.route?.swapper && (<img src={quote.route?.swapper?.logo} alt="swapper logo" width={50}/>)} <br/>
+              {quote.route?.swapper && (<img src={quote.route?.swapper?.logo} alt="swapper logo" width={50} />)} <br />
               {quote.route?.swapper?.title}
             </div>}
+            <br />
             {quote && (
               <div>
-                <br/>
-                {quote && (
-                  <React.Fragment>
-                    <div>expected output:
-                      {new BigNumber(quote?.route?.outputAmount || "0").shiftedBy(-(destinationToken?.decimals || 0)).toString()} {destinationToken?.symbol}
-                    </div>
-                    <div>time estimate:
-                      {quote.route?.estimatedTimeInSeconds}s
-                    </div>
-                  </React.Fragment>
-                )}
-                {txStatus && (
-                  <React.Fragment>
-                    <div>status: {txStatus.status || TransactionStatus.RUNNING}</div>
-                    <div>real output: {txStatus.output?.amount || '?'} {txStatus.output?.receivedToken?.symbol || ""}  {txStatus.output?.type || ""}</div>
-                    <div>details: {txStatus.error || '-'}</div>
-                    {txStatus.explorerUrl?.map((item, id) => (
-                        <div key={id}><a href={item.url}>{item.description || "Tx Hash"}</a></div>
-                      )
+                <table className='border-collapse border'>
+                  <tbody>
+                    {quote && (
+                      <React.Fragment>
+                        <tr>
+                          <td>expected output</td>
+                          <td>{new BigNumber(quote?.route?.outputAmount || "0").shiftedBy(-(destinationToken?.decimals || 0)).toString()} {destinationToken?.symbol}</td>
+                        </tr>
+                        <tr>
+                          <td>time estimate</td>
+                          <td>{quote.route?.estimatedTimeInSeconds}s</td>
+                        </tr>
+                      </React.Fragment>
                     )}
-                  </React.Fragment>
-                )}
-                <br/>
+                    {txStatus && (
+                      <React.Fragment>
+                        <tr>
+                          <td>status</td>
+                          <td>{txStatus.status || TransactionStatus.RUNNING}</td>
+                        </tr>
+                        <tr>
+                          <td>output</td>
+                          <td>{new BigNumber(txStatus.output?.amount || "0").shiftedBy(-(destinationToken?.decimals || 0)).toString() || '?'} {txStatus.output?.receivedToken?.symbol || ""}  {txStatus.output?.type || ""}</td>
+                        </tr>
+                        <tr>
+                          <td>error?</td>
+                          <td>{txStatus.error || '-'}</td>
+                        </tr>
+                        {txStatus.explorerUrl?.map((item, id) => (
+                          <tr key={id}>
+                            <td>explorer url [{id}]</td>
+                            <td>
+                              <a href={item.url}>{item.description || "Tx Hash"}</a>
+                            </td>
+                          </tr>
+                        ))}
+                        {!!txStatus.bridgeData && (
+                          <React.Fragment>
+                            <tr>
+                              <td>srcChainId</td>
+                              <td>{txStatus.bridgeData.srcChainId}</td>
+                            </tr>
+                            <tr>
+                              <td>destChainId</td>
+                              <td>{txStatus.bridgeData.destChainId}</td>
+                            </tr>
+                            <tr>
+                              <td>srcToken</td>
+                              <td>{txStatus.bridgeData.srcToken}</td>
+                            </tr>
+                            <tr>
+                              <td>destToken</td>
+                              <td>{txStatus.bridgeData.destToken}</td>
+                            </tr>
+                            <tr>
+                              <td>srcTokenAmt</td>
+                              <td>{txStatus.bridgeData.srcTokenAmt}</td>
+                            </tr>
+                            <tr>
+                              <td>destTokenAmt</td>
+                              <td>{txStatus.bridgeData.destTokenAmt}</td>
+                            </tr>
+                            <tr>
+                              <td>srcTxHash</td>
+                              <td>{txStatus.bridgeData.srcTxHash}</td>
+                            </tr>
+                            <tr>
+                              <td>destTxHash</td>
+                              <td>{txStatus.bridgeData.destTxHash}</td>
+                            </tr>
+                          </React.Fragment>
+                        )}
+                      </React.Fragment>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
             {!!error && (<div className="error-message">{error}</div>)}
           </div>
+          <br />
           <button id="swap" onClick={swap} disabled={loadingMeta || loadingSwap}>swap</button>
         </div>
         <div className="to">
-          {loadingMeta && (<div className="loading"/>)}
-          {!loadingMeta && (<img src={destinationToken?.image} alt="Matic" height="50px"/>)}
+          {loadingMeta && (<div className="loading" />)}
+          {!loadingMeta && (<img src={destinationToken?.image} alt="Matic" height="50px" />)}
           <div className="symbol">to</div>
           <div className="blockchain">{destinationToken?.blockchain}.{destinationToken?.symbol}</div>
         </div>

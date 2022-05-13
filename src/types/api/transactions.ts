@@ -104,6 +104,40 @@ export type StatusOutput = {
   type: "REVERTED_TO_INPUT" | "MIDDLE_ASSET_IN_SRC" | "MIDDLE_ASSET_IN_DEST" | "DESIRED_OUTPUT"
 }
 
+
+/**
+ * Tracking data for bridged token
+ *
+ * @property {number} srcChainId - source chain id
+ * @property {string | null} srcTxHash - source transaction hash
+ * @property {string | null} srcToken - source token address
+ * @property {string} srcTokenAmt - source token amount
+ * @property {number} srcTokenDecimals - source token decimals
+ * @property {number | null} srcTokenPrice - source token price
+ * @property {number} destChainId - destination chain id
+ * @property {string | null} destTxHash - destination transaction hash
+ * @property {string | null} destToken - destination token address
+ * @property {string | null} destTokenAmt - destination token amount
+ * @property {number} destTokenDecimals - destination token decimals
+ * @property {number | null} destTokenPrice - destination token price
+ *
+ */
+ export type BridgeData = {
+  srcChainId: number
+  srcTxHash: string | null
+  srcToken: string | null
+  srcTokenAmt: string
+  srcTokenDecimals: number
+  srcTokenPrice: string | null
+  destChainId: number
+  destTxHash: string | null
+  destToken: string | null
+  destTokenAmt: string | null
+  destTokenDecimals: number
+  destTokenPrice: string | null
+}
+
+
 /**
  * Response of check transaction status containing the latest status of transaction in blockchain
  *
@@ -113,6 +147,7 @@ export type StatusOutput = {
  * @property {StatusOutput | null} output - The output asset and amount, it could be different from destination asset in
  * case of failures and refund
  * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions of this swap.
+ * @property {BridgeData | null} bridgeData - Status of bridge
  *
  */
 export type StatusResponse = {
@@ -120,6 +155,7 @@ export type StatusResponse = {
   error: string | null
   output: StatusOutput | null
   explorerUrl: SwapExplorerUrl[] | null
+  bridgeData: BridgeData | null
 }
 
 /**

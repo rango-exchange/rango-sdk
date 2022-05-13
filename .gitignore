@@ -2,4 +2,5 @@
 /node_modules
 /lib
 /.env
-.package-lock.json
+package-lock.json
+react-app-env.d.ts
