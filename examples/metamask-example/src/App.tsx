@@ -56,14 +56,14 @@ export const App = () => {
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
 
   // aggregator sample 1: BSC.BNB to FTM.USDT
-  const sourceChainId = 56
-  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
-
-  // aggregator sample 2: BSC.BNB to FTM.FTM
   // const sourceChainId = 56
   // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
+  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
+
+  // aggregator sample 2: BSC.BNB to FTM.FTM
+  const sourceChainId = 56
+  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
+  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
 
   const getUserWallet = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
