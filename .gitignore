@@ -3,3 +3,5 @@
 /lib
 /.env
 .package-lock.json
+
+.env
