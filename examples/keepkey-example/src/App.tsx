@@ -24,6 +24,7 @@ import {
 } from "rango-sdk"
 // import {checkApprovalSync, prepareEvmTransaction, prettyAmount, sleep} from "./utils";
 import { metaInfoMock, prettyAmount, sleep } from "./utils";
+import { numberToHex } from 'web3-utils'
 
 //hdwallet sdk
 import * as core from "@shapeshiftoss/hdwallet-core";
@@ -33,20 +34,35 @@ const keyring = new core.Keyring();
 const keepkeyAdapter = keepkeyWebUSB.WebUSBKeepKeyAdapter.useKeyring(keyring);
 //end hdwallet sdk
 
+//requires
+const coinSelect = require('coinselect')
+let {
+  xpubConvert,
+  bip32ToAddressNList
+} = require('@pioneer-platform/pioneer-coins')
+//pioneer SDK (network calls)
+let pioneerApi = require("@pioneer-platform/pioneer-client")
+const config = {
+  queryKey:'sdk:2d0ec79c-6733-4235-9b09-9b87171edc16',
+  username:"rango-example-keepkey",
+  // spec:"https://pioneers.dev/spec/swagger.json"
+  spec:"http://localhost:9001/spec/swagger.json"
+}
+
 //globals
 dotenv.config()
 declare let window: any
 
 //mock info TODO moveme
 
-
+let TEST_AMOUNT = "0.003"
 
 export const App = () => {
   const RANGO_API_KEY = process.env['RANGO_API_KEY'] || '' // put your RANGO-API-KEY here
 
   const rangoClient = new RangoClient(RANGO_API_KEY)
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
-  const [inputAmount, setInputAmount] = useState<string>("0.1")
+  const [inputAmount, setInputAmount] = useState<string>(TEST_AMOUNT)
   const [bestRoute, setBestRoute] = useState<BestRouteResponse | null>()
   const [txStatus, setTxStatus] = useState<TransactionStatusResponse | null>(null)
   const [requiredAssets, setRequiredAssets] = useState<WalletRequiredAssets[]>([])
@@ -66,16 +82,32 @@ export const App = () => {
   const usdtAddressInPolygon = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f'
   const usdtToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === usdtAddressInPolygon)
   const maticToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
-  const btc = tokensMeta?.tokens.find(t => t.blockchain === "BTC")
-  const eth = tokensMeta?.tokens.find(t => t.blockchain === "ETH")
-  console.log("btc: ",btc)
-  console.log("eth: ",eth)
+
+  // BTC -> ETH
+  const inputAsset = tokensMeta?.tokens.find(t => t.blockchain === "BTC")
+  const outputAsset = tokensMeta?.tokens.find(t => t.blockchain === "ETH")
+
+  // ETH -> BTC
+  // const inputAsset = tokensMeta?.tokens.find(t => t.blockchain === "ETH")
+  // const outputAsset = tokensMeta?.tokens.find(t => t.blockchain === "BTC")
+  console.log("inputAsset: ",inputAsset)
+  console.log("outputAsset: ",outputAsset)
 
   const onConnect = async () => {
     try{
       let wallet = await keepkeyAdapter.pairDevice(undefined, /*tryDebugLink=*/ true);
       console.log("Wallet: ",wallet)
       window["wallet"] = wallet;
+
+      //sub to pioneer
+      let pioneer = new pioneerApi(config.spec,config)
+      window["pioneer"] = await pioneer.init()
+
+      //test pioneer
+      let status = await window["pioneer"].instance.Health()
+      if(!status.data.online) throw Error("Pioneer Server offline!")
+      console.log("pioneer status: ",status.data)
+
 
       //listen to events
       keyring.on(["*", "*", core.Events.PIN_REQUEST], () => {
@@ -108,10 +140,26 @@ export const App = () => {
 
   const getUserWallet = async () => {
     //get BTC address
+
+    //get xpub
+    const pubkeys = await window.wallet.getPublicKeys([
+      {
+        addressNList: [0x80000000 + 84, 0x80000000 + 0, 0x80000000 + 0],
+        curve: "secp256k1",
+        showDisplay: false, // Not supported by TrezorConnect or Ledger, but KeepKey should do it
+        coin: "Bitcoin",
+      }
+    ]);
+    console.log("pubkeys: ",pubkeys)
+    let btcXpub = pubkeys[0].xpub
+    //convert to zpub
+    btcXpub = xpubConvert(btcXpub,"zpub")
+    console.log("btcXpub: ",btcXpub)
+
     let btcAddress = await window.wallet.btcGetAddress({
-      addressNList: [0x80000000 + 44, 0x80000000 + 0, 0x80000000 + 0, 0, 0],
+      addressNList: [0x80000000 + 84, 0x80000000 + 0, 0x80000000 + 0, 0, 0],
       coin: "Bitcoin",
-      scriptType: core.BTCInputScriptType.SpendAddress,
+      scriptType: core.BTCInputScriptType.SpendWitness,
       showDisplay: false,
     })
     console.log("btcAddress: ",btcAddress)
@@ -129,6 +177,7 @@ export const App = () => {
 
     return {
       "BTC":btcAddress,
+      "BTC-XPUB":btcXpub,
       "ETH":ethAddress
     }
   }
@@ -144,7 +193,8 @@ export const App = () => {
       userAddresses = await getUserWallet()
       console.log("userAddresses: ",userAddresses)
     } catch (err) {
-      setError('Error connecting to KeepKey. Please check Metamask and try again.')
+      console.error("err: ",err)
+      setError('Error connecting to KeepKey.'+err)
       return
     }
 
@@ -168,15 +218,26 @@ export const App = () => {
       {blockchain: 'BTC', addresses: [userAddresses.BTC]},
       {blockchain: 'ETH', addresses: [userAddresses.ETH]}
     ]
-    const selectedWallets:any = [
-      {blockchain: 'BTC', accounts: [{address:userAddresses.BTC}]},
-      {blockchain: 'ETH', accounts: [{address:userAddresses.ETH}]}
-    ]
+    // const selectedWallets:any = [
+    //   {blockchain: 'ETH', accounts: [{address:userAddresses.ETH}]},
+    //   {blockchain: 'BTC', accounts: [{address:userAddresses.BTC}]}
+    // ]
+
+    const selectedWallets = {
+      "BTC":userAddresses.BTC,
+      "ETH":userAddresses.ETH,
+    }
+
     // const from = {blockchain: usdtToken?.blockchain, symbol: usdtToken?.symbol, address: usdtToken.address}
     // const to = {blockchain: maticToken?.blockchain, symbol: maticToken?.symbol, address: maticToken.address}
-    const from = {blockchain: "BTC", symbol: "BTC", address: userAddresses.BTC}
-    const to = {blockchain: "ETH", symbol: "ETH", address: userAddresses.ETH}
 
+    //BTC -> ETH
+    const from = {blockchain: "BTC", symbol: "BTC", address: null}
+    const to = {blockchain: "ETH", symbol: "ETH", address: null}
+
+    //ETH -> BTC
+    // const from = {blockchain: "ETH", symbol: "ETH", address: null}
+    // const to = {blockchain: "BTC", symbol: "BTC", address: null}
 
     // If you just want to show route to user, set checkPrerequisites: false.
     // Also for multi steps swap, it is faster to get route first with {checkPrerequisites: false} and if users confirms.
@@ -184,7 +245,7 @@ export const App = () => {
     let body = {
       amount: inputAmount,
       affiliateRef: null,
-      checkPrerequisites: false,
+      checkPrerequisites: true,
       connectedWallets,
       from,
       selectedWallets,
@@ -195,12 +256,13 @@ export const App = () => {
     setBestRoute(bestRoute)
 
     console.log({bestRoute})
-    if (!bestRoute || !bestRoute?.result || !bestRoute?.result?.swaps || bestRoute.result?.swaps?.length === 0) {
-      setError(`Invalid route response from server, please try again.`)
-      setLoadingSwap(false)
-      return
-    }
-    //
+    // if (!bestRoute || !bestRoute?.result || !bestRoute?.result?.swaps || bestRoute.result?.swaps?.length === 0) {
+    //   setError(`Invalid route response from server, please try again.`)
+    //   setLoadingSwap(false)
+    //   return
+    // }
+
+    //TODO
     // const requiredCoins =
     //   bestRoute.validationStatus?.flatMap(v => v.wallets.flatMap(w => w.requiredAssets)) || []
     // setRequiredAssets(requiredCoins)
@@ -211,76 +273,335 @@ export const App = () => {
     //   setLoadingSwap(false)
     //   return
     // }
-    // else if (bestRoute) {
-    //   await executeRoute(bestRoute)
-    // }
+
+    if (bestRoute) {
+      await executeRoute(bestRoute,userAddresses)
+    }
   }
 
-  const executeRoute = async (routeResponse: BestRouteResponse) => {
-    // const provider = await new ethers.providers.Web3Provider(window.ethereum as any)
-    // const signer = provider.getSigner()
-    //
-    // // In multi step swaps, you should loop over routeResponse.route array and create transaction per each item
-    // let evmTransaction
-    // try {
-    //   // A transaction might needs multiple approval txs (e.g. in harmony bridge),
-    //   // you should create transaction and check approval again and again until `isApprovalTx` field turns to false
-    //   while (true) {
-    //     const transactionResponse = await rangoClient.createTransaction({
-    //       requestId: routeResponse.requestId,
-    //       step: 1, // In this example, we assumed that route has only one step
-    //       userSettings: { 'slippage': '1' },
-    //       validations: { balance: true, fee: true },
-    //     })
-    //
-    //     // in general case, you should check transaction type and call related provider to sign and send tx
-    //     evmTransaction = transactionResponse.transaction as EvmTransaction
-    //     if (evmTransaction.isApprovalTx) {
-    //       const finalTx = prepareEvmTransaction(evmTransaction)
-    //       await signer.sendTransaction(finalTx)
-    //       await checkApprovalSync(routeResponse, rangoClient)
-    //       console.log("transaction approved successfully")
-    //     }
-    //     else {
-    //       break
-    //     }
-    //   }
-    //
-    //   const finalTx = prepareEvmTransaction(evmTransaction)
-    //   const txHash = (await signer.sendTransaction(finalTx)).hash
-    //   const txStatus = await checkTransactionStatusSync(txHash, routeResponse, rangoClient)
-    //   console.log("transaction finished", {txStatus})
-    //   setLoadingSwap(false)
-    // } catch (e) {
-    //   const rawMessage = JSON.stringify(e).substring(0, 90) + '...'
-    //   setLoadingSwap(false)
-    //   setError(rawMessage)
-    //   // report transaction failure to server if something went wrong in client for signing and sending the transaction
-    //   await rangoClient.reportFailure({
-    //     data: { message: rawMessage },
-    //     eventType: 'TX_FAIL',
-    //     requestId: routeResponse.requestId,
-    //   })
-    // }
+  /*
+
+      //example BTC -> ETH
+      {
+          "ok": true,
+          "error": null,
+          "transaction": {
+              "type": "TRANSFER",
+              "method": "transfer",
+              "fromWalletAddress": "bc1qs7ek0m3ah0xhn9a2txxrgvcw50clnvuhymx87h",
+              "recipientAddress": "bc1qsdnrzs8ra763pmq3agy62k2p3wmcfnte902wkw",
+              "memo": "=:ETH.ETH:0x33b35c665496bA8E71B22373843376740401F106:431361",
+              "amount": "100000",
+              "decimals": 8,
+              "asset": {
+                  "blockchain": "BTC",
+                  "symbol": "BTC",
+                  "address": null,
+                  "ticker": "BTC"
+              }
+          }
+      }
+
+      //Example ETH -> BTC
+      {
+        "ok": true,
+        "error": null,
+        "transaction": {
+            "type": "EVM",
+            "blockChain": "ETH",
+            "isApprovalTx": false,
+            "from": null,
+            "to": "0x3624525075b88B24ecc29CE226b0CEc1fFcB6976",
+            "data": "0x1fece7b4000000000000000000000000765cf1c8ea1bb68333340baebca791f27ca36d120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc100000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000003a3d3a4254432e4254433a626331717337656b306d3361683078686e39613274787872677663773530636c6e767568796d783837683a3338353237000000000000",
+            "value": "0x2386f26fc10000",
+            "gasLimit": null,
+            "gasPrice": null,
+            "nonce": null
+        }
+    }
+   */
+
+  const executeRoute = async (routeResponse: BestRouteResponse, selectedWallets:any) => {
+    try {
+      console.log("routeResponse: ",routeResponse)
+      const transactionResponse = await rangoClient.createTransaction({
+        requestId: routeResponse.requestId,
+        step: 1, // In this example, we assumed that route has only one step
+        userSettings: { 'slippage': '1' },
+        validations: { balance: true, fee: true },
+      })
+      console.log("transactionResponse: ",transactionResponse)
+
+      //switch by type
+      if(!transactionResponse?.transaction?.type) throw Error("Invalid transactionResponse!")
+      const expr = transactionResponse.transaction.type;
+      switch (expr) {
+        case 'EVM':
+          console.log('EVM Tx type');
+          //get account info
+          let from = selectedWallets['ETH']
+          let gas_limit = 80000
+
+          //get nonce
+          let nonceRemote = await window['pioneer'].instance.GetNonce(from)
+          nonceRemote = nonceRemote.data
+
+          //get gas price
+          let gas_price = await window['pioneer'].instance.GetGasPrice()
+          gas_price = gas_price.data
+
+          let nonce = nonceRemote // || override (for Replace manual Tx)
+
+          // @ts-ignore Generic Transaction type incorrect
+          if(!transactionResponse?.transaction?.value) throw Error("Invalid EVM Tx missing value")
+          // @ts-ignore
+          let value = transactionResponse.transaction.value
+
+          // @ts-ignore Generic Transaction type incorrect
+          if(!transactionResponse?.transaction?.to) throw Error("Invalid EVM Tx missing to")
+          // @ts-ignore
+          let to = transactionResponse.transaction.to
+
+          // @ts-ignore Generic Transaction type incorrect
+          if(!transactionResponse?.transaction?.data) throw Error("Invalid EVM Tx missing data")
+          // @ts-ignore
+          let data = transactionResponse.transaction.data
+
+          //sign
+          let ethTx = {
+              // addressNList: support.bip32ToAddressNList(masterPathEth),
+              "addressNList":[
+                  2147483692,
+                  2147483708,
+                  2147483648,
+                  0,
+                  0
+              ],
+              nonce: numberToHex(nonce),
+              gasPrice: numberToHex(gas_price),
+              gasLimit: numberToHex(gas_limit),
+              value,
+              to,
+              data,
+              // chainId: 1,//TODO more networks
+          }
+          let signedTx = await window['wallet'].ethSignTx(ethTx)
+          console.log("signedTx: ",signedTx)
+
+          //broadcast TX
+          let broadcastBody = {
+            network:"ETH",
+            serialized:signedTx.serialized,
+            txid:"unknown",
+            invocationId:"unknown"
+          }
+          let resultBroadcast = await window['pioneer'].instance.Broadcast(null,broadcastBody)
+          console.log("resultBroadcast: ",resultBroadcast)
+
+          break;
+        case 'TRANSFER':
+          console.log("selectedWallets",selectedWallets)
+          //get btc fee rate
+          let feeRateInfo = await window['pioneer'].instance.GetFeeInfo({coin:"BTC"})
+          feeRateInfo = feeRateInfo.data
+          console.log("feeRateInfo: ",feeRateInfo)
+
+          //get unspent from xpub
+          let unspentInputs = await window['pioneer'].instance.ListUnspent({network:"BTC",xpub:selectedWallets["BTC-XPUB"]})
+          unspentInputs = unspentInputs.data
+          console.log("unspentInputs: ",unspentInputs)
+
+          //prepaire coinselect
+          let utxos = []
+          for(let i = 0; i < unspentInputs.length; i++){
+              let input = unspentInputs[i]
+              let utxo = {
+                  txId:input.txid,
+                  vout:input.vout,
+                  value:parseInt(input.value),
+                  nonWitnessUtxo: Buffer.from(input.hex, 'hex'),
+                  hex: input.hex,
+                  tx: input.tx,
+                  path:input.path
+              }
+              utxos.push(utxo)
+          }
+
+          //if no utxo's
+          if (utxos.length === 0){
+              throw Error("101 YOUR BROKE! no UTXO's found! ")
+          }
+
+          //validate amount
+          // @ts-ignore Generic Transaction type incorrect
+          if(!transactionResponse?.transaction?.amount) throw Error("Invalid transfer Tx missing amount")
+          // @ts-ignore Generic Type wrong
+          let amountSat = parseInt(transactionResponse?.transaction?.amount)
+          console.log("amountSat: ",amountSat)
+
+          //coinselect
+          // @ts-ignore Generic Transaction type incorrect
+          if(!transactionResponse?.transaction?.amount) throw Error("Invalid transfer Tx missing amount")
+          // @ts-ignore
+          let toAddress = transactionResponse?.transaction?.recipientAddress
+
+          let targets = [
+              {
+                  address:toAddress,
+                  value: amountSat
+              }
+          ]
+
+          // @ts-ignore Generic Transaction type incorrect
+          if(!transactionResponse?.transaction?.memo) throw Error("Invalid transfer Tx missing memo")
+          // @ts-ignore
+          let memo = transactionResponse?.transaction?.memo
+
+          //coinselect
+          console.log("input coinSelect: ",{utxos, targets, feeRateInfo})
+          let selectedResults = coinSelect(utxos, targets, feeRateInfo)
+          console.log("result coinselect algo: ",selectedResults)
+
+          //if fee > available
+          if(!selectedResults.inputs){
+              throw Error("Fee exceeded total available inputs!")
+          }
+
+          //buildTx
+          let inputs = []
+          for(let i = 0; i < selectedResults.inputs.length; i++){
+              //get input info
+              let inputInfo = selectedResults.inputs[i]
+              console.log("inputInfo: ",inputInfo)
+              let input = {
+                  addressNList:bip32ToAddressNList(inputInfo.path),
+                  scriptType:core.BTCInputScriptType.SpendWitness,
+                  amount:String(inputInfo.value),
+                  vout:inputInfo.vout,
+                  txid:inputInfo.txId,
+                  segwit:false,
+                  hex:inputInfo.hex,
+                  tx:inputInfo.tx
+              }
+              inputs.push(input)
+          }
+
+          //TODO dont re-use addresses bro
+          //get change address
+          // let changeAddressIndex = await window['pioneer'].instance.GetChangeAddress(null,{network:"BTC",xpub:selectedWallets["BTC-XPUB"]})
+          // changeAddressIndex = changeAddressIndex.data.changeIndex
+          // console.log("changeAddressIndex: ",changeAddressIndex)
+          //
+          // //let changePath
+          // let changePath =
+
+          //use master (hack)
+          let changeAddress = selectedWallets['BTC']
+          console.log("changeAddress: ",changeAddress)
+
+          const outputsFinal:any = []
+          console.log("selectedResults.outputs: ",selectedResults.outputs)
+          console.log("outputsFinal: ",outputsFinal)
+          for(let i = 0; i < selectedResults.outputs.length; i++){
+              let outputInfo = selectedResults.outputs[i]
+              console.log("outputInfo: ",outputInfo)
+              if(outputInfo.address){
+                  //not change
+                  let output = {
+                      address:toAddress,
+                      addressType:"spend",
+                      scriptType:core.BTCInputScriptType.SpendWitness,
+                      amount:String(outputInfo.value),
+                      isChange: false,
+                  }
+                  if(output.address)outputsFinal.push(output)
+              } else {
+                  //change
+                  let output = {
+                      address:changeAddress,
+                      addressType:"spend",
+                      scriptType:core.BTCInputScriptType.SpendWitness,
+                      amount:String(outputInfo.value),
+                      isChange: true,
+                  }
+                if(output.address)outputsFinal.push(output)
+              }
+            console.log(i,"outputsFinal: ",outputsFinal)
+          }
+          console.log("outputsFinal: ",outputsFinal)
+          //why!?!? wtf witchcraft. where third element coming from?
+          outputsFinal.pop()
+          console.log("outputsFinal: ",outputsFinal)
+          //buildTx
+          let hdwalletTxDescription = {
+              opReturnData:memo,
+              coin: 'Bitcoin',
+              inputs,
+              outputs:outputsFinal,
+              version: 1,
+              locktime: 0,
+          }
+
+          //signTx
+          console.log("**** hdwalletTxDescription: ",hdwalletTxDescription)
+          let signedTxTransfer = await window['wallet'].btcSignTx(hdwalletTxDescription)
+          console.log("signedTxTransfer: ",signedTxTransfer)
+
+          //broadcastTx
+          //broadcast TX
+          let broadcastBodyTransfer = {
+            network:"BTC",
+            serialized:signedTxTransfer.serializedTx,
+            txid:"unknown",
+            invocationId:"unknown"
+          }
+          let resultBroadcastTransfer = await window['pioneer'].instance.Broadcast(null,broadcastBodyTransfer)
+          console.log("resultBroadcast: ",resultBroadcastTransfer)
+
+          break;
+        case 'COSMOS':
+          throw Error("TODO")
+          break;
+        default:
+          console.log(`Sorry, we are out of ${expr}.`);
+      }
+      //monitor till complete
+
+
+      // const txStatus = await checkTransactionStatusSync(txHash, routeResponse, rangoClient)
+      // console.log("transaction finished", {txStatus})
+      // setLoadingSwap(false)
+    } catch (e) {
+      console.error("e: ",e)
+      // const rawMessage = JSON.stringify(e).substring(0, 90) + '...'
+      // setLoadingSwap(false)
+      // setError(rawMessage)
+      // // report transaction failure to server if something went wrong in client for signing and sending the transaction
+      // await rangoClient.reportFailure({
+      //   data: { message: rawMessage },
+      //   eventType: 'TX_FAIL',
+      //   requestId: routeResponse.requestId,
+      // })
+    }
   }
 
   const checkTransactionStatusSync = async (txHash: string, bestRoute: BestRouteResponse, rangoClient: RangoClient) => {
-    // while (true) {
-    //   const txStatus = await rangoClient.checkStatus({
-    //     requestId: bestRoute.requestId,
-    //     step: 1,
-    //     txId: txHash,
-    //   })
-    //   setTxStatus(txStatus)
-    //   console.log({txStatus})
-    //   if (!!txStatus.status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(txStatus.status)) {
-    //     // for some swappers (e.g. harmony bridge), it needs more than one transaction to be signed for one single step
-    //     // swap. In these cases, you need to check txStatus.newTx and make sure it's null before going to the next step.
-    //     // If it's not null, you need to use that to create next transaction of this step.
-    //     return txStatus
-    //   }
-    //   await sleep(3000)
-    // }
+    while (true) {
+      const txStatus = await rangoClient.checkStatus({
+        requestId: bestRoute.requestId,
+        step: 1,
+        txId: txHash,
+      })
+      setTxStatus(txStatus)
+      console.log({txStatus})
+      if (!!txStatus.status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(txStatus.status)) {
+        // for some swappers (e.g. harmony bridge), it needs more than one transaction to be signed for one single step
+        // swap. In these cases, you need to check txStatus.newTx and make sure it's null before going to the next step.
+        // If it's not null, you need to use that to create next transaction of this step.
+        return txStatus
+      }
+      await sleep(3000)
+    }
   }
 
   const swapperLogo = tokensMeta?.swappers.find(sw => sw.id === bestRoute?.result?.swaps[0].swapperId)?.logo
@@ -351,7 +672,7 @@ export const App = () => {
         <button id="swap" onClick={onConnect}>connect KeepKey</button>
         <div className="from">
           {loadingMeta && (<div className="loading"/>)}
-          {!loadingMeta && (<img src={usdtToken?.image} alt="USDT" height="50px"/>)}
+          {!loadingMeta && (<img src={inputAsset?.image} alt="BTC" height="50px"/>)}
           <div>
             <input
               type="number"
@@ -364,8 +685,8 @@ export const App = () => {
               step="0.01"
             />
           </div>
-          <div className="symbol">{usdtToken?.symbol}</div>
-          <div className="blockchain">from {usdtToken?.blockchain}</div>
+          <div className="symbol">{inputAsset?.symbol}</div>
+          <div className="blockchain">from {inputAsset?.blockchain}</div>
         </div>
         <div className="swap-details-container">
           <div className="swap-details">
@@ -405,10 +726,10 @@ export const App = () => {
         </div>
         <div className="to">
           {loadingMeta && (<div className="loading"/>)}
-          {!loadingMeta && (<img src={maticToken?.image} alt="Matic" height="50px"/>)}
+          {!loadingMeta && (<img src={outputAsset?.image} alt="Matic" height="50px"/>)}
           <div className="amount green-text">{bestRoute?.result?.outputAmount || "?"}</div>
-          <div className="symbol">{maticToken?.symbol}</div>
-          <div className="blockchain">to {maticToken?.blockchain}</div>
+          <div className="symbol">{outputAsset?.symbol}</div>
+          <div className="blockchain">to {outputAsset?.blockchain}</div>
         </div>
       </div>
     </div>
