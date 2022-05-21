@@ -1,0 +1,96 @@
+body {
+    text-align: center;
+}
+
+.green-text {
+    color: darkgreen;
+}
+
+.red-text {
+    color: darkred;
+}
+
+button:hover {
+    cursor: pointer;
+}
+
+.container, .swap-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.swap-details-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.container {
+    background-color: gainsboro;
+    padding: 2rem;
+    display: flex;
+}
+
+.tokens-container {
+    display: flex;
+}
+
+.from,
+.to {
+    margin: 6rem;
+}
+
+.arrow {
+    margin-top: 3rem;
+    width: 100px;
+}
+
+.failure {
+    width: 40px;
+}
+
+.success {
+    width: 50px;
+}
+
+.from-amount {
+    width: 4rem;
+}
+
+#swap {
+    width: 4rem;
+}
+
+.loading {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+}
+
+.loading:after {
+    content: ' ';
+    display: block;
+    width: 32px;
+    height: 32px;
+    margin: 4px;
+    border-radius: 50%;
+    border: 3px solid #000;
+    border-color: #000 transparent #000 transparent;
+    animation: loading 1.2s linear infinite;
+}
+
+@keyframes loading {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.error-message {
+    color: red;
+}
