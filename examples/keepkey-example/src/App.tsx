@@ -55,7 +55,8 @@ declare let window: any
 
 //mock info TODO moveme
 
-let TEST_AMOUNT = "0.003"
+// let TEST_AMOUNT = "0.003"
+let TEST_AMOUNT = ".5"
 
 export const App = () => {
   const RANGO_API_KEY = process.env['RANGO_API_KEY'] || '' // put your RANGO-API-KEY here
@@ -84,12 +85,30 @@ export const App = () => {
   const maticToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
 
   // BTC -> ETH
-  const inputAsset = tokensMeta?.tokens.find(t => t.blockchain === "BTC")
-  const outputAsset = tokensMeta?.tokens.find(t => t.blockchain === "ETH")
+  // const inputAsset = tokensMeta?.tokens.find(t => t.blockchain === "BTC")
+  // const outputAsset = tokensMeta?.tokens.find(t => t.blockchain === "ETH")
 
   // ETH -> BTC
   // const inputAsset = tokensMeta?.tokens.find(t => t.blockchain === "ETH")
   // const outputAsset = tokensMeta?.tokens.find(t => t.blockchain === "BTC")
+
+  // ATOM -> OSMO
+  const inputAsset = tokensMeta?.tokens.find(t => t.blockchain === "COSMOS" && t.symbol === "ATOM")
+  const outputAsset = tokensMeta?.tokens.find(t => t.blockchain === "OSMOSIS" && t.symbol === "OSMO")
+
+  //TODO
+  // OSMO -> ATOM
+
+  // ETH -> AVAX
+
+  // AVAX -> ETH
+
+  // ETH -> BSC
+
+  // BSC -> ETH
+
+  // AVAX -> BSC
+
   console.log("inputAsset: ",inputAsset)
   console.log("outputAsset: ",outputAsset)
 
@@ -139,6 +158,9 @@ export const App = () => {
   }
 
   const getUserWallet = async () => {
+    //dev helper
+    // window.wallet.removePin()
+
     //get BTC address
 
     //get xpub
@@ -175,10 +197,26 @@ export const App = () => {
     });
     console.log("ethAddress: ",ethAddress)
 
+    //get osmo
+    // let { addressNList } = window.wallet.osmosisGetAccountPaths({ accountIdx: 0 })[0];
+    // let osmoAddress = await window.wallet.osmosisGetAddress({
+    //   addressNList,
+    //   showDisplay: false,
+    // });
+    let osmoAddress = "osmo1k0kzs2ygjsext3hx7mf00dfrfh8hl3e85s23kn"
+
+    let { addressNList } = window.wallet.cosmosGetAccountPaths({ accountIdx: 0 })[0];
+    let cosmosAddress = await window.wallet.cosmosGetAddress({
+      addressNList,
+      showDisplay: false,
+    });
+
     return {
       "BTC":btcAddress,
       "BTC-XPUB":btcXpub,
-      "ETH":ethAddress
+      "ETH":ethAddress,
+      "ATOM": cosmosAddress,
+      "OSMO": osmoAddress
     }
   }
 
@@ -215,8 +253,10 @@ export const App = () => {
 
     setLoadingSwap(true)
     const connectedWallets = [
-      {blockchain: 'BTC', addresses: [userAddresses.BTC]},
-      {blockchain: 'ETH', addresses: [userAddresses.ETH]}
+      // {blockchain: 'BTC', addresses: [userAddresses.BTC]},
+      // {blockchain: 'ETH', addresses: [userAddresses.ETH]}
+      {blockchain: 'COSMOS', addresses: [userAddresses.ATOM]},
+      {blockchain: 'OSMOSIS', addresses: [userAddresses.OSMO]}
     ]
     // const selectedWallets:any = [
     //   {blockchain: 'ETH', accounts: [{address:userAddresses.ETH}]},
@@ -224,20 +264,27 @@ export const App = () => {
     // ]
 
     const selectedWallets = {
-      "BTC":userAddresses.BTC,
-      "ETH":userAddresses.ETH,
+      // "BTC":userAddresses.BTC,
+      // "ETH":userAddresses.ETH,
+      "COSMOS":userAddresses.ATOM,
+      "OSMOSIS":userAddresses.OSMO,
     }
+    console.log("selectedWallets: ",selectedWallets)
 
     // const from = {blockchain: usdtToken?.blockchain, symbol: usdtToken?.symbol, address: usdtToken.address}
     // const to = {blockchain: maticToken?.blockchain, symbol: maticToken?.symbol, address: maticToken.address}
 
     //BTC -> ETH
-    const from = {blockchain: "BTC", symbol: "BTC", address: null}
-    const to = {blockchain: "ETH", symbol: "ETH", address: null}
+    // const from = {blockchain: "BTC", symbol: "BTC", address: null}
+    // const to = {blockchain: "ETH", symbol: "ETH", address: null}
 
     //ETH -> BTC
     // const from = {blockchain: "ETH", symbol: "ETH", address: null}
     // const to = {blockchain: "BTC", symbol: "BTC", address: null}
+
+    //ATOM -> OSMO
+    const from = {blockchain: "COSMOS", symbol: "ATOM", address: null}
+    const to = {blockchain: "OSMOSIS", symbol: "OSMO", address: null}
 
     // If you just want to show route to user, set checkPrerequisites: false.
     // Also for multi steps swap, it is faster to get route first with {checkPrerequisites: false} and if users confirms.
@@ -280,6 +327,65 @@ export const App = () => {
   }
 
   /*
+      // example ETH -> AVAX
+
+
+
+      // example ATOM -> OSMO
+      {
+        "ok": true,
+        "error": null,
+        "transaction": {
+            "type": "COSMOS",
+            "fromWalletAddress": "cosmos1qjwdyn56ecagk8rjf7crrzwcyz6775cj89njn3",
+            "blockChain": "COSMOS",
+            "data": {
+                "chainId": "cosmoshub-4",
+                "account_number": 487,
+                "sequence": "175",
+                "msgs": [
+                    {
+                        "__type": "CosmosIBCTransferMessage",
+                        "type": "cosmos-sdk/MsgTransfer",
+                        "value": {
+                            "source_port": "transfer",
+                            "source_channel": "channel-141",
+                            "token": {
+                                "denom": "uatom",
+                                "amount": "500000"
+                            },
+                            "sender": "cosmos1qjwdyn56ecagk8rjf7crrzwcyz6775cj89njn3",
+                            "receiver": "osmo1k0kzs2ygjsext3hx7mf00dfrfh8hl3e85s23kn",
+                            "timeout_height": {},
+                            "timeout_timestamp": "1653084192254000000"
+                        }
+                    }
+                ],
+                "protoMsgs": [
+                    {
+                        "type_url": "/ibc.applications.transfer.v1.MsgTransfer",
+                        "value": [
+                            10, 8, 116, 114, 97, 110, 115, 102, 101, 114, 18, 11, 99, 104, 97, 110, 110, 101, 108, 45, 49, 52, 49, 26, 15, 10, 5, 117, 97, 116, 111, 109, 18, 6, 53, 48, 48, 48, 48, 48, 34, 45, 99, 111, 115, 109, 111, 115, 49, 113, 106, 119, 100, 121, 110, 53, 54, 101, 99, 97, 103, 107, 56, 114, 106, 102, 55, 99, 114, 114, 122, 119, 99, 121, 122, 54, 55, 55, 53, 99, 106, 56, 57, 110, 106, 110, 51, 42, 43, 111, 115, 109, 111, 49, 107, 48, 107, 122, 115, 50, 121, 103, 106, 115, 101, 120, 116, 51, 104, 120, 55, 109, 102, 48, 48, 100, 102, 114, 102, 104, 56, 104, 108, 51, 101, 56, 53, 115, 50, 51, 107, 110, 50, 0, 56, -128, -9, -13, -8, -121, -22, -69, -8, 22
+                        ]
+                    }
+                ],
+                "memo": "",
+                "source": null,
+                "fee": {
+                    "gas": "1200000",
+                    "amount": [
+                        {
+                            "denom": "uatom",
+                            "amount": "15000"
+                        }
+                    ]
+                },
+                "signType": "AMINO",
+                "rpcUrl": null
+            },
+            "rawTransfer": null
+        }
+    }
 
       //example BTC -> ETH
       {
@@ -560,7 +666,64 @@ export const App = () => {
 
           break;
         case 'COSMOS':
-          throw Error("TODO")
+          //blockchain
+          let blockchain = transactionResponse.transaction.type
+
+          //
+          if(blockchain === 'COSMOS'){
+            let tx = {
+              "account_number": "16359",
+              "chain_id": "cosmoshub-4",
+              "sequence": "39",
+              "fee": {
+                "amount": [
+                  {
+                    "amount": "4500",
+                    "denom": "uatom"
+                  }
+                ],
+                "gas": "450000"
+              },
+              "memo": "",
+              "msg": [
+                {
+                  "type": "cosmos-sdk/MsgTransfer",
+                  "value": {
+                    "receiver": "osmo15cenya0tr7nm3tz2wn3h3zwkht2rxrq7g9ypmq",
+                    "sender": "cosmos15cenya0tr7nm3tz2wn3h3zwkht2rxrq7q7h3dj",
+                    "source_channel": "channel-141",
+                    "source_port": "transfer",
+                    "timeout_height": {
+                      "revision_height": "4006321",
+                      "revision_number": "1"
+                    },
+                    "token": {
+                      "amount": "5500",
+                      "denom": "uatom"
+                    }
+                  }
+                }
+              ]
+            }
+            const input: any = {
+              tx,
+              addressNList: core.bip32ToAddressNList("m/44'/118'/0'/0/0"),
+              chain_id: tx.chain_id,
+              account_number: tx.account_number,
+              sequence: tx.sequence,
+            };
+
+            //sign
+            console.log("input: ",input)
+            const res = await window.wallet.cosmosSignTx(input);
+            console.log("res: ",res)
+
+            //broadcast
+
+          }
+
+
+
           break;
         default:
           console.log(`Sorry, we are out of ${expr}.`);
