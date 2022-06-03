@@ -11,9 +11,9 @@ import {
   SwapRequest,
   SwapResponse,
   ReportTransactionRequest,
-  WalletDetailsResponse, assetToString
-} from "../types"
-
+  WalletDetailsResponse,
+  assetToString,
+} from '../types'
 
 type WalletAddress = { blockchain: string; address: string }
 
@@ -49,18 +49,21 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async quote(
-    quoteRequest: QuoteRequest
-  ): Promise<QuoteResponse> {
+  public async quote(quoteRequest: QuoteRequest): Promise<QuoteResponse> {
     const body = {
       ...quoteRequest,
       from: assetToString(quoteRequest.from),
       to: assetToString(quoteRequest.to),
+      swappers:
+        !!quoteRequest.swappers && quoteRequest.swappers.length > 0
+          ? quoteRequest.swappers.join(',')
+          : undefined,
     }
     const axiosResponse = await httpService.get<QuoteResponse>(
-      `/basic/quote?apiKey=${this.apiKey}`, {
+      `/basic/quote?apiKey=${this.apiKey}`,
+      {
         params: body,
-        headers: { 'X-Rango-Id': this.deviceId }
+        headers: { 'X-Rango-Id': this.deviceId },
       }
     )
     return axiosResponse.data
@@ -71,38 +74,41 @@ export class RangoClient {
     txId: string
   ): Promise<CheckApprovalResponse> {
     const axiosResponse = await httpService.get<CheckApprovalResponse>(
-      `/basic/is-approved?apiKey=${this.apiKey}`, {
+      `/basic/is-approved?apiKey=${this.apiKey}`,
+      {
         params: { requestId, txId },
-        headers: { 'X-Rango-Id': this.deviceId }
+        headers: { 'X-Rango-Id': this.deviceId },
       }
     )
     return axiosResponse.data
   }
 
-  public async status(
-    statusRequest: StatusRequest
-  ): Promise<StatusResponse> {
+  public async status(statusRequest: StatusRequest): Promise<StatusResponse> {
     const axiosResponse = await httpService.get<StatusResponse>(
-      `/basic/status?apiKey=${this.apiKey}`, {
+      `/basic/status?apiKey=${this.apiKey}`,
+      {
         params: statusRequest,
-        headers: { 'X-Rango-Id': this.deviceId }
+        headers: { 'X-Rango-Id': this.deviceId },
       }
     )
     return axiosResponse.data
   }
 
-  public async swap(
-    swapRequest: SwapRequest
-  ): Promise<SwapResponse> {
+  public async swap(swapRequest: SwapRequest): Promise<SwapResponse> {
     const body = {
       ...swapRequest,
       from: assetToString(swapRequest.from),
       to: assetToString(swapRequest.to),
+      swappers:
+        !!swapRequest.swappers && swapRequest.swappers.length > 0
+          ? swapRequest.swappers.join(',')
+          : undefined,
     }
     const axiosResponse = await httpService.get<SwapResponse>(
-      `/basic/swap?apiKey=${this.apiKey}`, {
+      `/basic/swap?apiKey=${this.apiKey}`,
+      {
         params: body,
-        headers: { 'X-Rango-Id': this.deviceId }
+        headers: { 'X-Rango-Id': this.deviceId },
       }
     )
     return axiosResponse.data
@@ -111,18 +117,23 @@ export class RangoClient {
   public async reportFailure(
     requestBody: ReportTransactionRequest
   ): Promise<void> {
-    await httpService.post(`/basic/report-tx?apiKey=${this.apiKey}`, requestBody, {
-      headers: { 'X-Rango-Id': this.deviceId }
-    })
+    await httpService.post(
+      `/basic/report-tx?apiKey=${this.apiKey}`,
+      requestBody,
+      {
+        headers: { 'X-Rango-Id': this.deviceId },
+      }
+    )
   }
 
   public async balance(
     walletAddress: WalletAddress
   ): Promise<WalletDetailsResponse> {
     const axiosResponse = await httpService.get<WalletDetailsResponse>(
-      `/basic/balance?apiKey=${this.apiKey}`, {
+      `/basic/balance?apiKey=${this.apiKey}`,
+      {
         params: walletAddress,
-        headers: { 'X-Rango-Id': this.deviceId }
+        headers: { 'X-Rango-Id': this.deviceId },
       }
     )
     return axiosResponse.data

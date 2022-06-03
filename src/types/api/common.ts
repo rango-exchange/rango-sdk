@@ -1,4 +1,4 @@
-import {SwapperMetaDto, Token} from "./meta"
+import { SwapperMetaDto, Token } from './meta'
 
 /**
  * An asset which is unique by (blockchain, symbol, address)
@@ -17,8 +17,7 @@ export type Asset = {
 export function assetToString(asset: Asset): string {
   if (!!asset.address)
     return `${asset.blockchain}.${asset.symbol}--${asset.address}`
-  else
-    return `${asset.blockchain}.${asset.symbol}`
+  else return `${asset.blockchain}.${asset.symbol}`
 }
 
 /**
@@ -34,7 +33,6 @@ export type Amount = {
   decimals: number
 }
 
-
 /**
  * A fee unit, including the type of asset and the amount of fee
  *
@@ -47,7 +45,10 @@ export type Amount = {
 export type SwapFee = {
   name: string
   token: Token
-  expenseType: 'FROM_SOURCE_WALLET' | 'DECREASE_FROM_OUTPUT' | 'FROM_DESTINATION_WALLET'
+  expenseType:
+    | 'FROM_SOURCE_WALLET'
+    | 'DECREASE_FROM_OUTPUT'
+    | 'FROM_DESTINATION_WALLET'
   amount: string
 }
 
@@ -65,7 +66,7 @@ export type QuotePath = {
   from: Token
   to: Token
   swapper: SwapperMetaDto
-  swapperType: "BRIDGE" | "DEX" | "COMPOSER"
+  swapperType: 'BRIDGE' | 'DEX' | 'COMPOSER'
   expectedOutput: string
 }
 

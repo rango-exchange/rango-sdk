@@ -1,5 +1,4 @@
-import type {Asset, QuoteSimulationResult} from './common'
-
+import type { Asset, QuoteSimulationResult } from './common'
 
 /**
  * Body of quote request
@@ -28,6 +27,6 @@ export type QuoteRequest = {
  */
 export type QuoteResponse = {
   requestId: string
-  resultType: "OK" | "HIGH_IMPACT" | "INPUT_LIMIT_ISSUE" | "NO_ROUTE"
+  resultType: 'OK' | 'HIGH_IMPACT' | 'INPUT_LIMIT_ISSUE' | 'NO_ROUTE'
   route: QuoteSimulationResult | null
 }

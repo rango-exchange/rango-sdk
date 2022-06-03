@@ -4,3 +4,4 @@
 /.env
 package-lock.json
 react-app-env.d.ts
+.vscode
