@@ -7,6 +7,7 @@ import type { Asset, QuoteSimulationResult } from './common'
  * @property {Asset} to - The destination asset
  * @property {string} amount - The human-readable amount of asset X that is going to be swapped, example: 0.28
  * @property {string[]} [swappers] - List of all accepted swappers, an empty list means no filter is required
+ * @property {string[]} [messagingProtocols] - List of all messaging protocols, an empty list means no filter is required
  *
  */
 export type QuoteRequest = {
@@ -14,6 +15,7 @@ export type QuoteRequest = {
   to: Asset
   amount: string
   swappers?: string[]
+  messagingProtocols?: string[]
 }
 
 /**

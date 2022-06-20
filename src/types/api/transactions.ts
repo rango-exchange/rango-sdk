@@ -1,7 +1,6 @@
-import {Asset, QuoteSimulationResult} from "./common";
-import {Token} from "./meta";
-import {CosmosTransaction, EvmTransaction, Transfer} from "./txs";
-
+import { Asset, QuoteSimulationResult } from './common'
+import { Token } from './meta'
+import { CosmosTransaction, EvmTransaction, Transfer } from './txs'
 
 /**
  * The type of transaction
@@ -50,6 +49,10 @@ export type StatusRequest = {
  * @property {string | number} referrerFee - Referrer fee in percent, (e.g. 0.3 means: 0.3% fee based on input amount)
  * @property {boolean} disableEstimate - check pre-requests of a swap before creating tx (e.g. check having enough balance)
  * @property {string} slippage - User slippage for this swap (e.g. 5.0 which means 5% slippage)
+ * @property {string[]} [messagingProtocols] - List of all messaging protocols, an empty list means no filter is required
+ * @property {string} [sourceContract] - Address of your contract on source chain (will be called in case of refund in the source chain)
+ * @property {string} [destinationContract] - Address of your contract on destination chain (will be called in case of success/refund in the destination chain)
+ * @property {string} [imMessage] - The message that you want to pass to your contract on the destination chain
  *
  */
 export type SwapRequest = {
@@ -63,6 +66,10 @@ export type SwapRequest = {
   referrerFee: string | null
   disableEstimate: boolean
   slippage: string
+  messagingProtocols?: string[]
+  sourceContract?: string
+  destinationContract?: string
+  imMessage?: string
 }
 
 /**
@@ -101,9 +108,12 @@ export enum TransactionStatus {
 export type StatusOutput = {
   amount: string
   receivedToken: Token
-  type: "REVERTED_TO_INPUT" | "MIDDLE_ASSET_IN_SRC" | "MIDDLE_ASSET_IN_DEST" | "DESIRED_OUTPUT"
+  type:
+    | 'REVERTED_TO_INPUT'
+    | 'MIDDLE_ASSET_IN_SRC'
+    | 'MIDDLE_ASSET_IN_DEST'
+    | 'DESIRED_OUTPUT'
 }
-
 
 /**
  * Tracking data for bridged token
@@ -122,7 +132,7 @@ export type StatusOutput = {
  * @property {number | null} destTokenPrice - destination token price
  *
  */
- export type BridgeData = {
+export type BridgeData = {
   srcChainId: number
   srcTxHash: string | null
   srcToken: string | null
@@ -136,7 +146,6 @@ export type StatusOutput = {
   destTokenDecimals: number
   destTokenPrice: string | null
 }
-
 
 /**
  * Response of check transaction status containing the latest status of transaction in blockchain
@@ -182,7 +191,7 @@ export type CheckApprovalResponse = {
  */
 export type SwapResponse = {
   requestId: string
-  resultType: "OK" | "HIGH_IMPACT" | "INPUT_LIMIT_ISSUE" | "NO_ROUTE"
+  resultType: 'OK' | 'HIGH_IMPACT' | 'INPUT_LIMIT_ISSUE' | 'NO_ROUTE'
   route: QuoteSimulationResult | null
   error: string | null
   tx: EvmTransaction | CosmosTransaction | Transfer | null

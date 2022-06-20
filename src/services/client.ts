@@ -58,6 +58,11 @@ export class RangoClient {
         !!quoteRequest.swappers && quoteRequest.swappers.length > 0
           ? quoteRequest.swappers.join(',')
           : undefined,
+      messagingProtocols:
+        !!quoteRequest.messagingProtocols &&
+        quoteRequest.messagingProtocols.length > 0
+          ? quoteRequest.messagingProtocols.join(',')
+          : undefined,
     }
     const axiosResponse = await httpService.get<QuoteResponse>(
       `/basic/quote?apiKey=${this.apiKey}`,
@@ -102,6 +107,11 @@ export class RangoClient {
       swappers:
         !!swapRequest.swappers && swapRequest.swappers.length > 0
           ? swapRequest.swappers.join(',')
+          : undefined,
+      messagingProtocols:
+        !!swapRequest.messagingProtocols &&
+        swapRequest.messagingProtocols.length > 0
+          ? swapRequest.messagingProtocols.join(',')
           : undefined,
     }
     const axiosResponse = await httpService.get<SwapResponse>(

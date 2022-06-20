@@ -119,7 +119,8 @@ export const App = () => {
       amount,
       from,
       to,
-      swappers: ['cBridge v2.0', 'OneInchPolygon']
+      swappers: ['cBridge v2.0', 'OneInchPolygon'],
+      messagingProtocols: ['axelar', 'cbridge']
     })
     setQuote(quoteResponse)
     console.log({ quoteResponse })
@@ -142,6 +143,19 @@ export const App = () => {
 
     let swapResponse: SwapResponse | null = null
     try {
+      console.log({
+        from,
+        to,
+        amount: inputAmount,
+        fromAddress: fromAddress,
+        toAddress: fromAddress,
+        disableEstimate: false,
+        referrerAddress: null,
+        referrerFee: null,
+        slippage: '1.0',
+        swappers: ['cBridge v2.0', 'OneInchPolygon'],
+        messagingProtocols: ['axelar', 'cbridge'],
+      })
       swapResponse = await rangoClient.swap({
         from,
         to,
@@ -152,7 +166,11 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        swappers: ['cBridge v2.0', 'OneInchPolygon']
+        swappers: ['cBridge v2.0', 'OneInchPolygon'],
+        messagingProtocols: ['axelar', 'cbridge'],
+        // sourceContract: "0x123...",
+        // destinationContract: "0x123...",
+        // imMessage: "0x"
       })
       console.log({ swapResponse })
 
@@ -206,6 +224,7 @@ export const App = () => {
       if (!!txStatus) {
         setTxStatus(txStatus)
         console.log({ txStatus })
+        console.log(txStatus.bridgeData?.destTokenPrice, txStatus.bridgeData?.srcTokenPrice)
         if (!!txStatus.status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(txStatus.status)) {
           return txStatus
         }
