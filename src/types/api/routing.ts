@@ -8,6 +8,9 @@ import type { Asset, QuoteSimulationResult } from './common'
  * @property {string} amount - The human-readable amount of asset X that is going to be swapped, example: 0.28
  * @property {string[]} [swappers] - List of all accepted swappers, an empty list means no filter is required
  * @property {string[]} [messagingProtocols] - List of all messaging protocols, an empty list means no filter is required
+ * @property {string} [sourceContract] - Address of your contract on source chain (will be called in case of refund in the source chain)
+ * @property {string} [destinationContract] - Address of your contract on destination chain (will be called in case of success/refund in the destination chain)
+ * @property {string} [imMessage] - The message that you want to pass to your contract on the destination chain
  *
  */
 export type QuoteRequest = {
@@ -16,6 +19,9 @@ export type QuoteRequest = {
   amount: string
   swappers?: string[]
   messagingProtocols?: string[]
+  sourceContract?: string
+  destinationContract?: string
+  imMessage?: string
 }
 
 /**
