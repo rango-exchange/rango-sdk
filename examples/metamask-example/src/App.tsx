@@ -66,9 +66,14 @@ export const App = () => {
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
 
   // aggregator sample 3: POLYGON.USDC to BSC.USDC
-  const sourceChainId = 137
-  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0x2791bca1f2de4661ed88a30c99a7a9449aa84174')
-  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d')
+  // const sourceChainId = 137
+  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0x2791bca1f2de4661ed88a30c99a7a9449aa84174')
+  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d')
+
+  // aggregator sample 4: BSC.BNB to FTM.FTM
+  const sourceChainId = 250
+  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
+  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
 
   const getUserWallet = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
@@ -119,9 +124,12 @@ export const App = () => {
       amount,
       from,
       to,
-      swappers: ['cBridge v2.0', 'OneInchPolygon'],
-      messagingProtocols: ['axelar', 'cbridge']
-    })
+      // swappers: ['cBridge v2.0', 'OneInchPolygon'],
+      messagingProtocols: ['axelar', 'cbridge'],
+      // sourceContract: "0x123...",
+      // destinationContract: "0x123...",
+      // imMessage: "0x"
+      })
     setQuote(quoteResponse)
     console.log({ quoteResponse })
 
@@ -153,7 +161,7 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        swappers: ['cBridge v2.0', 'OneInchPolygon'],
+        // swappers: ['cBridge v2.0', 'OneInchPolygon'],
         messagingProtocols: ['axelar', 'cbridge'],
       })
       swapResponse = await rangoClient.swap({
@@ -166,7 +174,7 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        swappers: ['cBridge v2.0', 'OneInchPolygon'],
+        // swappers: ['cBridge v2.0', 'OneInchPolygon'],
         messagingProtocols: ['axelar', 'cbridge'],
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
