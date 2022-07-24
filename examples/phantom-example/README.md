@@ -1,4 +1,4 @@
-# Basic Example of using SDK for EvmTransactions + MetaMask
+# Basic Example of using SDK for SolanaTransactions + Phantom
 
 ## How to run?
 
