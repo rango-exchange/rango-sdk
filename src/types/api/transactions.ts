@@ -5,6 +5,7 @@ export enum TransactionType {
   EVM = 'EVM',
   TRANSFER = 'TRANSFER',
   COSMOS = 'COSMOS',
+  SOLANA = 'SOLANA',
 }
 
 /**
@@ -126,6 +127,15 @@ export enum TransactionStatus {
 }
 
 /**
+ * The swapper details for a transaction step
+ */
+export type SwapperStatusStep = {
+  name: string
+  state: 'PENDING' | 'CREATED' | 'WAITING' | 'SIGNED' | 'SUCCESSED' | 'FAILED'
+  current: boolean
+}
+
+/**
  * Response of check transaction status containing the latest status of transaction
  *
  * @property {TransactionStatus | null} status - Status of the transaction, while the status is running or null, the
@@ -140,6 +150,7 @@ export enum TransactionStatus {
  * outside Rango to get its assets back (refund). You can show this link to the user to help him
  * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions that happened in this step.
  * @property {TransactionStatusReferral[] | null} referrals - List of referral reward for the dApp and Rango
+ * @property {SwapperStatusStep[] | null} steps - Internal steps details of a route step, used for solana
  *
  */
 export type TransactionStatusResponse = {
@@ -151,6 +162,7 @@ export type TransactionStatusResponse = {
   diagnosisUrl: string | null
   explorerUrl: SwapExplorerUrl[] | null
   referrals: TransactionStatusReferral[] | null
+  steps: SwapperStatusStep[] | null
 }
 
 /**
