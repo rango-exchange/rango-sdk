@@ -3,9 +3,6 @@
 [![npm version](https://badge.fury.io/js/rango-sdk.svg)](https://badge.fury.io/js/rango-sdk)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/rango-exchange/rango-sdk/blob/master/LICENSE)
 
-
-This is the first phase of Rango SDK which only wraps Rest API calls. In the next phase, we will handle connecting to the wallet providers.
-
 > **WARNING:** The Rango SDK is still beta. Please use it on your own risk.
 
 ## Installation
