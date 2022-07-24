@@ -1,4 +1,4 @@
-# Rango Exchange SDK (BETA)
+# Rango Exchange SDK
 
 [![npm version](https://badge.fury.io/js/rango-sdk.svg)](https://badge.fury.io/js/rango-sdk)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/rango-exchange/rango-sdk/blob/master/LICENSE)
