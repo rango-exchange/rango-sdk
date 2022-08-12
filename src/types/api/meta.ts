@@ -1,13 +1,33 @@
 import type { Asset } from './common'
+import { TransactionType } from './transactions'
 
 /**
- * Blockchain information
+ * Extra information specific to this type of blockchain
+ *
+ * @property {TransactionType} tyoe - Type of the blockchain
+ * @property {string | null} rpc - Suggested RPC url for the EVM blockchains
+ * @property {number | null} chainId - Chain ID for the EVM blockchains
+ *
+ */
+export type BlockchainExtraInfo = {
+  type: TransactionType
+  rpc: string | null
+  chainId: number | null
+}
+
+/**
+ * Blockchain Meta Information
  *
  * @property {string} name - Unique name of blockchain, this field is used in all endpoints as the identifier
  * @property {number} defaultDecimals - The default decimals of blockchain, do not use it in computations, use Token.decimals instead
  * @property {Asset[]} feeAssets - List of assets that can be used as fee in this blockchain
  * @property {string[]} addressPatterns - List of all regex patterns for wallet addresses of this blockchain, can be
  * used for input validation, example: [ "^(0x)[0-9A-Fa-f]{40}$" ]
+ * @property {string} logo - Logo of the blockchain
+ * @property {string} displayName - Display name for the blockchain
+ * @property {string} color - Suggested color for the blockchain
+ * @property {boolean} enabled - Is blockchain enabled or not
+ * @property {BlockchainExtraInfo} - Chain specific information for this blockchain
  *
  */
 export type BlockchainMeta = {
@@ -15,6 +35,11 @@ export type BlockchainMeta = {
   defaultDecimals: number
   feeAssets: Asset[]
   addressPatterns: string[]
+  logo: string
+  displayName: string
+  color: string
+  enabled: boolean
+  info: BlockchainExtraInfo
 }
 
 /**
