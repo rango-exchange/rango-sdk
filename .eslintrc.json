@@ -3,12 +3,15 @@
     "browser": true,
     "es2021": true
   },
-  "extends": ["plugin:prettier/recommended"],
+  "extends": [
+    "plugin:prettier/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 13,
     "sourceType": "module"
   },
   "plugins": ["@typescript-eslint"],
-  "rules": {"no-unused-vars": "error"}
+  "rules": { "no-unused-vars": "error" }
 }

@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Rango Exchange SDK for dApps",
   "main": "lib/index.js",
   "types": "lib",
@@ -15,9 +15,9 @@
   "scripts": {
     "test": "jest --config jestconfig.json",
     "build": "tsc",
-    "format": "prettier --write ./src",
     "lint": "eslint */**/*.{js,ts} --quiet --fix",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ./.prettierrc"
   },
   "keywords": [
     "Rango Exchange",
