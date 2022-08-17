@@ -53,12 +53,18 @@ export type SwapFee = {
 }
 
 /**
+ * Type of the swapper
+ *
+ */
+export type SwapperType = 'BRIDGE' | 'DEX' | 'AGGREGATOR'
+
+/**
  * A quote path from asset x (from) to asset y (to)
  *
  * @property {Token} from - The source asset
  * @property {Token} to - The destination asset
  * @property {SwapperMetaDto} swapper - Swapper for this path
- * @property {"BRIDGE" | "DEX" | "COMPOSER"} swapperType - Type of swapper
+ * @property {SwapperType} swapperType - Type of swapper
  * @property {string} expectedOutput - Expected output
  *
  */
@@ -66,7 +72,7 @@ export type QuotePath = {
   from: Token
   to: Token
   swapper: SwapperMetaDto
-  swapperType: 'BRIDGE' | 'DEX' | 'COMPOSER'
+  swapperType: SwapperType
   expectedOutput: string
 }
 

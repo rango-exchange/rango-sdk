@@ -1,5 +1,5 @@
-import type { Asset } from './common'
-import { TransactionType } from "./transactions";
+import type { Asset, SwapperType } from './common'
+import { TransactionType } from './transactions'
 
 /**
  * Blockchain information
@@ -24,11 +24,18 @@ export type BlockchainMeta = {
 
 /**
  * Metadata of Swapper
+ *
+ * @property {string} id - Unique identifier for the swapper
+ * @property {string} title - Display name for the swapper
+ * @property {string} logo - Icon logo for the swapper
+ * @property {SwapperType[]} types - Type of the transaction supported by the swapper
+ *
  */
 export type SwapperMetaDto = {
   id: string
   title: string
   logo: string
+  types: SwapperType[]
 }
 
 /**
