@@ -79,11 +79,12 @@ export type BlockchainValidationStatus = {
  * @property {Asset} from - The source asset
  * @property {Asset} to - The destination asset
  * @property {string} amount - The human-readable amount of asset X that is going to be swapped, example: 0.28
+ * @property {{ [key: string]: string }} selectedWallets - Map of blockchain to selected address
+ * @property {UserWalletBlockchain[]} connectedWallets - List of all user connected wallet addresses per each blockchain
  * @property {boolean} checkPrerequisites - It should be false when client just likes to preview the route to user,
  * and true when user really accepted to swap. If true, server will be much slower to respond, but will check some
  * pre-requisites including balance of X and required fees in user's wallets
- * @property {{ [key: string]: string }} selectedWallets - Map of blockchain to selected address
- * @property {UserWalletBlockchain[]} connectedWallets - List of all user connected wallet addresses per each blockchain
+ * @property {boolean} [forceExecution] - Use this flag if you want to ignore checkPrerequisites before executing the route
  * @property {string | null} [affiliateRef] - The affiliate ref that client likes to send to Rango, so in cases of
  * 1inch, Thorchain, etc. that support affiliation, the referrer will earn some money if user accept the route and
  * signs the transactions. example: K3ldk3
@@ -98,9 +99,10 @@ export type BestRouteRequest = {
   from: Asset
   to: Asset
   amount: string
-  checkPrerequisites: boolean
   connectedWallets: UserWalletBlockchain[]
   selectedWallets: { [key: string]: string }
+  checkPrerequisites: boolean
+  forceExecution?: boolean
   affiliateRef?: string | null
   disableMultiStepTx?: boolean
   blockchains?: string[]
