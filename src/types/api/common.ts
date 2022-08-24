@@ -48,7 +48,10 @@ export type RecommendedSlippage = {
  */
 export type SwapFee = {
   name: string
-  expenseType: 'FROM_SOURCE_WALLET' | 'DECREASE_FROM_OUTPUT'
+  expenseType:
+    | 'FROM_SOURCE_WALLET'
+    | 'DECREASE_FROM_OUTPUT'
+    | 'FROM_DESTINATION_WALLET'
   asset: Asset
   amount: string
 }
@@ -61,6 +64,7 @@ export type SwapFee = {
  * @property {string | number} address - Contract address of the source/dest asset of this step, null for native token
  * @property {number} decimals - Decimals of the source/destination asset of this step, example: 18
  * @property {string} logo - Absolute path of the logo of the source/destination asset of this step
+ * @property {string | null} usdPrice - Usd price unit for the asset if available
  *
  */
 export type SwapResultAsset = {
@@ -69,6 +73,7 @@ export type SwapResultAsset = {
   symbol: string
   logo: string
   decimals: number
+  usdPrice: string | null
 }
 
 /**
@@ -142,7 +147,9 @@ export type TimeStat = {
  *
  * @property {string} swapperId - Unique Id of swapper. example: 1INCH_BSC, TERRASWAP
  *
- * @property {string} swapperType - Type of swapper. example: BRIDGE, DEX
+ * @property {'BRIDGE' | 'DEX' | 'AGGREGATOR'} swapperType - Type of swapper. example: BRIDGE, DEX, AGGREGATOR
+ *
+ * @property {'INTER_CHAIN' | 'INTRA_CHAIN'} swapChainType - Type of swapping. It could be inter chain or intra chain
  *
  * @property {SwapResultAsset} from - The source asset
  *
@@ -179,6 +186,10 @@ export type TimeStat = {
  *
  * @property {TimeStat | null} timeStat - The minimum, avg and max estimation time for this step
  *
+ * @property {boolean} includesDestinationTx - Is it required to sign a transaction on the destination chain or not
+ *
+ * @property {number} maxRequiredSign - Max number of transaction signing required by the user
+ *
  * @property {RecommendedSlippage | null} recommendedSlippage
  *
  * @property {string[] | null} warnings - List of warnings for this swap step, usually null or empty
@@ -186,7 +197,8 @@ export type TimeStat = {
  */
 export type SwapResult = {
   swapperId: string
-  swapperType: string
+  swapperType: 'BRIDGE' | 'DEX' | 'AGGREGATOR'
+  swapChainType: 'INTER_CHAIN' | 'INTRA_CHAIN'
   from: SwapResultAsset
   to: SwapResultAsset
   fromAmount: string
@@ -199,6 +211,8 @@ export type SwapResult = {
   fromAmountRestrictionType: 'EXCLUSIVE' | 'INCLUSIVE'
   estimatedTimeInSeconds: number
   timeStat: TimeStat | null
+  includesDestinationTx: boolean
+  maxRequiredSign: number
   recommendedSlippage: RecommendedSlippage | null
   warnings: string[] | null
 }
