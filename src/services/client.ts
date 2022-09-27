@@ -22,7 +22,7 @@ export class RangoClient {
 
   private readonly apiKey: string
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, debug: boolean = false) {
     this.apiKey = apiKey
     try {
       if (typeof window !== 'undefined') {
@@ -39,6 +39,16 @@ export class RangoClient {
       }
     } catch (e) {
       this.deviceId = v4()
+    }
+    if (debug) {
+      httpService.interceptors.request.use((request: any) => {
+        console.log('Starting Request', JSON.stringify(request, null, 2))
+        return request
+      })
+      httpService.interceptors.response.use((response: any) => {
+        console.log('Response:', JSON.stringify(response, null, 2))
+        return response
+      })
     }
   }
 

@@ -1,5 +1,5 @@
-import './App.css';
-import { useEffect, useMemo, useState } from "react"
+import './App.css'
+import { useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import {
   EvmTransaction,
@@ -9,14 +9,13 @@ import {
   QuoteResponse,
   StatusResponse,
   Asset,
-  SwapResponse
-} from "rango-sdk-basic"
-import { checkApprovalSync, prepareEvmTransaction, sleep } from "./utils";
-import BigNumber from "bignumber.js";
-import React from 'react';
+  SwapResponse,
+} from 'rango-sdk-basic'
+import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
+import BigNumber from 'bignumber.js'
+import React from 'react'
 
 declare let window: any
-
 
 export const App = () => {
   const RANGO_API_KEY = '' // put your RANGO-API-KEY here
@@ -24,12 +23,12 @@ export const App = () => {
   const rangoClient = useMemo(() => new RangoClient(RANGO_API_KEY), [])
 
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
-  const [inputAmount, setInputAmount] = useState<string>("0.01")
+  const [inputAmount, setInputAmount] = useState<string>('0.01')
   const [quote, setQuote] = useState<QuoteResponse | null>()
   const [txStatus, setTxStatus] = useState<StatusResponse | null>(null)
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
   const [loadingSwap, setLoadingSwap] = useState<boolean>(false)
-  const [error, setError] = useState<string>("")
+  const [error, setError] = useState<string>('')
 
   useEffect(() => {
     setLoadingMeta(true)
@@ -72,8 +71,12 @@ export const App = () => {
 
   // aggregator sample 4: BSC.BNB to FTM.FTM
   const sourceChainId = 250
-  const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
-  const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
+  const sourceToken = tokensMeta?.tokens.find(
+    (t) => t.blockchain === 'FANTOM' && t.address === null
+  )
+  const destinationToken = tokensMeta?.tokens.find(
+    (t) => t.blockchain === 'BSC' && t.address === null
+  )
 
   const getUserWallet = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
@@ -82,7 +85,7 @@ export const App = () => {
   }
 
   const swap = async () => {
-    setError("")
+    setError('')
     setQuote(null)
     setTxStatus(null)
     let userAddress = ''
@@ -90,16 +93,23 @@ export const App = () => {
       userAddress = await getUserWallet()
       console.log({ userAddress })
     } catch (err) {
-      setError('Error connecting to MetMask. Please check Metamask and try again.')
+      setError(
+        'Error connecting to MetMask. Please check Metamask and try again.'
+      )
       return
     }
 
-    if (!(window.ethereum).isConnected()) {
-      setError('Error connecting to MetMask. Please check Metamask and try again.')
+    if (!window.ethereum.isConnected()) {
+      setError(
+        'Error connecting to MetMask. Please check Metamask and try again.'
+      )
       return
     }
 
-    if (window.ethereum.chainId && parseInt(window.ethereum.chainId) !== sourceChainId) {
+    if (
+      window.ethereum.chainId &&
+      parseInt(window.ethereum.chainId) !== sourceChainId
+    ) {
       setError(`Change meta mask network to '${sourceToken?.blockchain}'.`)
       return
     }
@@ -112,42 +122,62 @@ export const App = () => {
       setError(`Set input amount`)
       return
     }
-    if (!sourceToken || !destinationToken)
-      return
+    if (!sourceToken || !destinationToken) return
 
     setLoadingSwap(true)
-    const from: Asset = { blockchain: sourceToken?.blockchain, symbol: sourceToken?.symbol, address: sourceToken.address }
-    const to: Asset = { blockchain: destinationToken?.blockchain, symbol: destinationToken?.symbol, address: destinationToken.address }
-    const amount: string = (new BigNumber(inputAmount)).shiftedBy(sourceToken.decimals).toString()
+    const from: Asset = {
+      blockchain: sourceToken?.blockchain,
+      symbol: sourceToken?.symbol,
+      address: sourceToken.address,
+    }
+    const to: Asset = {
+      blockchain: destinationToken?.blockchain,
+      symbol: destinationToken?.symbol,
+      address: destinationToken.address,
+    }
+    const amount: string = new BigNumber(inputAmount)
+      .shiftedBy(sourceToken.decimals)
+      .toString()
 
     const quoteResponse = await rangoClient.quote({
       amount,
       from,
       to,
       // swappers: ['cBridge v2.0', 'OneInchPolygon'],
-      messagingProtocols: ['axelar', 'cbridge'],
+      // messagingProtocols: ['axelar', 'cbridge'],
       // sourceContract: "0x123...",
       // destinationContract: "0x123...",
       // imMessage: "0x"
-      })
+    })
     setQuote(quoteResponse)
     console.log({ quoteResponse })
 
-    if (!quoteResponse || !quoteResponse?.route || quoteResponse.resultType !== "OK") {
-      setError(`Invalid quote response: ${quoteResponse.resultType}, please try again.`)
+    if (
+      !quoteResponse ||
+      !quoteResponse?.route ||
+      quoteResponse.resultType !== 'OK'
+    ) {
+      setError(
+        `Invalid quote response: ${quoteResponse.resultType}, please try again.`
+      )
       setLoadingSwap(false)
       return
-    }
-    else {
+    } else {
       await executeRoute(from, to, userAddress, amount)
     }
   }
 
-  const executeRoute = async (from: Asset, to: Asset, fromAddress: string, inputAmount: string) => {
-    const provider = await new ethers.providers.Web3Provider(window.ethereum as any)
+  const executeRoute = async (
+    from: Asset,
+    to: Asset,
+    fromAddress: string,
+    inputAmount: string
+  ) => {
+    const provider = await new ethers.providers.Web3Provider(
+      window.ethereum as any
+    )
     const signer = provider.getSigner()
-    if (!sourceToken || !destinationToken)
-      return
+    if (!sourceToken || !destinationToken) return
 
     let swapResponse: SwapResponse | null = null
     try {
@@ -175,15 +205,21 @@ export const App = () => {
         referrerFee: null,
         slippage: '1.0',
         // swappers: ['cBridge v2.0', 'OneInchPolygon'],
-        messagingProtocols: ['axelar', 'cbridge'],
+        // messagingProtocols: ['axelar', 'cbridge'],
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
         // imMessage: "0x"
       })
       console.log({ swapResponse })
 
-      if (!!swapResponse.error || swapResponse.resultType === "NO_ROUTE" || swapResponse.resultType === "INPUT_LIMIT_ISSUE") {
-        setError(`Error swapping, error message: ${swapResponse.error}, result type: ${swapResponse.resultType}`)
+      if (
+        !!swapResponse.error ||
+        swapResponse.resultType === 'NO_ROUTE' ||
+        swapResponse.resultType === 'INPUT_LIMIT_ISSUE'
+      ) {
+        setError(
+          `Error swapping, error message: ${swapResponse.error}, result type: ${swapResponse.resultType}`
+        )
         setLoadingSwap(false)
         return
       }
@@ -195,16 +231,20 @@ export const App = () => {
       if (!!evmTransaction.approveData) {
         // try to approve
         const finalTx = prepareEvmTransaction(evmTransaction, true)
-        console.log("approve tx", { finalTx })
+        console.log('approve tx', { finalTx })
         const txHash = (await signer.sendTransaction(finalTx)).hash
         await checkApprovalSync(swapResponse.requestId, txHash, rangoClient)
-        console.log("transaction approved successfully")
+        console.log('transaction approved successfully')
       }
       const finalTx = prepareEvmTransaction(evmTransaction, false)
       const txHash = (await signer.sendTransaction(finalTx)).hash
-      const txStatus = await checkTransactionStatusSync(swapResponse.requestId, txHash, rangoClient)
-      console.log("transaction finished", { txStatus })
-      console.log("bridged data?", txStatus.bridgeData)
+      const txStatus = await checkTransactionStatusSync(
+        swapResponse.requestId,
+        txHash,
+        rangoClient
+      )
+      console.log('transaction finished', { txStatus })
+      console.log('bridged data?', txStatus.bridgeData)
       setLoadingSwap(false)
     } catch (e) {
       const rawMessage = JSON.stringify(e).substring(0, 90) + '...'
@@ -221,19 +261,33 @@ export const App = () => {
     }
   }
 
-  const checkTransactionStatusSync = async (requestId: string, txHash: string, rangoClient: RangoClient) => {
+  const checkTransactionStatusSync = async (
+    requestId: string,
+    txHash: string,
+    rangoClient: RangoClient
+  ) => {
     while (true) {
-      const txStatus = await rangoClient.status({
-        requestId: requestId,
-        txId: txHash,
-      }).catch((error: any) => {
-        console.log(error)
-      })
+      const txStatus = await rangoClient
+        .status({
+          requestId: requestId,
+          txId: txHash,
+        })
+        .catch((error: any) => {
+          console.log(error)
+        })
       if (!!txStatus) {
         setTxStatus(txStatus)
         console.log({ txStatus })
-        console.log(txStatus.bridgeData?.destTokenPrice, txStatus.bridgeData?.srcTokenPrice)
-        if (!!txStatus.status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(txStatus.status)) {
+        console.log(
+          txStatus.bridgeData?.destTokenPrice,
+          txStatus.bridgeData?.srcTokenPrice
+        )
+        if (
+          !!txStatus.status &&
+          [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(
+            txStatus.status
+          )
+        ) {
           return txStatus
         }
       }
@@ -244,12 +298,16 @@ export const App = () => {
   return (
     <div className="container">
       {!RANGO_API_KEY && (
-        <div className='red-text'><b>Set RANGO_API_KEY inside App.tsx to make it work!</b></div>
+        <div className="red-text">
+          <b>Set RANGO_API_KEY inside App.tsx to make it work!</b>
+        </div>
       )}
       <div className="tokens-container">
         <div className="from">
-          {loadingMeta && (<div className="loading" />)}
-          {!loadingMeta && (<img src={sourceToken?.image} alt="USDT" height="50px" />)}
+          {loadingMeta && <div className="loading" />}
+          {!loadingMeta && (
+            <img src={sourceToken?.image} alt="USDT" height="50px" />
+          )}
           <div>
             <input
               type="number"
@@ -263,25 +321,41 @@ export const App = () => {
             />
           </div>
           <div className="symbol">from</div>
-          <div className="blockchain">{sourceToken?.blockchain}.{sourceToken?.symbol}</div>
+          <div className="blockchain">
+            {sourceToken?.blockchain}.{sourceToken?.symbol}
+          </div>
         </div>
         <div className="swap-details-container">
           <div className="swap-details">
             <img src="./img/arrow.png" className="arrow" alt="to" />
-            {quote && <div className='green-text'>
-              {quote.route?.swapper && (<img src={quote.route?.swapper?.logo} alt="swapper logo" width={50} />)} <br />
-              {quote.route?.swapper?.title}
-            </div>}
+            {quote && (
+              <div className="green-text">
+                {quote.route?.swapper && (
+                  <img
+                    src={quote.route?.swapper?.logo}
+                    alt="swapper logo"
+                    width={50}
+                  />
+                )}{' '}
+                <br />
+                {quote.route?.swapper?.title}
+              </div>
+            )}
             <br />
             {quote && (
               <div>
-                <table className='border-collapse border'>
+                <table className="border-collapse border">
                   <tbody>
                     {quote && (
                       <React.Fragment>
                         <tr>
                           <td>expected output</td>
-                          <td>{new BigNumber(quote?.route?.outputAmount || "0").shiftedBy(-(destinationToken?.decimals || 0)).toString()} {destinationToken?.symbol}</td>
+                          <td>
+                            {new BigNumber(quote?.route?.outputAmount || '0')
+                              .shiftedBy(-(destinationToken?.decimals || 0))
+                              .toString()}{' '}
+                            {destinationToken?.symbol}
+                          </td>
                         </tr>
                         <tr>
                           <td>time estimate</td>
@@ -293,11 +367,19 @@ export const App = () => {
                       <React.Fragment>
                         <tr>
                           <td>status</td>
-                          <td>{txStatus.status || TransactionStatus.RUNNING}</td>
+                          <td>
+                            {txStatus.status || TransactionStatus.RUNNING}
+                          </td>
                         </tr>
                         <tr>
                           <td>output</td>
-                          <td>{new BigNumber(txStatus.output?.amount || "0").shiftedBy(-(destinationToken?.decimals || 0)).toString() || '?'} {txStatus.output?.receivedToken?.symbol || ""}  {txStatus.output?.type || ""}</td>
+                          <td>
+                            {new BigNumber(txStatus.output?.amount || '0')
+                              .shiftedBy(-(destinationToken?.decimals || 0))
+                              .toString() || '?'}{' '}
+                            {txStatus.output?.receivedToken?.symbol || ''}{' '}
+                            {txStatus.output?.type || ''}
+                          </td>
                         </tr>
                         <tr>
                           <td>error?</td>
@@ -307,7 +389,9 @@ export const App = () => {
                           <tr key={id}>
                             <td>explorer url [{id}]</td>
                             <td>
-                              <a href={item.url}>{item.description || "Tx Hash"}</a>
+                              <a href={item.url}>
+                                {item.description || 'Tx Hash'}
+                              </a>
                             </td>
                           </tr>
                         ))}
@@ -353,16 +437,26 @@ export const App = () => {
                 </table>
               </div>
             )}
-            {!!error && (<div className="error-message">{error}</div>)}
+            {!!error && <div className="error-message">{error}</div>}
           </div>
           <br />
-          <button id="swap" onClick={swap} disabled={loadingMeta || loadingSwap}>swap</button>
+          <button
+            id="swap"
+            onClick={swap}
+            disabled={loadingMeta || loadingSwap}
+          >
+            swap
+          </button>
         </div>
         <div className="to">
-          {loadingMeta && (<div className="loading" />)}
-          {!loadingMeta && (<img src={destinationToken?.image} alt="Matic" height="50px" />)}
+          {loadingMeta && <div className="loading" />}
+          {!loadingMeta && (
+            <img src={destinationToken?.image} alt="Matic" height="50px" />
+          )}
           <div className="symbol">to</div>
-          <div className="blockchain">{destinationToken?.blockchain}.{destinationToken?.symbol}</div>
+          <div className="blockchain">
+            {destinationToken?.blockchain}.{destinationToken?.symbol}
+          </div>
         </div>
       </div>
     </div>
