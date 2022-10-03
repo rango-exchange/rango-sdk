@@ -1,5 +1,4 @@
-import type { Asset } from './common'
-import { TransactionType } from './transactions'
+import { Asset, TransactionType } from 'common'
 
 /**
  * EVM Chain Info

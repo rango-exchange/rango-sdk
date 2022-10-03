@@ -1,5 +1,10 @@
 .idea
-/node_modules
-/lib
+**node_modules**
+**dist**
+**lib**
 /.env
-.package-lock.json
+**build**
+.cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

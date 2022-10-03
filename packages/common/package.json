@@ -1,0 +1,23 @@
+{
+  "name": "common",
+  "private": true,
+  "version": "0.0.1",
+  "description": "",
+  "main": "lib/index.js",
+  "types": "lib",
+  "scripts": {
+    "clean": "rm -f ./tsconfig.tsbuildinfo && rm -rf ./lib",
+    "test": "jest --config jestconfig.json",
+    "build": "rm -rf ./lib && tsc",
+    "lint": "eslint */**/*.{js,ts} -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "author": "rango.exchange",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "axios": "^0.24.0"
+  }
+}

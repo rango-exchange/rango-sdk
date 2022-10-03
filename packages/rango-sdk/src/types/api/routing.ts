@@ -1,5 +1,5 @@
-import type { Amount, Asset, SwapResult } from './common'
-import type { TransactionType } from './transactions'
+import { Amount, Asset, TransactionType, ResultType } from 'common'
+import { SwapResult } from './common'
 
 /**
  * All user wallets for a specific blockchain
@@ -17,13 +17,13 @@ export type UserWalletBlockchain = {
  * Full information of a path of multiple swaps that should be executed by user to swap X to Y
  *
  * @property {string} outputAmount - The estimation of Rango from output amount of Y
- * @property {'OK' | 'HIGH_IMPACT' | 'NO_ROUTE' | 'INPUT_LIMIT_ISSUE'} resultType
+ * @property {ResultType} resultType
  * @property {SwapResult[]} swaps - List of required swaps to swap X to Y with the expected outputAmount
  *
  */
 export type SimulationResult = {
   outputAmount: string
-  resultType: 'OK' | 'HIGH_IMPACT' | 'NO_ROUTE' | 'INPUT_LIMIT_ISSUE'
+  resultType: ResultType
   swaps: SwapResult[]
 }
 

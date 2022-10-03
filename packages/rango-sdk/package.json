@@ -1,0 +1,42 @@
+{
+  "name": "rango-sdk",
+  "version": "0.0.8",
+  "description": "Rango Exchange SDK for dApps",
+  "main": "lib/index.js",
+  "types": "lib",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rango-exchange/rango-sdk.git"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "bugs": {
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
+  },
+  "scripts": {
+    "clean": "rm -f ./tsconfig.tsbuildinfo && rm -rf ./lib",
+    "test": "jest --config jestconfig.json",
+    "build": "rm -rf ./lib && tsc",
+    "lint": "eslint */**/*.{js,ts} -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
+  },
+  "keywords": [
+    "Rango Exchange",
+    "SDK",
+    "Cross-Chain",
+    "Multi-Chain"
+  ],
+  "files": [
+    "lib/**/*"
+  ],
+  "author": "rango.exchange",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "uuid": "^8.3.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "branches": [
+      "master"
+    ]
+  }
+}

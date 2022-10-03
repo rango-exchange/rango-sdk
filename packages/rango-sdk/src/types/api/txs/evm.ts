@@ -1,4 +1,4 @@
-import type { GenericTransaction } from '../transactions'
+import { TransactionType } from 'common'
 
 /**
  * The transaction object for all EVM-based blockchains, including Ethereum, BSC, Polygon, Harmony, etc
@@ -16,7 +16,8 @@ import type { GenericTransaction } from '../transactions'
  * @property {string | null} gasLimit - The suggested gas limit for this transaction
  *
  */
-export interface EvmTransaction extends GenericTransaction {
+export interface EvmTransaction {
+  type: TransactionType
   isApprovalTx: boolean
   blockChain: string
   from: string | null

@@ -1,21 +1,11 @@
-/**
- * The type of transaction
- */
-export enum TransactionType {
-  EVM = 'EVM',
-  TRANSFER = 'TRANSFER',
-  COSMOS = 'COSMOS',
-  SOLANA = 'SOLANA',
-}
-
-/**
- * Parent model for all types of transactions
- * Check EvmTransaction, TransferTransaction and CosmosTransaction models for more details
- *
- */
-export type GenericTransaction = {
-  type: TransactionType
-}
+import {
+  TransactionStatus,
+  SwapExplorerUrl,
+  CosmosTransaction,
+  SolanaTransaction,
+  Transfer,
+} from 'common'
+import { EvmTransaction } from './txs'
 
 /**
  * Data of referral rewards of a transaction
@@ -55,19 +45,6 @@ export type UserSettings = {
 export type CreateTransactionValidation = {
   balance: boolean
   fee: boolean
-}
-
-/**
- * A transaction's url that can be displayed to advanced user to track the progress
- *
- * @property {string} url - Url of the transaction in blockchain explorer. example: https://etherscan.io/tx/0xa1a3...
- * @property {string | null} description - A custom display name to help user distinguish the transactions from each
- * other. Example: Inbound, Outbound, Bridge, or null
- *
- */
-export type SwapExplorerUrl = {
-  description: string | null
-  url: string
 }
 
 /**
@@ -118,15 +95,6 @@ export type ReportTransactionRequest = {
 }
 
 /**
- * The status of transaction in tracking
- */
-export enum TransactionStatus {
-  FAILED = 'failed',
-  RUNNING = 'running',
-  SUCCESS = 'success',
-}
-
-/**
  * The swapper details for a transaction step
  */
 export type SwapperStatusStep = {
@@ -144,11 +112,12 @@ export type SwapperStatusStep = {
  * the status is successful or failed, example: 1635271424813
  * @property {string | null} extraMessage - A message in case of failure, that could be shown to the user
  * @property {string | null} outputAmount - The output amount of the transaction if it was successful, exmaple: 0.28
- * @property {GenericTransaction | null} newTx - if a transaction needs more than one-step transaction to be signed by
- * the user, the next step transaction will be returned in this field.
+ * @property {EvmTransaction | CosmosTransaction | Transfer | SolanaTransaction | null} newTx - if a transaction needs
+ * more than one-step transaction to be signed by the user, the next step transaction will be returned in this field.
  * @property {string | null} diagnosisUrl - In some special cases [e.g. AnySwap], the user should follow some steps
  * outside Rango to get its assets back (refund). You can show this link to the user to help him
- * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions that happened in this step.
+ * @property {SwapExplorerUrl[] | null} explorerUrl - List of explorer URLs for the transactions that happened in
+ * this step.
  * @property {TransactionStatusReferral[] | null} referrals - List of referral reward for the dApp and Rango
  * @property {SwapperStatusStep[] | null} steps - Internal steps details of a route step, used for solana
  *
@@ -158,7 +127,12 @@ export type TransactionStatusResponse = {
   timestamp: number | null
   extraMessage: string | null
   outputAmount: string | null
-  newTx: GenericTransaction | null
+  newTx:
+    | EvmTransaction
+    | CosmosTransaction
+    | Transfer
+    | SolanaTransaction
+    | null
   diagnosisUrl: string | null
   explorerUrl: SwapExplorerUrl[] | null
   referrals: TransactionStatusReferral[] | null
@@ -181,11 +155,16 @@ export type CheckApprovalResponse = {
  *
  * @property {string | null} error - Error message about the incident if ok == false
  * @property {boolean} ok - If true, Rango has created a non-null transaction and the error message is null
- * @property {GenericTransaction | null} transaction - Transaction's raw data
+ * @property {EvmTransaction | CosmosTransaction | Transfer | SolanaTransaction | null} transaction - Transaction's raw data
  *
  */
 export type CreateTransactionResponse = {
   error: string | null
   ok: boolean
-  transaction: GenericTransaction | null
+  transaction:
+    | EvmTransaction
+    | CosmosTransaction
+    | Transfer
+    | SolanaTransaction
+    | null
 }

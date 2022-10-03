@@ -1,4 +1,4 @@
-import type { GenericTransaction } from '../transactions'
+import { TransactionType } from '../transactions'
 
 /**
  * Account metadata used to define instructions
@@ -38,7 +38,8 @@ export type SolanaSignature = {
  * @property {SolanaInstruction[]} instructions, The instructions to atomically execute
  *
  */
-export interface SolanaTransaction extends GenericTransaction {
+export interface SolanaTransaction {
+  type: TransactionType
   blockChain: string
   from: string
   identifier: string
