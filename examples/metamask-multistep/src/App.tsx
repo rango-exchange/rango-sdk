@@ -20,7 +20,7 @@ import {
 declare let window: any
 
 export const App = () => {
-  const RANGO_API_KEY = '' // put your RANGO-API-KEY here
+  const RANGO_API_KEY = '4a624ab5-16ff-4f96-90b7-ab00ddfc342c' // put your RANGO-API-KEY here
 
   const rangoClient = useMemo(() => new RangoClient(RANGO_API_KEY), [])
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()

@@ -6,9 +6,10 @@
   "main": "lib/index.js",
   "types": "lib",
   "scripts": {
-    "clean": "rm -f ./tsconfig.tsbuildinfo && rm -rf ./lib",
+    "clean": "tsc --build --clean && rm -rf ./lib",
     "test": "jest --config jestconfig.json",
-    "build": "rm -rf ./lib && tsc",
+    "post:build": "node ../../scripts/frankBuild.js",
+    "build": "tsc --build --clean && tsc --build && tsc --build tsconfig.cjs.json && yarn post:build",
     "lint": "eslint */**/*.{js,ts} -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
   },

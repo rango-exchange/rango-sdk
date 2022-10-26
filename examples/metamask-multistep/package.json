@@ -1,5 +1,5 @@
 {
-  "name": "rango-metamask-example",
+  "name": "metamask-multistep",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -11,7 +11,7 @@
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
     "typescript": "^4.3.4",
-    "rango-sdk": "^0.0.7",
+    "rango-sdk": "file:../../packages/rango-sdk/lib",
     "@ethersproject/providers": "^5.4.0",
     "ethers": "^5.4.0"
   },

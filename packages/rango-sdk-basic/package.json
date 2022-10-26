@@ -13,9 +13,10 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "clean": "rm -f ./tsconfig.tsbuildinfo && rm -rf ./lib",
+    "clean": "tsc --build --clean && rm -rf ./lib",
     "test": "jest --config jestconfig.json",
-    "build": "tsc",
+    "build": "tsc --build --clean && tsc --build && tsc --build tsconfig.cjs.json && yarn post:build",
+    "post:build": "node ../../scripts/frankBuild.js",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore",
     "lint": "eslint */**/*.{js,ts} -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore"
   },

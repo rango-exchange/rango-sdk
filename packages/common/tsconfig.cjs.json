@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "lib/cjs"
+  }
+}
