@@ -44,7 +44,7 @@ export type SwapperMetaDto = {
  * @property {string} blockchain - The blockchain which this token belongs to
  * @property {string | null} address - Smart contract address of token, null for native tokens
  * @property {string} symbol - The token symbol, e.g: ADA
- * @property {string} symbol - The token name, e.g: Binance Pegged ETH
+ * @property {string} name - The token name, e.g: Binance Pegged ETH
  * @property {number} decimals - Decimals of token in blockchain, example: 18
  * @property {string} image - Url of its image, example: https://api.rango.exchange/tokens/ETH/ETH.png
  *
