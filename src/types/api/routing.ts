@@ -95,6 +95,8 @@ export type BlockchainValidationStatus = {
  * @property {string[]} [swappers] - List of all accepted swappers, an empty list means no filter is required
  * @property {string[]} [transactionTypes] - List of all accepted transaction types including [EVM, TRANSFER, COSMOS]
  * @property {number} [maxLength] - Maximum number of steps in a route
+ * @property {boolean} contractCall - Mark it true if you are going to call this route via your own contract, so we
+ * will filter routes that are not possible to be called from a contract
  *
  */
 export type BestRouteRequest = {
@@ -111,6 +113,7 @@ export type BestRouteRequest = {
   swappers?: string[]
   transactionTypes?: TransactionType[]
   maxLength?: number
+  contractCall?: boolean
 }
 
 /**
