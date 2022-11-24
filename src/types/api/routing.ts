@@ -11,6 +11,8 @@ import type { Asset, QuoteSimulationResult } from './common'
  * @property {string} [sourceContract] - Address of your contract on source chain (will be called in case of refund in the source chain)
  * @property {string} [destinationContract] - Address of your contract on destination chain (will be called in case of success/refund in the destination chain)
  * @property {string} [imMessage] - The message that you want to pass to your contract on the destination chain
+ * @property {boolean} contractCall - Mark it true if you are going to call this quote via your own contract, so we
+ * will filter routes that are not possible to be called from a contract
  *
  */
 export type QuoteRequest = {
@@ -22,6 +24,7 @@ export type QuoteRequest = {
   sourceContract?: string
   destinationContract?: string
   imMessage?: string
+  contractCall?: boolean
 }
 
 /**
