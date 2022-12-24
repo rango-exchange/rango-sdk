@@ -28,14 +28,16 @@ export type BlockchainMeta = {
  * @property {string} id - Unique identifier for the swapper
  * @property {string} title - Display name for the swapper
  * @property {string} logo - Icon logo for the swapper
- * @property {SwapperType[]} types - Type of the transaction supported by the swapper
+ * @property {string | null} swapperGroup - Group name for swapper
+ * @property {SwapperType[] | null} types - Type of the transaction supported by the swapper
  *
  */
 export type SwapperMetaDto = {
   id: string
   title: string
   logo: string
-  types: SwapperType[]
+  swapperGroup: string | null
+  types: SwapperType[] | null
 }
 
 /**
@@ -47,6 +49,7 @@ export type SwapperMetaDto = {
  * @property {string} name - The token name, e.g: Binance Pegged ETH
  * @property {number} decimals - Decimals of token in blockchain, example: 18
  * @property {string} image - Url of its image, example: https://api.rango.exchange/tokens/ETH/ETH.png
+ * @property {string | decimals} usdPrice - The token unit price
  *
  */
 export type Token = {
@@ -56,6 +59,7 @@ export type Token = {
   name: string
   decimals: number
   image: string
+  usdPrice: string | null
 }
 
 /**

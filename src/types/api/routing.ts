@@ -34,10 +34,12 @@ export type QuoteRequest = {
  * passed down to all other endpoints if this swap continues on. e.g. d10657ce-b13a-405c-825b-b47f8a5016ad
  * @property {string} resultType - Type of result (OK or error type)
  * @property {QuoteSimulationResult | null} route - Suggested route
+ * @property {string | null} error - Error message
  *
  */
 export type QuoteResponse = {
   requestId: string
   resultType: 'OK' | 'HIGH_IMPACT' | 'INPUT_LIMIT_ISSUE' | 'NO_ROUTE'
   route: QuoteSimulationResult | null
+  error: string | null
 }
