@@ -1,11 +1,12 @@
 import type { AssetWithTicker } from '../common'
+import { TransferBlockchainMeta } from '../meta'
 import { TransactionType } from '../transactions'
 
 /**
  * TransferTransaction. This type of transaction is used for non-EVM and non-Cosmos blockchains including BTC, LTC, BCH
  *
  * @property {TransactionType} type - This fields equals to TransactionType.TRANSFER for all TransferTransactions
- * @property {string} blockChain - The blockchain that this transaction will be executed in, same as the input blockchain of creating transaction
+ * @property {TransferBlockchainMeta} blockChain - The blockchain that this transaction will be executed in, same as the input blockchain of creating transaction
  * @property {string} method - The method that should be passed to wallet. examples: deposit, transfer
  * @property {AssetWithTicker} asset
  * @property {string} amount - The machine-readable amount of transaction, example: 1000000000000000000
@@ -17,7 +18,7 @@ import { TransactionType } from '../transactions'
  */
 export interface Transfer {
   type: TransactionType
-  blockChain: string
+  blockChain: TransferBlockchainMeta
   method: string
   asset: AssetWithTicker
   amount: string

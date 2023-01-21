@@ -95,10 +95,12 @@ export type AmountRestriction = {
 /**
  * A step of a multi-step swap route
  *
- * @property {string} outputAmount - The estimation of Rango from output amount of Y
- * @property {SwapperMetaDto} swapper - Swapper suggested for this path
  * @property {Token} from - Source token
  * @property {Token} to - Destination token
+ * @property {string} outputAmount - The estimation of Rango from output amount for Y
+ * @property {string} outputAmountMin - The estimation of Rango from output amount for Y
+ * @property {number | null} outputAmountUsd - The estimation of Rango from output usd value for Y
+ * @property {SwapperMetaDto} swapper - Swapper suggested for this path
  * @property {QuotePath[] | null} path - The internal routing of this step showing how the initial swap request will
  * be split and executed. This can be used for previewing purpose to give the user a sense of what's going to happen.
  * Null indicates that there is no internal mechanism and swapping is simple and straight-forward.
@@ -113,6 +115,8 @@ export type QuoteSimulationResult = {
   from: Token
   to: Token
   outputAmount: string
+  outputAmountMin: string
+  outputAmountUsd: number | null
   swapper: SwapperMetaDto
   path: QuotePath[] | null
   fee: SwapFee[]

@@ -3,5 +3,7 @@
 /lib
 /.env
 package-lock.json
+yarn-error.log
+yarn.lock
 react-app-env.d.ts
 .vscode

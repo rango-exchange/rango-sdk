@@ -32,7 +32,7 @@ export type QuoteRequest = {
  *
  * @property {string} requestId - The unique requestId which is generated for this request by the server. It should be
  * passed down to all other endpoints if this swap continues on. e.g. d10657ce-b13a-405c-825b-b47f8a5016ad
- * @property {string} resultType - Type of result (OK or error type)
+ * @property {string} resultType - Type of result for route (OK or error type)
  * @property {QuoteSimulationResult | null} route - Suggested route
  * @property {string | null} error - Error message
  *

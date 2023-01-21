@@ -1,2 +1,2 @@
 export { RangoClient } from './services'
-export * from './types'
+export * from './types/utils/errors'

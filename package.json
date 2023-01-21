@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk-basic",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Rango Exchange Basic SDK for dApps",
   "main": "lib/index.js",
   "types": "lib",
@@ -48,6 +48,8 @@
   "dependencies": {
     "axios": "^0.24.0",
     "bignumber.js": "^9.0.2",
+    "eth-rpc-errors": "^4.0.3",
+    "ethers": "^5.7.2",
     "uuid": "^8.3.2"
   },
   "publishConfig": {
