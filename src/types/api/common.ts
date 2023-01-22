@@ -105,6 +105,7 @@ export type AmountRestriction = {
  * be split and executed. This can be used for previewing purpose to give the user a sense of what's going to happen.
  * Null indicates that there is no internal mechanism and swapping is simple and straight-forward.
  * @property {SwapFee[]} fee - List of fees that are taken from user in this step
+ * @property {number | null} feeUsd - Amount of fee in usd
  * @property {AmountRestriction | null} amountRestriction - restrictions on input amount. This field is informational
  * and there is no need to apply it in client-side
  * @property {number} estimatedTimeInSeconds - The estimated time (in seconds) that this step might take, beware that
@@ -120,6 +121,7 @@ export type QuoteSimulationResult = {
   swapper: SwapperMetaDto
   path: QuotePath[] | null
   fee: SwapFee[]
+  feeUsd: number | null
   amountRestriction: AmountRestriction | null
   estimatedTimeInSeconds: number
 }

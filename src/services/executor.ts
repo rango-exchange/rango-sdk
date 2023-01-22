@@ -51,7 +51,7 @@ async function checkApprovalSync(
     } catch (err) {
       console.log('ignorinig error', { err })
     }
-    await sleep(3000)
+    await sleep(3_000)
   }
 }
 
@@ -80,7 +80,7 @@ export const checkTransactionStatusSync = async (
         return txStatus
       }
     }
-    await sleep(3000)
+    await sleep(3_000)
   }
 }
 
@@ -107,7 +107,7 @@ export const executeEvmRoute = async (
     const approveTxData = prepareEvmTransaction(evmTransaction, true)
     const approveTx = await signer.sendTransaction(approveTxData)
     approveTx.wait()
-    checkApprovalSync(requestId, approveTx.hash, client)
+    await checkApprovalSync(requestId, approveTx.hash, client)
   }
   signerChainId = await signer.getChainId()
   if (signerChainId !== txChainId) {
