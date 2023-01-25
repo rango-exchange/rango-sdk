@@ -17,7 +17,7 @@ export type UserWalletBlockchain = {
  * Full information of a path of multiple swaps that should be executed by user to swap X to Y
  *
  * @property {string} outputAmount - The estimation of Rango from output amount of Y
- * @property {ResultType} resultType
+ * @property {ResultType} resultType -
  * @property {SwapResult[]} swaps - List of required swaps to swap X to Y with the expected outputAmount
  *
  */
@@ -93,6 +93,8 @@ export type BlockchainValidationStatus = {
  * @property {boolean} [disableMultiStepTx] - It should be true when the client doesn't want multi-step transactions
  * @property {string[]} [blockchains] - List of all accepted blockchains, an empty list means no filter is required
  * @property {string[]} [swappers] - List of all accepted swappers, an empty list means no filter is required
+ * @property {string[]} [swapperGroups] -
+ * @property {string[]} [swappersGroupsExclude] -
  * @property {string[]} [transactionTypes] - List of all accepted transaction types including [EVM, TRANSFER, COSMOS]
  * @property {number} [maxLength] - Maximum number of steps in a route
  *
@@ -109,6 +111,8 @@ export type BestRouteRequest = {
   disableMultiStepTx?: boolean
   blockchains?: string[]
   swappers?: string[]
+  swapperGroups?: string[]
+  swappersGroupsExclude?: boolean
   transactionTypes?: TransactionType[]
   maxLength?: number
 }

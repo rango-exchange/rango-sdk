@@ -17,9 +17,9 @@ import { TransactionType } from 'common'
  *
  */
 export interface EvmTransaction {
-  type: TransactionType
+  type: TransactionType.EVM
   isApprovalTx: boolean
-  blockChain: string
+  blockChain: string // TODO DOUBLE CHECK
   from: string | null
   to: string
   data: string | null

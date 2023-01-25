@@ -1,5 +1,11 @@
-import { SwapperMetaDto, Token } from './meta'
-import { AmountRestrictionType, Asset, ExpenseType, SwapperType } from 'common'
+import {
+  AmountRestrictionType,
+  Asset,
+  ExpenseType,
+  SwapperMetaDto,
+  SwapperType,
+  Token,
+} from 'common'
 
 /**
  * A fee unit, including the type of asset and the amount of fee

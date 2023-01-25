@@ -1,4 +1,5 @@
 import { AssetWithTicker } from '../common'
+import { CosmosBlockchainMeta } from '../meta'
 import { TransactionType } from '../transactions'
 
 /**
@@ -57,15 +58,15 @@ export type CosmosRawTransferData = {
  * A Cosmos transaction
  *
  * @property {TransactionType} type - This fields equals to TransactionType.COSMOS for all CosmosTransactions
- * @property {string} blockChain - The blockchain that this transaction will be executed in, same as the input blockchain of creating transaction
+ * @property {CosmosBlockchainMeta} blockChain - The blockchain that this transaction will be executed in
  * @property {string} fromWalletAddress - Address of wallet that this transaction should be executed in, same as the create transaction request's input
  * @property {CosmosMessage} data - Transaction data
  * @property {CosmosRawTransferData} rawTransfer - An alternative to CosmosMessage object for the cosmos wallets that do not support generic Cosmos messages
  *
  */
 export interface CosmosTransaction {
-  type: TransactionType
-  blockChain: string
+  type: TransactionType.COSMOS
+  blockChain: CosmosBlockchainMeta // TODO DOUBLE CHECK Probably Wrong
   fromWalletAddress: string
   data: CosmosMessage
   rawTransfer: CosmosRawTransferData

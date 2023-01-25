@@ -1,3 +1,4 @@
+import { SolanaBlockchainMeta } from '../meta'
 import { TransactionType } from '../transactions'
 
 /**
@@ -29,7 +30,8 @@ export type SolanaSignature = {
 /**
  * This type of transaction is used for all solana transactions
  *
- * @property {string} blockChain, equals to SOLANA
+ * @property {TransactionType} type - This fields equals to TransactionType.SOLANA for all SolanaTransactions
+ * @property {SolanaBlockchainMeta} blockChain - The blockchain that this transaction will be executed in
  * @property {string} from, Source wallet address
  * @property {string} identifier, Transaction hash used in case of retry
  * @property {string | null} recentBlockhash, A recent blockhash
@@ -39,8 +41,8 @@ export type SolanaSignature = {
  *
  */
 export interface SolanaTransaction {
-  type: TransactionType
-  blockChain: string
+  type: TransactionType.SOLANA
+  blockChain: SolanaBlockchainMeta // TODO DOUBLE CHECK
   from: string
   identifier: string
   recentBlockhash: string | null

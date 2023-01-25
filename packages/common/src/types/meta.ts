@@ -1,4 +1,5 @@
-import { Asset, TransactionType } from 'common'
+import { Asset, SwapperType } from './common'
+import { TransactionType } from './transactions'
 
 /**
  * EVM Chain Info
@@ -21,6 +22,18 @@ export type EVMChainInfo = {
     decimals: number
   }
   rpcUrls: string[]
+  blockExplorerUrls: string[]
+  addressUrl: string
+  transactionUrl: string
+}
+
+type StarkNetChainInfo = {
+  chainName: string
+  nativeCurrency: {
+    name: string
+    symbol: string
+    decimals: number
+  }
   blockExplorerUrls: string[]
   addressUrl: string
   transactionUrl: string
@@ -82,6 +95,16 @@ export type CosmosChainInfo = {
   } | null
 }
 
+export interface CosmosInfo extends Omit<CosmosChainInfo, 'chianId'> {
+  experimental: boolean
+}
+
+export type BlockchainInfo =
+  | EVMChainInfo
+  | CosmosInfo
+  | StarkNetChainInfo
+  | null
+
 /**
  * Blockchain Meta Information
  *
@@ -97,10 +120,10 @@ export type CosmosChainInfo = {
  * @property {boolean} enabled - Is blockchain enabled or not in Rango
  * @property {TransactionType} type - Type of the blockchain
  * @property {string | null} chainId - e.g. "0xa86a" for Avax, "osmosis-1" for Osmosis, etc.
- * @property {EVMChainInfo | CosmosChainInfo | null} info - Chain specific information
+ * @property {BlockchainInfo} info - Chain specific information
  *
  */
-export type BlockchainMeta = {
+export type BlockchainMetaBase = {
   name: string
   shortName: string
   displayName: string
@@ -112,16 +135,120 @@ export type BlockchainMeta = {
   enabled: boolean
   type: TransactionType
   chainId: string | null
-  info: EVMChainInfo | CosmosChainInfo | null
+  info: BlockchainInfo
 }
+
+export interface EvmBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.EVM
+  chainId: string
+  info: EVMChainInfo
+}
+
+export interface CosmosBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.COSMOS
+  chainId: string
+  info: CosmosChainInfo
+}
+
+export interface TransferBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.TRANSFER
+  chainId: null
+  info: null
+}
+
+export interface StarknetBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.STARKNET
+  info: StarkNetChainInfo
+  chainId: string
+}
+
+export interface TronBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.TRON
+  info: null
+  chainId: string
+}
+
+export interface NativeBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.TRANSFER
+  info: null
+  chainId: null
+}
+
+export interface SolanaBlockchainMeta extends BlockchainMetaBase {
+  type: TransactionType.SOLANA
+  chainId: string
+  info: null
+}
+
+export const isEvmBlockchain = (
+  blockchainMeta: BlockchainMeta
+): blockchainMeta is EvmBlockchainMeta =>
+  blockchainMeta.type === TransactionType.EVM
+
+export const isCosmosBlockchain = (
+  blockchainMeta: BlockchainMeta
+): blockchainMeta is CosmosBlockchainMeta =>
+  blockchainMeta.type === TransactionType.COSMOS
+
+export const isSolanaBlockchain = (
+  blockchainMeta: BlockchainMeta
+): blockchainMeta is SolanaBlockchainMeta =>
+  blockchainMeta.type === TransactionType.SOLANA
+
+export const isNativeBlockchain = (
+  blockchainMeta: BlockchainMeta
+): blockchainMeta is NativeBlockchainMeta =>
+  blockchainMeta.type === TransactionType.TRANSFER
+
+export const isStarknetBlockchain = (
+  blockchainMeta: BlockchainMeta
+): blockchainMeta is StarknetBlockchainMeta =>
+  blockchainMeta.type === TransactionType.STARKNET
+
+export const isTronBlockchain = (
+  blockchainMeta: BlockchainMeta
+): blockchainMeta is TronBlockchainMeta =>
+  blockchainMeta.type === TransactionType.TRON
+
+export const evmBlockchains = (allBlockChains: BlockchainMeta[]) =>
+  allBlockChains.filter(isEvmBlockchain)
+
+export const solanaBlockchain = (allBlockChains: BlockchainMeta[]) =>
+  allBlockChains.filter(isSolanaBlockchain)
+
+export const starknetBlockchain = (allBlockChains: BlockchainMeta[]) =>
+  allBlockChains.filter(isStarknetBlockchain)
+
+export const tronBlockchain = (allBlockChains: BlockchainMeta[]) =>
+  allBlockChains.filter(isTronBlockchain)
+
+export const cosmosBlockchains = (allBlockChains: BlockchainMeta[]) =>
+  allBlockChains.filter(isCosmosBlockchain)
+
+export type BlockchainMeta =
+  | EvmBlockchainMeta
+  | CosmosBlockchainMeta
+  | TransferBlockchainMeta
+  | SolanaBlockchainMeta
+  | StarknetBlockchainMeta
+  | TronBlockchainMeta
 
 /**
  * Metadata of Swapper
+ *
+ * @property {string} id - Unique identifier for the swapper
+ * @property {string} title - Display name for the swapper
+ * @property {string} logo - Icon logo for the swapper
+ * @property {string} swapperGroup - Group of the swapper
+ * @property {SwapperType[]} types - Type of the transaction supported by the swapper
+ *
  */
 export type SwapperMetaDto = {
   id: string
   title: string
   logo: string
+  swapperGroup: string
+  types: SwapperType[]
 }
 
 /**
@@ -158,13 +285,11 @@ export type Token = {
  *
  * @property {BlockchainMeta[]} blockchains - List of all supported blockchains
  * @property {Token[]} tokens - List of all tokens
- * @property {Token[]} popularTokens - List of popular tokens, a subset of tokens field
  * @property {SwapperMetaDto[]} swappers - List of all DEXes & Bridges
  *
  */
 export type MetaResponse = {
   blockchains: BlockchainMeta[]
   tokens: Token[]
-  popularTokens: Token[]
   swappers: SwapperMetaDto[]
 }

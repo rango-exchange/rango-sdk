@@ -1,4 +1,6 @@
 export * from './balance'
 export * from './common'
+export * from './meta'
 export * from './transactions'
 export * from './txs'
+export * from './errors'

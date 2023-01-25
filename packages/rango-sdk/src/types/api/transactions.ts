@@ -79,22 +79,6 @@ export type CreateTransactionRequest = {
 }
 
 /**
- * Data of the event including its type and an extra metadata
- * It should be used when an error happened in client and we want to inform server that transaction failed,
- * E.g. user rejected the transaction dialog or and an RPC error raised during signing tx by user.
- *
- * @property {string} requestId - The requestId from best route endpoint
- * @property {string} eventType - Type of the event that happened, example: TX_FAIL
- * @property {[key: string]: string} data - A list of key-value for extra details
- *
- */
-export type ReportTransactionRequest = {
-  requestId: string
-  eventType: 'TX_FAIL'
-  data: { [key: string]: string }
-}
-
-/**
  * The swapper details for a transaction step
  */
 export type SwapperStatusStep = {
@@ -127,6 +111,7 @@ export type TransactionStatusResponse = {
   timestamp: number | null
   extraMessage: string | null
   outputAmount: string | null
+  // TODO
   newTx:
     | EvmTransaction
     | CosmosTransaction
@@ -145,6 +130,7 @@ export type TransactionStatusResponse = {
  * @property {boolean} isApproved - A flag which indicates that the approve tx is done or not
  *
  */
+// TODO UPDATED
 export type CheckApprovalResponse = {
   isApproved: boolean
 }
@@ -158,6 +144,7 @@ export type CheckApprovalResponse = {
  * @property {EvmTransaction | CosmosTransaction | Transfer | SolanaTransaction | null} transaction - Transaction's raw data
  *
  */
+// TODO ADD STARKNET TRON
 export type CreateTransactionResponse = {
   error: string | null
   ok: boolean
