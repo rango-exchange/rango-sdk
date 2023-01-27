@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk-basic",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Rango Exchange Basic SDK for dApps",
   "main": "lib/index.js",
   "types": "lib",
@@ -50,7 +50,8 @@
     "bignumber.js": "^9.0.2",
     "eth-rpc-errors": "^4.0.3",
     "ethers": "^5.7.2",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "rango-types": "^0.1.0"
   },
   "publishConfig": {
     "access": "public",

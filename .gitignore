@@ -7,3 +7,5 @@ yarn-error.log
 yarn.lock
 react-app-env.d.ts
 .vscode
+.yalc
+yalc.lock
