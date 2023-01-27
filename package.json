@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Rango Exchange SDK for dApps",
   "main": "lib/index.js",
   "types": "lib",
@@ -48,6 +48,7 @@
   "dependencies": {
     "axios": "^0.24.0",
     "bignumber.js": "^9.0.2",
+    "rango-types": "^0.1.0",
     "uuid": "^8.3.2"
   },
   "publishConfig": {
