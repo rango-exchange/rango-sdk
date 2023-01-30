@@ -1,20 +1,18 @@
 import './App.css';
 import {useEffect, useState} from "react"
 import {
-  BestRouteResponse,
-  CosmosTransaction,
+  BestRouteResponse, CosmosTransaction,
   MetaResponse,
   RangoClient,
   TransactionStatus,
   TransactionStatusResponse,
   WalletRequiredAssets
 } from "rango-sdk"
-import {cosmosTxToTerraTx, prettyAmount, sleep} from "./utils"
-import {ConnectType, useConnectedWallet, useWallet, WalletStatus} from "@terra-money/wallet-provider";
+import {executeCosmosTransaction, getKeplr, prettyAmount, sleep} from "./utils"
 
 
 export const App = () => {
-  const RANGO_API_KEY = '' // put your RANGO-API-KEY here
+  const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
 
   const rangoClient = new RangoClient(RANGO_API_KEY)
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
@@ -25,9 +23,6 @@ export const App = () => {
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
   const [loadingSwap, setLoadingSwap] = useState<boolean>(false)
   const [error, setError] = useState<string>("")
-  const { wallets, status, connect } = useWallet()
-  const terraWallet = useConnectedWallet()
-
 
   useEffect(() => {
     setLoadingMeta(true)
@@ -38,13 +33,38 @@ export const App = () => {
     })
   }, [])
 
-  const ustToken = tokensMeta?.tokens.find(t => t.blockchain === "TERRA" && t.address === null && t.symbol === 'UST')
-  const lunaToken = tokensMeta?.tokens.find(t => t.blockchain === "TERRA" && t.address === null && t.symbol === 'Luna')
+  const ustIbcAddress = 'ibc/be1bb42d4be3c30d50b68d7c41db4dfce9678e8ef8c539f6e6a9345048894fcc'
+  const ustTokenInOsmosis = tokensMeta?.tokens.find(t => t.blockchain === "OSMOSIS" && t.address === ustIbcAddress)
+  const osmoToken = tokensMeta?.tokens.find(t => t.blockchain === "OSMOSIS" && t.address === null && t.symbol === 'OSMO')
+
 
   const getUserWallet = async () => {
-    if (status === WalletStatus.WALLET_NOT_CONNECTED)
-      connect(ConnectType.EXTENSION)
-    return wallets[0].terraAddress
+    const cosmosPopularChains: { name: string; chainId: string }[] = [
+      { name: 'COSMOS', chainId: 'cosmoshub-4' },
+      { name: 'OSMOSIS', chainId: 'osmosis-1' },
+      { name: 'AKASH', chainId: 'akashnet-2', },
+      { name: 'SIF', chainId: 'sifchain-1' },
+      { name: 'IRIS', chainId: 'irishub-1' },
+      { name: 'CRYPTO_ORG', chainId: 'crypto-org-chain-mainnet-1' },
+      { name: 'PERSISTENCE', chainId: 'core-1' },
+      { name: 'REGEN', chainId: 'regen-1' },
+      { name: 'SENTINEL', chainId: 'sentinelhub-2' },
+      { name: 'TERRA', chainId: 'columbus-5' },
+    ]
+    const chainIds = cosmosPopularChains.map(chainInfo => chainInfo.chainId)
+    const keplr = await getKeplr()
+    if (!keplr) return []
+    await keplr.enable(chainIds)
+    let connectedWallets = []
+    for (let chain of cosmosPopularChains) {
+      const offlineSigner = await keplr.getOfflineSigner(chain.chainId)
+      const accounts = await offlineSigner?.getAccounts()
+      if (!!accounts && accounts.length > 0) {
+        const address = accounts.map((account: { address: string }) => { return account.address })
+        connectedWallets.push({ blockchain: chain.name, addresses: address, })
+      }
+    }
+    return connectedWallets
   }
 
   const swap = async () => {
@@ -52,15 +72,15 @@ export const App = () => {
     setBestRoute(null)
     setTxStatus(null)
     setRequiredAssets([])
-    let terraAddress = ''
+    let connectedWallets = []
     try {
-      terraAddress = await getUserWallet()
+      connectedWallets = await getUserWallet()
     } catch (err) {
-      setError('Error connecting to Terra Station. Please check Terra Station and try again.')
+      setError('Error connecting to Keplr. Please check Keplr and try again.')
       return
     }
 
-    if (!terraAddress) {
+    if (!connectedWallets || connectedWallets.length === 0) {
       setError(`Could not get wallet address.`)
       return
     }
@@ -68,15 +88,14 @@ export const App = () => {
       setError(`Set input amount`)
       return
     }
-    if (!ustToken || !lunaToken)
+    if (!ustTokenInOsmosis || !osmoToken)
       return
 
     setLoadingSwap(true)
 
-    const from = {blockchain: ustToken?.blockchain, symbol: ustToken?.symbol, address: ustToken.address}
-    const to = {blockchain: lunaToken?.blockchain, symbol: lunaToken?.symbol, address: lunaToken.address}
-    const connectedWallets = [{ blockchain: 'TERRA', addresses: [terraAddress] }]
-    const selectedWallets =  { TERRA: terraAddress }
+    const from = {blockchain: ustTokenInOsmosis?.blockchain, symbol: ustTokenInOsmosis?.symbol, address: ustTokenInOsmosis.address}
+    const to = {blockchain: osmoToken?.blockchain, symbol: osmoToken?.symbol, address: osmoToken.address}
+    const selectedWallets =  {OSMOSIS: connectedWallets.find((wallet) => wallet.blockchain === 'OSMOSIS')?.addresses[0] || '',}
 
     // If you just want to show route to user, set checkPrerequisites: false.
     // Also for multi steps swap, it is faster to get route first with {checkPrerequisites: false} and if users confirms.
@@ -85,10 +104,10 @@ export const App = () => {
       amount: inputAmount,
       affiliateRef: null,
       checkPrerequisites: true,
-      from,
-      to,
       connectedWallets,
+      from,
       selectedWallets,
+      to,
     })
     setBestRoute(bestRoute)
 
@@ -115,12 +134,6 @@ export const App = () => {
   }
 
   const executeRoute = async (routeResponse: BestRouteResponse) => {
-    if (!terraWallet) {
-      setError(`Terra wallet is null!`)
-      setLoadingSwap(false)
-      return
-    }
-
     // In multi step swaps, you should loop over routeResponse.route array and create transaction per each item
     let cosmosTransaction
     try {
@@ -134,10 +147,7 @@ export const App = () => {
       // in general case, you should check transaction type and call related provider to sign and send tx
       cosmosTransaction = transactionResponse.transaction as CosmosTransaction
 
-      const terraTx = await cosmosTxToTerraTx(cosmosTransaction)
-
-      const transactionResult = await terraWallet.post(terraTx)
-      const txHash = transactionResult.result.txhash
+      const txHash = await executeCosmosTransaction(cosmosTransaction)
       const txStatus = await checkTransactionStatusSync(txHash, routeResponse, rangoClient)
       console.log("transaction finished", {txStatus})
       setLoadingSwap(false)
@@ -184,7 +194,7 @@ export const App = () => {
       <div className="tokens-container">
         <div className="from">
           {loadingMeta && (<div className="loading"/>)}
-          {!loadingMeta && (<img src={ustToken?.image} alt="source coin" height="50px"/>)}
+          {!loadingMeta && (<img src={ustTokenInOsmosis?.image} alt="USDT" height="50px"/>)}
           <div>
             <input
               type="number"
@@ -197,8 +207,8 @@ export const App = () => {
               step="0.01"
             />
           </div>
-          <div className="symbol">{ustToken?.symbol}</div>
-          <div className="blockchain">from {ustToken?.blockchain}</div>
+          <div className="symbol">{ustTokenInOsmosis?.symbol}</div>
+          <div className="blockchain">from {ustTokenInOsmosis?.blockchain}</div>
         </div>
         <div className="swap-details-container">
           <div className="swap-details">
@@ -238,10 +248,10 @@ export const App = () => {
         </div>
         <div className="to">
           {loadingMeta && (<div className="loading"/>)}
-          {!loadingMeta && (<img src={lunaToken?.image} alt="destination coin" height="50px"/>)}
+          {!loadingMeta && (<img src={osmoToken?.image} alt="Matic" height="50px"/>)}
           <div className="amount green-text">{bestRoute?.result?.outputAmount || "?"}</div>
-          <div className="symbol">{lunaToken?.symbol}</div>
-          <div className="blockchain">to {lunaToken?.blockchain}</div>
+          <div className="symbol">{osmoToken?.symbol}</div>
+          <div className="blockchain">to {osmoToken?.blockchain}</div>
         </div>
       </div>
     </div>

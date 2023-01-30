@@ -9,6 +9,8 @@
 
 ```shell
   yarn add rango-sdk-basic
+  # or
+  npm install rango-sdk-basic --save
 ```
 
 ## Main SDK (Multi Step Tx)
@@ -20,6 +22,8 @@
 
 ```shell
   yarn add rango-sdk
+  # or
+  npm install rango-sdk --save
 ```
 
 ## Usage
