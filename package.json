@@ -2,9 +2,9 @@
   "name": "rango-sdk-basic",
   "version": "0.0.15",
   "description": "Rango Exchange Basic SDK for dApps",
-  "module": "dist/rango-sdk-basic.esm.js",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "module": "lib/rango-sdk-basic.esm.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rango-exchange/rango-sdk.git"
@@ -14,11 +14,12 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "tsdx build --tsconfig ./tsconfig.json",
+    "build": "tsdx build --tsconfig ./tsconfig.json && yarn mv:file lib",
     "watch": "tsdx watch",
     "format": "prettier --write ./src",
     "lint": "eslint */**/*.{js,ts} --quiet --fix",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "mv:file": "sh ./scripts/post-build.sh"
   },
   "keywords": [
     "Rango Exchange",
@@ -27,7 +28,7 @@
     "Multi-Chain"
   ],
   "files": [
-    "dist/**/*"
+    "lib/**/*"
   ],
   "author": "rango.exchange",
   "license": "GPL-3.0",
