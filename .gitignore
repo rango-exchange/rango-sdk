@@ -1,8 +1,10 @@
 .idea
 /node_modules
 /lib
+/dist
 /.env
 .package-lock.json
 yarn-error.log
 .yalc
 yalc.lock
+yarn.lock
