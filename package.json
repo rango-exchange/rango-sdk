@@ -1,10 +1,10 @@
 {
   "name": "rango-sdk-basic",
-  "version": "0.0.16",
+  "version": "0.0.15",
   "description": "Rango Exchange Basic SDK for dApps",
   "module": "dist/rango-sdk-basic.esm.js",
   "main": "dist/index.js",
-  "types": "dist",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rango-exchange/rango-sdk.git"
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",
     "@types/uuid": "^9.0.0",
+    "@types/node": "^18.11.18",
     "@typescript-eslint/eslint-plugin": "^5.9.1",
     "@typescript-eslint/parser": "^5.9.1",
     "eslint": "^8.33.0",
@@ -44,12 +45,11 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
-    "@types/node": "^18.11.18",
     "axios": "^1.2.6",
     "bignumber.js": "^9.1.1",
     "eth-rpc-errors": "^4.0.3",
     "ethers": "^5.7.2",
-    "rango-types": "^0.1.0",
+    "rango-types": "^0.1.1",
     "uuid": "^9.0.0"
   },
   "publishConfig": {
