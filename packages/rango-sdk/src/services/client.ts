@@ -1,6 +1,6 @@
 import { v4 } from 'uuid'
 
-import { httpService, ReportTransactionRequest } from 'common'
+import { httpService } from './httpService'
 import {
   MetaResponse,
   BestRouteRequest,
@@ -10,6 +10,7 @@ import {
   TransactionStatusResponse,
   CreateTransactionRequest,
   CreateTransactionResponse,
+  ReportTransactionRequest,
   WalletDetailsResponse,
 } from '../types'
 

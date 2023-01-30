@@ -3,10 +3,5 @@
   "compilerOptions": {
     "outDir": "lib/cjs",
     "module": "CommonJS"
-  },
-  "references": [
-    {
-      "path": "../common/tsconfig.json"
-    }
-  ]
+  }
 }

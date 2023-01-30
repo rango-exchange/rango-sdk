@@ -7,10 +7,6 @@
     "outDir": "lib",
     "rootDir": "./src"
   },
-  "include": ["./src/**/*", "./src/**/*.json"],
-  "references": [
-    {
-      "path": "../common/tsconfig.json"
-    }
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules", "**/__tests__/*"]
 }

@@ -1,6 +1,6 @@
 import { v4 } from 'uuid'
 
-import { httpService } from 'common'
+import { httpService } from './httpService'
 import {
   MetaResponse,
   QuoteRequest,
@@ -13,7 +13,12 @@ import {
   ReportTransactionRequest,
   WalletDetailsResponse,
   assetToString,
+  BlockchainMeta,
+  SwapperMetaDto,
 } from '../types'
+import { Signer } from 'ethers'
+import { executeEvmRoute as executeEvmRoute } from './executor'
+import { prettifyError } from '../utils/errors'
 
 type WalletAddress = { blockchain: string; address: string }
 
@@ -55,6 +60,20 @@ export class RangoClient {
   public async meta(): Promise<MetaResponse> {
     const axiosResponse = await httpService.get<MetaResponse>(
       `/basic/meta?apiKey=${this.apiKey}`
+    )
+    return axiosResponse.data
+  }
+
+  public async chains(): Promise<BlockchainMeta[]> {
+    const axiosResponse = await httpService.get<BlockchainMeta[]>(
+      `/basic/meta/blockchains?apiKey=${this.apiKey}`
+    )
+    return axiosResponse.data
+  }
+
+  public async swappers(): Promise<SwapperMetaDto[]> {
+    const axiosResponse = await httpService.get<SwapperMetaDto[]>(
+      `/basic/meta/swappers?apiKey=${this.apiKey}`
     )
     return axiosResponse.data
   }
@@ -157,5 +176,16 @@ export class RangoClient {
       }
     )
     return axiosResponse.data
+  }
+
+  public async executeEvmRoute(
+    signer: any,
+    route: SwapResponse
+  ): Promise<StatusResponse> {
+    try {
+      return await executeEvmRoute(this, signer as Signer, route)
+    } catch (error) {
+      throw prettifyError(error)
+    }
   }
 }

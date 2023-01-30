@@ -1,9 +1,10 @@
 {
   "name": "rango-sdk",
-  "version": "0.0.8",
+  "version": "0.0.10",
   "description": "Rango Exchange SDK for dApps",
+  "module": "lib/rango-sdk.esm.js",
   "main": "lib/index.js",
-  "types": "lib",
+  "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rango-exchange/rango-sdk.git"
@@ -13,12 +14,13 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "clean": "tsc --build --clean && rm -rf ./lib",
-    "test": "jest --config jestconfig.json",
-    "post:build": "node ../../scripts/frankBuild.js",
-    "build": "tsc --build --clean && tsc --build && tsc --build tsconfig.cjs.json && yarn post:build",
+    "clean": "rm -rf ./lib",
+    "build": "tsdx build --tsconfig ./tsconfig.json && yarn post:build",
+    "post:build": "yarn mv:file lib && node ../../scripts/frankBuild.js",
+    "watch": "tsdx watch",
     "lint": "eslint */**/*.{js,ts} -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
-    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore",
+    "mv:file": "sh ../../scripts/post-build.sh"
   },
   "keywords": [
     "Rango Exchange",
@@ -32,7 +34,10 @@
   "author": "rango.exchange",
   "license": "GPL-3.0",
   "dependencies": {
-    "uuid": "^8.3.2"
+    "axios": "^1.2.6",
+    "bignumber.js": "^9.1.1",
+    "rango-types": "^0.1.1",
+    "uuid": "^9.0.0"
   },
   "publishConfig": {
     "access": "public",
