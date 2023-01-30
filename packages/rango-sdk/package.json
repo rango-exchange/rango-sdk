@@ -16,7 +16,7 @@
   "scripts": {
     "clean": "rm -rf ./lib",
     "build": "tsdx build --tsconfig ./tsconfig.json && yarn post:build",
-    "post:build": "yarn mv:file lib && node ../../scripts/frankBuild.js",
+    "post:build": "yarn mv:file lib && node ../../scripts/frank-build.js",
     "watch": "tsdx watch",
     "lint": "eslint src -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore",
