@@ -1,6 +1,7 @@
 import { getMessageFromCode } from 'eth-rpc-errors'
 import { MetamaskErrorCodes } from '../types/utils/errors'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const prettifyError = (error: any) => {
   if (!error) return error
   if (error.code && (error.code === 'ACTION_REJECTED' || error.code === 4001))

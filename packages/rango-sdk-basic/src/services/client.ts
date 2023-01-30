@@ -46,11 +46,11 @@ export class RangoClient {
       this.deviceId = v4()
     }
     if (debug) {
-      httpService.interceptors.request.use((request: any) => {
+      httpService.interceptors.request.use((request) => {
         console.log('Starting Request', JSON.stringify(request, null, 2))
         return request
       })
-      httpService.interceptors.response.use((response: any) => {
+      httpService.interceptors.response.use((response) => {
         console.log('Response:', JSON.stringify(response, null, 2))
         return response
       })
@@ -179,6 +179,7 @@ export class RangoClient {
   }
 
   public async executeEvmRoute(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     signer: any,
     route: SwapResponse
   ): Promise<StatusResponse> {
