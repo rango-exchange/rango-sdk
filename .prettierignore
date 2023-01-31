@@ -3,3 +3,5 @@ node_modules
 yarn.lock
 package-lock.json
 public
+lib
+dist

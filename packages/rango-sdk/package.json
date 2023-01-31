@@ -1,0 +1,48 @@
+{
+  "name": "rango-sdk",
+  "version": "0.1.0",
+  "description": "Rango Exchange SDK for dApps",
+  "module": "lib/rango-sdk.esm.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rango-exchange/rango-sdk.git"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "bugs": {
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
+  },
+  "scripts": {
+    "clean": "rm -rf ./lib",
+    "build": "tsdx build --tsconfig ./tsconfig.json && yarn post:build",
+    "post:build": "yarn mv:file lib && node ../../scripts/frank-build.js",
+    "watch": "tsdx watch",
+    "lint": "eslint src -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore",
+    "mv:file": "sh ../../scripts/post-build.sh"
+  },
+  "keywords": [
+    "Rango Exchange",
+    "SDK",
+    "Cross-Chain",
+    "Multi-Chain"
+  ],
+  "files": [
+    "lib/**/*"
+  ],
+  "author": "rango.exchange",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "axios": "^1.2.6",
+    "bignumber.js": "^9.1.1",
+    "rango-types": "^0.1.2",
+    "uuid": "^9.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "branches": [
+      "master"
+    ]
+  }
+}
