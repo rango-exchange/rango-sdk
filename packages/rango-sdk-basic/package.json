@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk-basic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rango Exchange Basic SDK for dApps",
   "module": "lib/rango-sdk-basic.esm.js",
   "main": "lib/index.js",
@@ -9,7 +9,7 @@
     "type": "git",
     "url": "git+https://github.com/rango-exchange/rango-sdk.git"
   },
-  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "homepage": "https://github.com/rango-exchange/rango-sdk-basic",
   "bugs": {
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
@@ -26,7 +26,13 @@
     "Rango Exchange",
     "SDK",
     "Cross-Chain",
-    "Multi-Chain"
+    "Multi-Chain",
+    "Ethereum",
+    "Cosmos",
+    "Solana",
+    "Tron",
+    "Starknet",
+    "Aggregator"
   ],
   "files": [
     "lib/**/*"

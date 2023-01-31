@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rango Exchange SDK for dApps",
   "module": "lib/rango-sdk.esm.js",
   "main": "lib/index.js",
@@ -26,7 +26,13 @@
     "Rango Exchange",
     "SDK",
     "Cross-Chain",
-    "Multi-Chain"
+    "Multi-Chain",
+    "Ethereum",
+    "Cosmos",
+    "Solana",
+    "Tron",
+    "Starknet",
+    "Aggregator"
   ],
   "files": [
     "lib/**/*"
