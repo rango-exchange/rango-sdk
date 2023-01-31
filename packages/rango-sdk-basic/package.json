@@ -38,7 +38,7 @@
     "bignumber.js": "^9.1.1",
     "eth-rpc-errors": "^4.0.3",
     "ethers": "^5.7.2",
-    "rango-types": "^0.1.1",
+    "rango-types": "^0.1.2",
     "uuid": "^9.0.0"
   },
   "publishConfig": {
