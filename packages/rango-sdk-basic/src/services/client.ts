@@ -186,7 +186,18 @@ export class RangoClient {
     try {
       return await executeEvmRoute(this, signer as Signer, route)
     } catch (error) {
-      throw prettifyError(error)
+      const prettifiedError = prettifyError(error)
+      try {
+        const message = prettifiedError?.message || 'Error executing the route'
+        this.reportFailure({
+          requestId: route.requestId,
+          eventType: 'TX_FAIL',
+          reason: message,
+        })
+      } catch (err) {
+        console.log({ err })
+      }
+      throw prettifiedError
     }
   }
 }
