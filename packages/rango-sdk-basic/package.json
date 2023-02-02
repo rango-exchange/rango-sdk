@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk-basic",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Rango Exchange Basic SDK for dApps",
   "module": "lib/rango-sdk-basic.esm.js",
   "main": "lib/index.js",
@@ -14,9 +14,9 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "clean": "rm -rf ./lib",
+    "clean": "rm -rf ./lib && rm -rf ./dist",
     "build": "tsdx build --tsconfig ./tsconfig.json && yarn post:build",
-    "post:build": "yarn mv:file lib && node ../../scripts/frank-build.js",
+    "post:build": "yarn mv:file lib",
     "watch": "tsdx watch",
     "lint": "eslint src -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore",
@@ -44,7 +44,7 @@
     "bignumber.js": "^9.1.1",
     "eth-rpc-errors": "^4.0.3",
     "ethers": "^5.7.2",
-    "rango-types": "^0.1.2",
+    "rango-types": "^0.1.5",
     "uuid": "^9.0.0"
   },
   "publishConfig": {

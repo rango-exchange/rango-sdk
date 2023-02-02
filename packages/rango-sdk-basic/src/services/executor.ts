@@ -43,11 +43,16 @@ async function checkApprovalSync(
   requestId: string,
   txId: string,
   rangoClient: RangoClient
-) {
+): Promise<boolean> {
   while (true) {
     try {
       const approvalResponse = await rangoClient.isApproved(requestId, txId)
-      if (approvalResponse.isApproved) return true
+      if (approvalResponse?.isApproved) return true
+      if (
+        !approvalResponse?.isApproved &&
+        approvalResponse?.txStatus === TransactionStatus.FAILED
+      )
+        return false
     } catch (err) {
       console.log('ignorinig error', { err })
     }
@@ -96,6 +101,7 @@ export const executeEvmRoute = async (
   if (tx?.type !== TransactionType.EVM)
     throw new Error('Non Evm transactions are not supported yet.')
   const evmTransaction = tx as EvmTransaction
+  if (!evmTransaction) throw new Error('Transaction is null. Please try again!')
   const txChainId = parseInt(evmTransaction.blockChain.chainId || '-1')
   let signerChainId = await signer.getChainId()
   if (signerChainId !== txChainId) {
@@ -107,7 +113,12 @@ export const executeEvmRoute = async (
     const approveTxData = prepareEvmTransaction(evmTransaction, true)
     const approveTx = await signer.sendTransaction(approveTxData)
     approveTx.wait()
-    await checkApprovalSync(requestId, approveTx.hash, client)
+    const isApproved = await checkApprovalSync(
+      requestId,
+      approveTx.hash,
+      client
+    )
+    if (!isApproved) throw new Error('Error in approve transaction.')
   }
   signerChainId = await signer.getChainId()
   if (signerChainId !== txChainId) {
@@ -123,5 +134,7 @@ export const executeEvmRoute = async (
     mainTx.hash,
     client
   )
+  if (status.status !== TransactionStatus.SUCCESS)
+    throw new Error(`Cross-chain swap failed. ${status.error || ''}`)
   return status
 }
