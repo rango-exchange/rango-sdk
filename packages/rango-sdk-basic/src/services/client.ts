@@ -15,6 +15,7 @@ import {
   assetToString,
   BlockchainMeta,
   SwapperMetaDto,
+  RequestOptions,
 } from '../types'
 import { Signer } from 'ethers'
 import { executeEvmRoute as executeEvmRoute } from './executor'
@@ -57,28 +58,34 @@ export class RangoClient {
     }
   }
 
-  public async meta(): Promise<MetaResponse> {
+  public async meta(options?: RequestOptions): Promise<MetaResponse> {
     const axiosResponse = await httpService.get<MetaResponse>(
-      `/basic/meta?apiKey=${this.apiKey}`
+      `/basic/meta?apiKey=${this.apiKey}`,
+      { ...options }
     )
     return axiosResponse.data
   }
 
-  public async chains(): Promise<BlockchainMeta[]> {
+  public async chains(options?: RequestOptions): Promise<BlockchainMeta[]> {
     const axiosResponse = await httpService.get<BlockchainMeta[]>(
-      `/basic/meta/blockchains?apiKey=${this.apiKey}`
+      `/basic/meta/blockchains?apiKey=${this.apiKey}`,
+      { ...options }
     )
     return axiosResponse.data
   }
 
-  public async swappers(): Promise<SwapperMetaDto[]> {
+  public async swappers(options?: RequestOptions): Promise<SwapperMetaDto[]> {
     const axiosResponse = await httpService.get<SwapperMetaDto[]>(
-      `/basic/meta/swappers?apiKey=${this.apiKey}`
+      `/basic/meta/swappers?apiKey=${this.apiKey}`,
+      { ...options }
     )
     return axiosResponse.data
   }
 
-  public async quote(quoteRequest: QuoteRequest): Promise<QuoteResponse> {
+  public async quote(
+    quoteRequest: QuoteRequest,
+    options?: RequestOptions
+  ): Promise<QuoteResponse> {
     const body = {
       ...quoteRequest,
       from: assetToString(quoteRequest.from),
@@ -98,6 +105,7 @@ export class RangoClient {
       {
         params: body,
         headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
       }
     )
     return axiosResponse.data
@@ -105,30 +113,39 @@ export class RangoClient {
 
   public async isApproved(
     requestId: string,
-    txId: string
+    txId: string,
+    options?: RequestOptions
   ): Promise<CheckApprovalResponse> {
     const axiosResponse = await httpService.get<CheckApprovalResponse>(
       `/basic/is-approved?apiKey=${this.apiKey}`,
       {
         params: { requestId, txId },
         headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
       }
     )
     return axiosResponse.data
   }
 
-  public async status(statusRequest: StatusRequest): Promise<StatusResponse> {
+  public async status(
+    statusRequest: StatusRequest,
+    options?: RequestOptions
+  ): Promise<StatusResponse> {
     const axiosResponse = await httpService.get<StatusResponse>(
       `/basic/status?apiKey=${this.apiKey}`,
       {
         params: statusRequest,
         headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
       }
     )
     return axiosResponse.data
   }
 
-  public async swap(swapRequest: SwapRequest): Promise<SwapResponse> {
+  public async swap(
+    swapRequest: SwapRequest,
+    options?: RequestOptions
+  ): Promise<SwapResponse> {
     const body = {
       ...swapRequest,
       from: assetToString(swapRequest.from),
@@ -148,31 +165,36 @@ export class RangoClient {
       {
         params: body,
         headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
       }
     )
     return axiosResponse.data
   }
 
   public async reportFailure(
-    requestBody: ReportTransactionRequest
+    requestBody: ReportTransactionRequest,
+    options?: RequestOptions
   ): Promise<void> {
     await httpService.post(
       `/basic/report-tx?apiKey=${this.apiKey}`,
       requestBody,
       {
         headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
       }
     )
   }
 
   public async balance(
-    walletAddress: WalletAddress
+    walletAddress: WalletAddress,
+    options?: RequestOptions
   ): Promise<WalletDetailsResponse> {
     const axiosResponse = await httpService.get<WalletDetailsResponse>(
       `/basic/balance?apiKey=${this.apiKey}`,
       {
         params: walletAddress,
         headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
       }
     )
     return axiosResponse.data
