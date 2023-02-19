@@ -8,6 +8,10 @@
       name="description"
       content="Web site created using create-react-app"
     />
+    <script>
+      // Required by some npm packages
+      window.process = { browser: true, env: { ENVIRONMENT: 'BROWSER' } };
+  </script>
     <style>
       table td {
         border: 1px solid gray;

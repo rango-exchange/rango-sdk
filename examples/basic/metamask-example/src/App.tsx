@@ -1,19 +1,22 @@
 import './App.css'
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import {
   EvmTransaction,
-  MetaResponse,
   RangoClient,
   TransactionStatus,
   QuoteResponse,
   StatusResponse,
   Asset,
   SwapResponse,
+  BlockchainMeta,
+  Token,
+  MetaResponse,
 } from 'rango-sdk-basic'
 import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
 import BigNumber from 'bignumber.js'
-import React from 'react'
+import { Button, VerticalSwapIcon } from '@rangodev/ui'
+import { TokenInfo } from './components/TokenInfo'
 
 declare let window: any
 
@@ -21,7 +24,10 @@ export const App = () => {
   const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
 
   const rangoClient = useMemo(() => new RangoClient(RANGO_API_KEY), [])
-
+  const [fromChain, setFromChain] = useState<BlockchainMeta | null>(null)
+  const [fromToken, setFromToken] = useState<Token | null>(null)
+  const [toChain, setToChain] = useState<BlockchainMeta | null>(null)
+  const [toToken, setToToken] = useState<Token | null>(null)
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
   const [inputAmount, setInputAmount] = useState<string>('0.01')
   const [quote, setQuote] = useState<QuoteResponse | null>()
@@ -34,6 +40,8 @@ export const App = () => {
     setLoadingMeta(true)
     // Meta provides all blockchains, tokens and swappers information supported by Rango
     rangoClient.meta().then((meta) => {
+      console.log({ meta })
+
       setTokenMeta(meta)
       setLoadingMeta(false)
     })
@@ -70,13 +78,6 @@ export const App = () => {
   // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d')
 
   // aggregator sample 4: BSC.BNB to FTM.FTM
-  const sourceChainId = 250
-  const sourceToken = tokensMeta?.tokens.find(
-    (t) => t.blockchain === 'FANTOM' && t.address === null
-  )
-  const destinationToken = tokensMeta?.tokens.find(
-    (t) => t.blockchain === 'BSC' && t.address === null
-  )
 
   const getUserWallet = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
@@ -105,12 +106,28 @@ export const App = () => {
       )
       return
     }
-
+    if (!fromChain) {
+      setError(`Please select source blockchain.`)
+      return
+    }
+    if (!fromToken) {
+      setError(`Please select source token.`)
+      return
+    }
+    if (!toChain) {
+      setError(`Please select destination blockchain.`)
+      return
+    }
+    if (!toToken) {
+      setError(`Please select destination token.`)
+      return
+    }
     if (
       window.ethereum.chainId &&
-      parseInt(window.ethereum.chainId) !== sourceChainId
+      fromChain?.chainId &&
+      parseInt(window.ethereum.chainId) !== parseInt(fromChain?.chainId)
     ) {
-      setError(`Change meta mask network to '${sourceToken?.blockchain}'.`)
+      setError(`Change meta mask network to '${fromChain?.name}'.`)
       return
     }
 
@@ -122,21 +139,20 @@ export const App = () => {
       setError(`Set input amount`)
       return
     }
-    if (!sourceToken || !destinationToken) return
 
     setLoadingSwap(true)
     const from: Asset = {
-      blockchain: sourceToken?.blockchain,
-      symbol: sourceToken?.symbol,
-      address: sourceToken.address,
+      blockchain: fromToken?.blockchain as string,
+      symbol: fromToken?.symbol as string,
+      address: fromToken?.address as string,
     }
     const to: Asset = {
-      blockchain: destinationToken?.blockchain,
-      symbol: destinationToken?.symbol,
-      address: destinationToken.address,
+      blockchain: toToken?.blockchain as string,
+      symbol: toToken?.symbol as string,
+      address: toToken?.address as string,
     }
     const amount: string = new BigNumber(inputAmount)
-      .shiftedBy(sourceToken.decimals)
+      .shiftedBy(fromToken?.decimals as number)
       .toString()
 
     const quoteResponse = await rangoClient.quote({
@@ -177,7 +193,7 @@ export const App = () => {
       window.ethereum as any
     )
     const signer = provider.getSigner()
-    if (!sourceToken || !destinationToken) return
+    if (!fromToken || !toToken) return
 
     let swapResponse: SwapResponse | null = null
     try {
@@ -295,6 +311,13 @@ export const App = () => {
     }
   }
 
+  const swithFromAndTo = () => {
+    setFromChain(toChain)
+    setFromToken(toToken)
+    setToChain(fromChain)
+    setToToken(fromToken)
+  }
+
   return (
     <div className="container">
       {!RANGO_API_KEY && (
@@ -303,31 +326,32 @@ export const App = () => {
         </div>
       )}
       <div className="tokens-container">
-        <div className="from">
-          {loadingMeta && <div className="loading" />}
-          {!loadingMeta && (
-            <img src={sourceToken?.image} alt="USDT" height="50px" />
-          )}
-          <div>
-            <input
-              type="number"
-              className="from-amount"
-              value={inputAmount}
-              onChange={(e) => {
-                setInputAmount(e.target.value)
-              }}
-              min="0.01"
-              step="0.01"
-            />
-          </div>
-          <div className="symbol">from</div>
-          <div className="blockchain">
-            {sourceToken?.blockchain}.{sourceToken?.symbol}
-          </div>
-        </div>
+        <TokenInfo
+          type="From"
+          chain={fromChain}
+          setToken={setFromToken}
+          setChain={setFromChain}
+          token={fromToken}
+          loading={loadingMeta}
+          setInputAmount={setInputAmount}
+          blockchains={tokensMeta?.blockchains || []}
+          tokens={tokensMeta?.tokens || []}
+        />
+        <Button variant="ghost" onClick={swithFromAndTo}>
+          <VerticalSwapIcon size={36} />
+        </Button>
+        <TokenInfo
+          chain={toChain}
+          token={toToken}
+          setToken={setToToken}
+          setChain={setToChain}
+          type="To"
+          blockchains={tokensMeta?.blockchains || []}
+          tokens={tokensMeta?.tokens || []}
+          loading={loadingMeta}
+        />
         <div className="swap-details-container">
           <div className="swap-details">
-            <img src="./img/arrow.png" className="arrow" alt="to" />
             {quote && (
               <div className="green-text">
                 {quote.route?.swapper && (
@@ -352,9 +376,9 @@ export const App = () => {
                           <td>expected output</td>
                           <td>
                             {new BigNumber(quote?.route?.outputAmount || '0')
-                              .shiftedBy(-(destinationToken?.decimals || 0))
+                              .shiftedBy(-(toToken?.decimals || 0))
                               .toString()}{' '}
-                            {destinationToken?.symbol}
+                            {toToken?.symbol}
                           </td>
                         </tr>
                         <tr>
@@ -375,7 +399,7 @@ export const App = () => {
                           <td>output</td>
                           <td>
                             {new BigNumber(txStatus.output?.amount || '0')
-                              .shiftedBy(-(destinationToken?.decimals || 0))
+                              .shiftedBy(-(toToken?.decimals || 0))
                               .toString() || '?'}{' '}
                             {txStatus.output?.receivedToken?.symbol || ''}{' '}
                             {txStatus.output?.type || ''}
@@ -447,16 +471,6 @@ export const App = () => {
           >
             swap
           </button>
-        </div>
-        <div className="to">
-          {loadingMeta && <div className="loading" />}
-          {!loadingMeta && (
-            <img src={destinationToken?.image} alt="Matic" height="50px" />
-          )}
-          <div className="symbol">to</div>
-          <div className="blockchain">
-            {destinationToken?.blockchain}.{destinationToken?.symbol}
-          </div>
         </div>
       </div>
     </div>

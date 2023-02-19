@@ -1,96 +1,99 @@
 body {
-    text-align: center;
+  text-align: center;
 }
 
 .green-text {
-    color: darkgreen;
+  color: darkgreen;
 }
 
 .red-text {
-    color: darkred;
+  color: darkred;
 }
 
 button:hover {
-    cursor: pointer;
+  cursor: pointer;
 }
 
-.container, .swap-details {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+.container,
+.swap-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .swap-details-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
 }
 
 .container {
-    background-color: gainsboro;
-    padding: 2rem;
-    display: flex;
+  background-color: gainsboro;
+  padding: 2rem;
+  display: flex;
 }
 
 .tokens-container {
-    display: flex;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
 }
 
 .from,
 .to {
-    margin: 6rem;
+  margin: 6rem;
 }
 
 .arrow {
-    margin-top: 3rem;
-    width: 100px;
+  margin-top: 3rem;
+  width: 100px;
 }
 
 .failure {
-    width: 40px;
+  width: 40px;
 }
 
 .success {
-    width: 50px;
+  width: 50px;
 }
 
 .from-amount {
-    width: 4rem;
+  width: 4rem;
 }
 
 #swap {
-    width: 4rem;
+  width: 4rem;
 }
 
 .loading {
-    display: inline-block;
-    width: 40px;
-    height: 40px;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
 }
 
 .loading:after {
-    content: ' ';
-    display: block;
-    width: 32px;
-    height: 32px;
-    margin: 4px;
-    border-radius: 50%;
-    border: 3px solid #000;
-    border-color: #000 transparent #000 transparent;
-    animation: loading 1.2s linear infinite;
+  content: ' ';
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  border-radius: 50%;
+  border: 3px solid #000;
+  border-color: #000 transparent #000 transparent;
+  animation: loading 1.2s linear infinite;
 }
 
 @keyframes loading {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-message {
-    color: red;
+  color: red;
 }
