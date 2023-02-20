@@ -1,4 +1,4 @@
-import { v4 } from 'uuid'
+import uuid from 'uuid-random'
 
 import { httpService } from './httpService'
 import {
@@ -36,15 +36,15 @@ export class RangoClient {
         if (deviceId) {
           this.deviceId = deviceId
         } else {
-          const generatedId = v4()
+          const generatedId = uuid()
           localStorage.setItem('deviceId', generatedId)
           this.deviceId = generatedId
         }
       } else {
-        this.deviceId = v4()
+        this.deviceId = uuid()
       }
     } catch (e) {
-      this.deviceId = v4()
+      this.deviceId = uuid()
     }
     if (debug) {
       httpService.interceptors.request.use((request) => {
