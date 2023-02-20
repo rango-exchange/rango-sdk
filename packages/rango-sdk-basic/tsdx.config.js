@@ -4,7 +4,8 @@ module.exports = {
   rollup(config, opts) {
     // https://github.com/jaredpalmer/tsdx/issues/179#issuecomment-525306272
     config.external = (id) => {
-      if (id !== 'axios' && id !== 'eth-rpc-errors') return false
+      if (id !== 'axios' && id !== 'eth-rpc-errors' && id !== 'uuid-random')
+        return false
       return true
     }
     // https://github.com/jaredpalmer/tsdx/issues/981#issuecomment-789920054
