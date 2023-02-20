@@ -16,6 +16,7 @@ import {
   BlockchainMeta,
   SwapperMeta,
   RequestOptions,
+  MessagingProtocolsResponse,
 } from '../types'
 import { Signer } from 'ethers'
 import { executeEvmRoute as executeEvmRoute } from './executor'
@@ -77,6 +78,16 @@ export class RangoClient {
   public async swappers(options?: RequestOptions): Promise<SwapperMeta[]> {
     const axiosResponse = await httpService.get<SwapperMeta[]>(
       `/basic/meta/swappers?apiKey=${this.apiKey}`,
+      { ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async messagingProtocols(
+    options?: RequestOptions
+  ): Promise<MessagingProtocolsResponse> {
+    const axiosResponse = await httpService.get<MessagingProtocolsResponse>(
+      `/basic/meta/messaging-protocols?apiKey=${this.apiKey}`,
       { ...options }
     )
     return axiosResponse.data
