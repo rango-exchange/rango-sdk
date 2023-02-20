@@ -14,7 +14,7 @@ import {
   WalletDetailsResponse,
   assetToString,
   BlockchainMeta,
-  SwapperMetaDto,
+  SwapperMeta,
   RequestOptions,
 } from '../types'
 import { Signer } from 'ethers'
@@ -74,8 +74,8 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async swappers(options?: RequestOptions): Promise<SwapperMetaDto[]> {
-    const axiosResponse = await httpService.get<SwapperMetaDto[]>(
+  public async swappers(options?: RequestOptions): Promise<SwapperMeta[]> {
+    const axiosResponse = await httpService.get<SwapperMeta[]>(
       `/basic/meta/swappers?apiKey=${this.apiKey}`,
       { ...options }
     )
