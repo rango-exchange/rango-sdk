@@ -1799,10 +1799,10 @@ queue-microtask@^1.2.2:
   resolved "https://registry.yarnpkg.com/queue-microtask/-/queue-microtask-1.2.3.tgz#4929228bbc724dfac43e0efb058caf7b6cfb6243"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
 
-rango-types@^0.1.11:
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.11.tgz#5dd869bf877434ad4485d6d15bbb11806e4e04e9"
-  integrity sha512-r+5vEqefHbgaJKSeZTNBnatMONlCQgH9f4I4/9dlKI8fCzkTlzC0VthxbHv+9twYNcnQ0lBljuM5FPAoOvYGlQ==
+rango-types@^0.1.12:
+  version "0.1.13"
+  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.13.tgz#763ecda9a7a6535930d895a1ed66d592f2c2ed73"
+  integrity sha512-+Ffw7wWJ5j7IloFvoaNvlNn4vVo4Q+1v2+GHPFDPGzJhr5pJAG25JTmeGcPvfxfgxJ4VXB6vax4V84FkAfCvWw==
 
 regexp.prototype.flags@^1.4.3:
   version "1.4.3"
@@ -2032,10 +2032,10 @@ uri-js@^4.2.2:
   dependencies:
     punycode "^2.1.0"
 
-uuid@^9.0.0:
-  version "9.0.0"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-9.0.0.tgz#592f550650024a38ceb0c562f2f6aa435761efb5"
-  integrity sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==
+uuid-random@^1.3.2:
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/uuid-random/-/uuid-random-1.3.2.tgz#96715edbaef4e84b1dcf5024b00d16f30220e2d0"
+  integrity sha512-UOzej0Le/UgkbWEO8flm+0y+G+ljUon1QWTEZOq1rnMAsxo2+SckbiZdKzAHHlVh6gJqI1TjC/xwgR50MuCrBQ==
 
 which-boxed-primitive@^1.0.2:
   version "1.0.2"
