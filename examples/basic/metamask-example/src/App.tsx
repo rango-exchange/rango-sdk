@@ -23,7 +23,7 @@ export const App = () => {
   const rangoClient = useMemo(() => new RangoClient(RANGO_API_KEY), [])
 
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
-  const [inputAmount, setInputAmount] = useState<string>('0.01')
+  const [inputAmount, setInputAmount] = useState<string>('100')
   const [quote, setQuote] = useState<QuoteResponse | null>()
   const [txStatus, setTxStatus] = useState<StatusResponse | null>(null)
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
@@ -181,19 +181,6 @@ export const App = () => {
 
     let swapResponse: SwapResponse | null = null
     try {
-      console.log({
-        from,
-        to,
-        amount: inputAmount,
-        fromAddress: fromAddress,
-        toAddress: fromAddress,
-        disableEstimate: false,
-        referrerAddress: null,
-        referrerFee: null,
-        slippage: '1.0',
-        // swappers: ['cBridge v2.0', 'OneInchPolygon'],
-        messagingProtocols: ['axelar', 'cbridge'],
-      })
       swapResponse = await rangoClient.swap({
         from,
         to,
