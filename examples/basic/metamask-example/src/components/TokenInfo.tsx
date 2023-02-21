@@ -121,7 +121,9 @@ export function TokenInfo(props: PropTypes) {
         {type === 'From' && (
           <TextField
             type="number"
-            onChange={(e) => setInputAmount && setInputAmount(e.target.value)}
+            onChange={(e: any) =>
+              setInputAmount && setInputAmount(e.target.value)
+            }
             size="large"
             style={{
               width: '70%',
@@ -147,12 +149,11 @@ export function TokenInfo(props: PropTypes) {
                   isEvmBlockchain(chain)
                 ) as any
               }
+              hasHeader={false}
               selected={chain as any}
               onChange={(chain: any) => setChain(chain)}
-              type={'Source'}
-              onBack={function (): void {
-                throw new Error('Function not implemented.')
-              }}
+              loadingStatus="success"
+              listContainerStyle={{ height: 'auto', paddingBottom: 20 }}
             />
           ) : (
             modal.isToken && (
@@ -164,16 +165,16 @@ export function TokenInfo(props: PropTypes) {
                       ) as any)
                     : []
                 }
-                onBack={() => console.log('back')}
+                hasHeader={false}
                 onChange={(token: any) => setToken(token)}
                 selected={token as any}
-                type={type === 'From' ? 'Source' : 'Destination'}
               />
             )
           )
         }
         title={`Select ${type === 'From' ? 'Source' : 'Destination'} Network`}
-        containerStyle={{ width: '560px', height: '655px' }}
+        containerStyle={{ width: '560px', height: '610px' }}
+        contentStyle={{ overflowY: 'hidden' }}
       />
     </Box>
   )
