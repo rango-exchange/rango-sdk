@@ -30,7 +30,7 @@ export const App = () => {
   const [toChain, setToChain] = useState<BlockchainMeta | null>(null)
   const [toToken, setToToken] = useState<Token | null>(null)
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
-  const [inputAmount, setInputAmount] = useState<string>('0.01')
+  const [inputAmount, setInputAmount] = useState<string>('100')
   const [quote, setQuote] = useState<QuoteResponse | null>()
   const [txStatus, setTxStatus] = useState<StatusResponse | null>(null)
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
@@ -351,6 +351,8 @@ export const App = () => {
           swappers={tokensMeta?.swappers || []}
           disabledLiquiditySources={disabledLiquiditySources}
         />
+
+        <Button></Button>
         <TokenInfo
           type="From"
           chain={fromChain}

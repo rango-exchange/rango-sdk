@@ -1,4 +1,4 @@
-import { v4 } from 'uuid'
+import uuid from 'uuid-random'
 
 import { httpService } from './httpService'
 import {
@@ -14,8 +14,9 @@ import {
   WalletDetailsResponse,
   assetToString,
   BlockchainMeta,
-  SwapperMetaDto,
+  SwapperMeta,
   RequestOptions,
+  MessagingProtocolsResponse,
 } from '../types'
 import { Signer } from 'ethers'
 import { executeEvmRoute as executeEvmRoute } from './executor'
@@ -36,15 +37,15 @@ export class RangoClient {
         if (deviceId) {
           this.deviceId = deviceId
         } else {
-          const generatedId = v4()
+          const generatedId = uuid()
           localStorage.setItem('deviceId', generatedId)
           this.deviceId = generatedId
         }
       } else {
-        this.deviceId = v4()
+        this.deviceId = uuid()
       }
     } catch (e) {
-      this.deviceId = v4()
+      this.deviceId = uuid()
     }
     if (debug) {
       httpService.interceptors.request.use((request) => {
@@ -74,9 +75,19 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async swappers(options?: RequestOptions): Promise<SwapperMetaDto[]> {
-    const axiosResponse = await httpService.get<SwapperMetaDto[]>(
+  public async swappers(options?: RequestOptions): Promise<SwapperMeta[]> {
+    const axiosResponse = await httpService.get<SwapperMeta[]>(
       `/basic/meta/swappers?apiKey=${this.apiKey}`,
+      { ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async messagingProtocols(
+    options?: RequestOptions
+  ): Promise<MessagingProtocolsResponse> {
+    const axiosResponse = await httpService.get<MessagingProtocolsResponse>(
+      `/basic/meta/messaging-protocols?apiKey=${this.apiKey}`,
       { ...options }
     )
     return axiosResponse.data
