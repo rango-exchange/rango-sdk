@@ -17,6 +17,7 @@ import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
 import BigNumber from 'bignumber.js'
 import { Button, VerticalSwapIcon } from '@rangodev/ui'
 import { TokenInfo } from './components/TokenInfo'
+import { LiquiditySources } from './components/LiquiditySources'
 
 declare let window: any
 
@@ -35,7 +36,9 @@ export const App = () => {
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
   const [loadingSwap, setLoadingSwap] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
-
+  const [disabledLiquiditySources, setDisabledLiquiditySources] = useState<
+    string[]
+  >([])
   useEffect(() => {
     setLoadingMeta(true)
     // Meta provides all blockchains, tokens and swappers information supported by Rango
@@ -154,12 +157,14 @@ export const App = () => {
     const amount: string = new BigNumber(inputAmount)
       .shiftedBy(fromToken?.decimals as number)
       .toString()
-
+    const allSwappers = tokensMeta?.swappers.map((item) => item.title) || []
     const quoteResponse = await rangoClient.quote({
       amount,
       from,
       to,
-      // swappers: ['cBridge v2.0', 'OneInchPolygon'],
+      swappers: allSwappers.filter(
+        (swapper) => !disabledLiquiditySources.includes(swapper)
+      ),
       // messagingProtocols: ['axelar', 'cbridge'],
       // sourceContract: "0x123...",
       // destinationContract: "0x123...",
@@ -194,6 +199,7 @@ export const App = () => {
     )
     const signer = provider.getSigner()
     if (!fromToken || !toToken) return
+    const allSwappers = tokensMeta?.swappers.map((item) => item.title) || []
 
     let swapResponse: SwapResponse | null = null
     try {
@@ -207,7 +213,9 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        // swappers: ['cBridge v2.0', 'OneInchPolygon'],
+        swappers: allSwappers.filter(
+          (swapper) => !disabledLiquiditySources.includes(swapper)
+        ),
         messagingProtocols: ['axelar', 'cbridge'],
       })
       swapResponse = await rangoClient.swap({
@@ -220,7 +228,9 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        // swappers: ['cBridge v2.0', 'OneInchPolygon'],
+        swappers: allSwappers.filter(
+          (swapper) => !disabledLiquiditySources.includes(swapper)
+        ),
         // messagingProtocols: ['axelar', 'cbridge'],
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
@@ -318,6 +328,15 @@ export const App = () => {
     setToToken(fromToken)
   }
 
+  const toggleLiquiditySource = (name: string) => {
+    const result = disabledLiquiditySources.includes(name)
+      ? disabledLiquiditySources.filter(
+          (liquiditySource) => liquiditySource !== name
+        )
+      : disabledLiquiditySources.concat(name)
+    setDisabledLiquiditySources(result)
+  }
+
   return (
     <div className="container">
       {!RANGO_API_KEY && (
@@ -326,6 +345,12 @@ export const App = () => {
         </div>
       )}
       <div className="tokens-container">
+        <LiquiditySources
+          loading={loadingMeta}
+          toggleLiquiditySource={toggleLiquiditySource}
+          swappers={tokensMeta?.swappers || []}
+          disabledLiquiditySources={disabledLiquiditySources}
+        />
         <TokenInfo
           type="From"
           chain={fromChain}

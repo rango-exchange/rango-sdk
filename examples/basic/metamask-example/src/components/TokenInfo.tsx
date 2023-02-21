@@ -8,6 +8,7 @@ import {
   TokenSelector,
   Typography,
 } from '@rangodev/ui'
+import { isEvmBlockchain } from 'rango-sdk'
 import { BlockchainMeta, Token } from 'rango-sdk-basic/lib'
 
 import { useState } from 'react'
@@ -141,7 +142,11 @@ export function TokenInfo(props: PropTypes) {
         content={
           modal.isChain ? (
             <BlockchainSelector
-              list={blockchains as any}
+              list={
+                blockchains.filter((chain: any) =>
+                  isEvmBlockchain(chain)
+                ) as any
+              }
               selected={chain as any}
               onChange={(chain: any) => setChain(chain)}
               type={'Source'}
@@ -169,7 +174,7 @@ export function TokenInfo(props: PropTypes) {
         }
         title={`Select ${type === 'From' ? 'Source' : 'Destination'} Network`}
         containerStyle={{ width: '560px', height: '655px' }}
-      ></Modal>
+      />
     </Box>
   )
 }
