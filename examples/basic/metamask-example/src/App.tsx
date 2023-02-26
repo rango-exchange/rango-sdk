@@ -15,7 +15,14 @@ import {
 } from 'rango-sdk-basic'
 import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
 import BigNumber from 'bignumber.js'
-import { Button, VerticalSwapIcon } from '@rangodev/ui'
+import {
+  Button,
+  VerticalSwapIcon,
+  Modal,
+  CheckIcon,
+  Typography,
+  Spacer,
+} from '@rangodev/ui'
 import { TokenInfo } from './components/TokenInfo'
 import { LiquiditySources } from './components/LiquiditySources'
 
@@ -36,6 +43,10 @@ export const App = () => {
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
   const [loadingSwap, setLoadingSwap] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
+  const [open, setOpen] = useState<boolean>(false)
+  const [protocols, setProtocols] = useState<string[]>([])
+  const [selectedProtocols, setSelectedProtocols] = useState<string[]>([])
+
   const [disabledLiquiditySources, setDisabledLiquiditySources] = useState<
     string[]
   >([])
@@ -43,10 +54,12 @@ export const App = () => {
     setLoadingMeta(true)
     // Meta provides all blockchains, tokens and swappers information supported by Rango
     rangoClient.meta().then((meta) => {
-      console.log({ meta })
-
       setTokenMeta(meta)
       setLoadingMeta(false)
+    })
+    rangoClient.messagingProtocols().then((res) => {
+      const protocols = res.protocols.map((p) => p.id)
+      setProtocols(protocols)
     })
   }, [rangoClient])
 
@@ -91,7 +104,6 @@ export const App = () => {
   const swap = async () => {
     setError('')
     setQuote(null)
-    setTxStatus(null)
     let userAddress = ''
     try {
       userAddress = await getUserWallet()
@@ -125,13 +137,21 @@ export const App = () => {
       setError(`Please select destination token.`)
       return
     }
+
     if (
       window.ethereum.chainId &&
       fromChain?.chainId &&
       parseInt(window.ethereum.chainId) !== parseInt(fromChain?.chainId)
     ) {
-      setError(`Change meta mask network to '${fromChain?.name}'.`)
-      return
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${Number(fromChain.chainId).toString(16)}` }],
+        })
+      } catch (e) {
+        setError(`Change meta mask network to '${fromChain?.name}'.`)
+        return
+      }
     }
 
     if (!userAddress) {
@@ -157,15 +177,12 @@ export const App = () => {
     const amount: string = new BigNumber(inputAmount)
       .shiftedBy(fromToken?.decimals as number)
       .toString()
-    const allSwappers = tokensMeta?.swappers.map((item) => item.title) || []
     const quoteResponse = await rangoClient.quote({
       amount,
       from,
       to,
-      swappers: allSwappers.filter(
-        (swapper) => !disabledLiquiditySources.includes(swapper)
-      ),
-      // messagingProtocols: ['axelar', 'cbridge'],
+      swappers: disabledLiquiditySources,
+      messagingProtocols: selectedProtocols,
       // sourceContract: "0x123...",
       // destinationContract: "0x123...",
       // imMessage: "0x"
@@ -199,25 +216,9 @@ export const App = () => {
     )
     const signer = provider.getSigner()
     if (!fromToken || !toToken) return
-    const allSwappers = tokensMeta?.swappers.map((item) => item.title) || []
 
     let swapResponse: SwapResponse | null = null
     try {
-      console.log({
-        from,
-        to,
-        amount: inputAmount,
-        fromAddress: fromAddress,
-        toAddress: fromAddress,
-        disableEstimate: false,
-        referrerAddress: null,
-        referrerFee: null,
-        slippage: '1.0',
-        swappers: allSwappers.filter(
-          (swapper) => !disabledLiquiditySources.includes(swapper)
-        ),
-        messagingProtocols: ['axelar', 'cbridge'],
-      })
       swapResponse = await rangoClient.swap({
         from,
         to,
@@ -228,10 +229,8 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        swappers: allSwappers.filter(
-          (swapper) => !disabledLiquiditySources.includes(swapper)
-        ),
-        // messagingProtocols: ['axelar', 'cbridge'],
+        swappers: disabledLiquiditySources,
+        messagingProtocols: selectedProtocols,
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
         // imMessage: "0x"
@@ -321,7 +320,7 @@ export const App = () => {
     }
   }
 
-  const swithFromAndTo = () => {
+  const switchFromAndTo = () => {
     setFromChain(toChain)
     setFromToken(toToken)
     setToChain(fromChain)
@@ -345,14 +344,23 @@ export const App = () => {
         </div>
       )}
       <div className="tokens-container">
-        <LiquiditySources
-          loading={loadingMeta}
-          toggleLiquiditySource={toggleLiquiditySource}
-          swappers={tokensMeta?.swappers || []}
-          disabledLiquiditySources={disabledLiquiditySources}
-        />
+        <div className="row">
+          <LiquiditySources
+            loading={loadingMeta}
+            toggleLiquiditySource={toggleLiquiditySource}
+            swappers={tokensMeta?.swappers || []}
+            disabledLiquiditySources={disabledLiquiditySources}
+          />
+          <Spacer />
+          <Button
+            onClick={() => setOpen(true)}
+            variant="outlined"
+            type="primary"
+          >
+            Select Message Sender
+          </Button>
+        </div>
 
-        <Button></Button>
         <TokenInfo
           type="From"
           chain={fromChain}
@@ -364,7 +372,7 @@ export const App = () => {
           blockchains={tokensMeta?.blockchains || []}
           tokens={tokensMeta?.tokens || []}
         />
-        <Button variant="ghost" onClick={swithFromAndTo}>
+        <Button variant="ghost" onClick={switchFromAndTo}>
           <VerticalSwapIcon size={36} />
         </Button>
         <TokenInfo
@@ -491,15 +499,58 @@ export const App = () => {
             {!!error && <div className="error-message">{error}</div>}
           </div>
           <br />
-          <button
+          <Button
             id="swap"
             onClick={swap}
+            loading={loadingSwap}
+            type="primary"
             disabled={loadingMeta || loadingSwap}
           >
             swap
-          </button>
+          </Button>
         </div>
       </div>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen((prev) => !prev)}
+        content={
+          <div>
+            {protocols.map((protocol, index) => (
+              <>
+                <Button
+                  variant="ghost"
+                  size="large"
+                  suffix={
+                    selectedProtocols.findIndex((p) => p === protocol) !==
+                    -1 ? (
+                      <CheckIcon size={20} />
+                    ) : undefined
+                  }
+                  align="start"
+                  onClick={() => {
+                    const selects = [...selectedProtocols]
+                    const i = selects.findIndex((p) => p === protocol)
+                    if (i === -1) {
+                      selects.push(protocol)
+                      setSelectedProtocols(selects)
+                    } else {
+                      selects.splice(i, 1)
+                      setSelectedProtocols(selects)
+                    }
+                  }}
+                  key={index}
+                >
+                  <Typography variant="body2">{protocol}</Typography>
+                </Button>
+                <hr />
+              </>
+            ))}
+          </div>
+        }
+        title={'Select Messaging Protocols'}
+        containerStyle={{ width: '560px', height: 'auto' }}
+      />
     </div>
   )
 }

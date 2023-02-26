@@ -1,10 +1,10 @@
 import { Button, LiquiditySourcesSelector, Modal, styled } from '@rangodev/ui'
-import { SwapperMetaDto } from 'rango-sdk-basic/lib'
+import { SwapperMeta } from 'rango-sdk-basic/lib'
 
 import { useState } from 'react'
 
 interface PropTypes {
-  swappers: SwapperMetaDto[]
+  swappers: SwapperMeta[]
   disabledLiquiditySources: string[]
   loading: boolean
   toggleLiquiditySource: (name: string) => void
@@ -52,22 +52,24 @@ export function LiquiditySources({
         type="primary"
         onClick={() => setOpen(true)}
       >
-        select liquidity sources
+        Select Liquidity Sources
       </Button>
       <Modal
         onClose={() => setOpen(false)}
         open={open}
         content={
           <LiquiditySourcesSelector
+            listContainerStyle={{ height: 'auto', paddingBottom: 20 }}
             list={uniqueSwappersGroups}
-            onChange={(liquiditySource) =>
+            onChange={(liquiditySource: SwapperMeta) =>
               toggleLiquiditySource(liquiditySource.title)
             }
-            onBack={() => console.log('back')}
+            hasHeader={false}
           />
         }
-        title={''}
-        containerStyle={{ width: '560px', height: '655px' }}
+        title="Liquidity Sources"
+        containerStyle={{ width: '560px', height: '610px' }}
+        contentStyle={{ overflowY: 'hidden' }}
       />
     </Container>
   )

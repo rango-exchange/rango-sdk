@@ -3,18 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@rangodev/ui": "^0.1.10-next.35",
+    "@ethersproject/providers": "^5.4.0",
+    "@rangodev/ui": "^0.1.10-next.51",
     "@types/node": "^12.20.15",
     "@types/react": "^17.0.11",
     "@types/react-dom": "^17.0.8",
     "babel-jest": "^26.6.0",
-    "rango-sdk": "^0.1.8",
-    "react": "^18.2.0",
+    "rango-sdk-basic": "^0.1.11",
+    "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
     "typescript": "^4.3.4",
-    "rango-sdk-basic": "^0.1.10",
-    "@ethersproject/providers": "^5.4.0",
     "ethers": "^5.4.0"
   },
   "scripts": {
