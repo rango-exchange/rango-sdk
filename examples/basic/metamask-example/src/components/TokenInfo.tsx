@@ -24,6 +24,7 @@ interface PropTypes {
   setChain: React.Dispatch<React.SetStateAction<BlockchainMeta | null>>
   setToken: React.Dispatch<React.SetStateAction<Token | null>>
   setInputAmount?: React.Dispatch<React.SetStateAction<string>>
+  amount: string
 }
 
 const Box = styled('div', {
@@ -64,6 +65,7 @@ export function TokenInfo(props: PropTypes) {
     tokens,
     setToken,
     setChain,
+    amount,
     setInputAmount,
   } = props
   const [modal, setModal] = useState({
@@ -71,6 +73,12 @@ export function TokenInfo(props: PropTypes) {
     isChain: false,
     isToken: false,
   })
+
+  const onClose = () =>
+    setModal((prev) => ({
+      ...prev,
+      open: false,
+    }))
 
   return (
     <Box>
@@ -119,42 +127,34 @@ export function TokenInfo(props: PropTypes) {
         >
           {token ? token.symbol : 'Token'}
         </Button>
-        {type === 'From' && (
-          <TextField
-            type="number"
-            onChange={(e: any) =>
-              setInputAmount && setInputAmount(e.target.value)
-            }
-            size="large"
-            style={{
-              width: '70%',
-              position: 'relative',
-              backgroundColor: '$background !important',
-            }}
-            onResize={undefined}
-            onResizeCapture={undefined}
-          />
-        )}
+        <TextField
+          type="number"
+          onChange={(e) => setInputAmount && setInputAmount(e.target.value)}
+          disabled={type !== 'From'}
+          size="large"
+          value={amount}
+          style={{
+            width: '70%',
+            position: 'relative',
+            backgroundColor: '$background !important',
+          }}
+          onResize={undefined}
+          onResizeCapture={undefined}
+        />
       </Container>
       <Modal
         open={modal.open}
-        onClose={() =>
-          setModal((prev) => ({
-            ...prev,
-            open: false,
-          }))
-        }
+        onClose={onClose}
         content={
           modal.isChain ? (
             <BlockchainSelector
-              list={
-                blockchains.filter((chain: any) =>
-                  isEvmBlockchain(chain)
-                ) as any
-              }
+              list={blockchains.filter((chain) => isEvmBlockchain(chain))}
               hasHeader={false}
-              selected={chain as any}
-              onChange={(chain: any) => setChain(chain)}
+              selected={chain}
+              onChange={(chain) => {
+                setChain(chain)
+                onClose()
+              }}
               loadingStatus="success"
               listContainerStyle={{ height: 'auto', paddingBottom: 20 }}
             />
@@ -169,7 +169,10 @@ export function TokenInfo(props: PropTypes) {
                     : []
                 }
                 hasHeader={false}
-                onChange={(token: any) => setToken(token)}
+                onChange={(token: any) => {
+                  setToken(token)
+                  onClose()
+                }}
                 selected={token as any}
               />
             )

@@ -30,7 +30,7 @@ button:hover {
 }
 
 .container {
-  background-color: gainsboro;
+  background-color: #FAFAFA;
   padding: 2rem;
   display: flex;
 }
@@ -39,6 +39,7 @@ button:hover {
   display: flex;
   justify-content: center;
   flex-direction: column;
+  width: 512px;
 }
 
 .from,

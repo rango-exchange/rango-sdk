@@ -19,15 +19,23 @@ import {
   Button,
   VerticalSwapIcon,
   Modal,
-  CheckIcon,
   Typography,
   Spacer,
+  styled,
+  Switch,
 } from '@rangodev/ui'
 import { TokenInfo } from './components/TokenInfo'
 import { LiquiditySources } from './components/LiquiditySources'
 
 declare let window: any
 
+const SwitchButtonContainer = styled('div', {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  position: 'relative',
+  top: '11px',
+})
 export const App = () => {
   const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
 
@@ -46,7 +54,7 @@ export const App = () => {
   const [open, setOpen] = useState<boolean>(false)
   const [protocols, setProtocols] = useState<string[]>([])
   const [selectedProtocols, setSelectedProtocols] = useState<string[]>([])
-
+  const [loadingProtocols, setLoadingProtocols] = useState<boolean>(true)
   const [disabledLiquiditySources, setDisabledLiquiditySources] = useState<
     string[]
   >([])
@@ -60,6 +68,7 @@ export const App = () => {
     rangoClient.messagingProtocols().then((res) => {
       const protocols = res.protocols.map((p) => p.id)
       setProtocols(protocols)
+      setLoadingProtocols(false)
     })
   }, [rangoClient])
 
@@ -327,6 +336,17 @@ export const App = () => {
     setToToken(fromToken)
   }
 
+  const onchangeProtocols = (protocol: string) => {
+    const selects = [...selectedProtocols]
+    const i = selects.findIndex((p) => p === protocol)
+    if (i === -1) {
+      selects.push(protocol)
+      setSelectedProtocols(selects)
+    } else {
+      selects.splice(i, 1)
+      setSelectedProtocols(selects)
+    }
+  }
   const toggleLiquiditySource = (name: string) => {
     const result = disabledLiquiditySources.includes(name)
       ? disabledLiquiditySources.filter(
@@ -356,6 +376,7 @@ export const App = () => {
             onClick={() => setOpen(true)}
             variant="outlined"
             type="primary"
+            loading={loadingProtocols}
           >
             Select Message Sender
           </Button>
@@ -369,12 +390,16 @@ export const App = () => {
           token={fromToken}
           loading={loadingMeta}
           setInputAmount={setInputAmount}
+          amount={inputAmount}
           blockchains={tokensMeta?.blockchains || []}
           tokens={tokensMeta?.tokens || []}
         />
-        <Button variant="ghost" onClick={switchFromAndTo}>
-          <VerticalSwapIcon size={36} />
-        </Button>
+        <SwitchButtonContainer>
+          <Button variant="ghost" onClick={switchFromAndTo}>
+            <VerticalSwapIcon size={36} />
+          </Button>
+        </SwitchButtonContainer>
+
         <TokenInfo
           chain={toChain}
           token={toToken}
@@ -384,6 +409,9 @@ export const App = () => {
           blockchains={tokensMeta?.blockchains || []}
           tokens={tokensMeta?.tokens || []}
           loading={loadingMeta}
+          amount={new BigNumber(quote?.route?.outputAmount || '0')
+            .shiftedBy(-(toToken?.decimals || 0))
+            .toString()}
         />
         <div className="swap-details-container">
           <div className="swap-details">
@@ -518,31 +546,20 @@ export const App = () => {
             {protocols.map((protocol, index) => (
               <>
                 <Button
-                  variant="ghost"
+                  variant="outlined"
                   size="large"
                   suffix={
-                    selectedProtocols.findIndex((p) => p === protocol) !==
-                    -1 ? (
-                      <CheckIcon size={20} />
-                    ) : undefined
+                    <Switch
+                      checked={selectedProtocols.includes(protocol)}
+                      onChange={() => onchangeProtocols(protocol)}
+                    />
                   }
                   align="start"
-                  onClick={() => {
-                    const selects = [...selectedProtocols]
-                    const i = selects.findIndex((p) => p === protocol)
-                    if (i === -1) {
-                      selects.push(protocol)
-                      setSelectedProtocols(selects)
-                    } else {
-                      selects.splice(i, 1)
-                      setSelectedProtocols(selects)
-                    }
-                  }}
                   key={index}
                 >
                   <Typography variant="body2">{protocol}</Typography>
                 </Button>
-                <hr />
+                <Spacer size={16} direction="vertical" />
               </>
             ))}
           </div>

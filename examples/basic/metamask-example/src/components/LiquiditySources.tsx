@@ -10,12 +10,6 @@ interface PropTypes {
   loading: boolean
   toggleLiquiditySource: (name: string) => void
 }
-
-const Container = styled('div', {
-  display: 'flex',
-  justifyContent: 'flex-end',
-})
-
 export function LiquiditySources({
   swappers,
   toggleLiquiditySource,
@@ -46,7 +40,7 @@ export function LiquiditySources({
       }
     })
   return (
-    <Container>
+    <>
       <Button
         loading={loading}
         variant="outlined"
@@ -72,6 +66,6 @@ export function LiquiditySources({
         containerStyle={{ width: '560px', height: '610px' }}
         contentStyle={{ overflowY: 'hidden' }}
       />
-    </Container>
+    </>
   )
 }
