@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   AngleDownIcon,
   BlockchainSelector,
@@ -130,6 +131,8 @@ export function TokenInfo(props: PropTypes) {
               position: 'relative',
               backgroundColor: '$background !important',
             }}
+            onResize={undefined}
+            onResizeCapture={undefined}
           />
         )}
       </Container>

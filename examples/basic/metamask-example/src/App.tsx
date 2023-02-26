@@ -500,7 +500,6 @@ export const App = () => {
           </div>
           <br />
           <Button
-            id="swap"
             onClick={swap}
             loading={loadingSwap}
             type="primary"

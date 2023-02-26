@@ -1,3 +1,4 @@
+import React from 'react'
 import { Button, LiquiditySourcesSelector, Modal, styled } from '@rangodev/ui'
 import { SwapperMeta } from 'rango-sdk-basic/lib'
 
@@ -61,7 +62,7 @@ export function LiquiditySources({
           <LiquiditySourcesSelector
             listContainerStyle={{ height: 'auto', paddingBottom: 20 }}
             list={uniqueSwappersGroups}
-            onChange={(liquiditySource: SwapperMeta) =>
+            onChange={(liquiditySource) =>
               toggleLiquiditySource(liquiditySource.title)
             }
             hasHeader={false}
