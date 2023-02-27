@@ -45,9 +45,10 @@ export function LiquiditySources({
         loading={loading}
         variant="outlined"
         type="primary"
+        size="small"
         onClick={() => setOpen(true)}
       >
-        Select Liquidity Sources
+        Liquidity Sources
       </Button>
       <Modal
         onClose={() => setOpen(false)}

@@ -13,6 +13,8 @@ import {
   Token,
   MetaResponse,
   WalletDetail,
+  TransactionType,
+  RoutingResultType,
 } from 'rango-sdk-basic'
 import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
 import BigNumber from 'bignumber.js'
@@ -75,15 +77,34 @@ export const App = () => {
 
   const [address, setAddress] = useState<string>('')
   useEffect(() => {
-    setLoadingMeta(true)
-    // Meta provides all blockchains, tokens and swappers information supported by Rango
     rangoClient.meta().then((meta) => {
       setTokenMeta(meta)
+      setLoadingMeta(false)
+      const { blockchains, tokens } = meta
+      const defaultFromChain = 'BSC'
+      const defaultFromTokenAddress =
+        '0x55d398326f99059ff775485246999027b3197955' // usdt in bsc
+      const defaultToChain = 'BSC'
+      const defaultToTokenAddress = null // native
+      const fromChain = blockchains.find((b) => b.name === defaultFromChain)
+      const toChain = blockchains.find((b) => b.name === defaultToChain)
+      const fromToken = tokens.find(
+        (t) =>
+          t.blockchain === defaultFromChain &&
+          t.address === defaultFromTokenAddress
+      )
+      const toToken = tokens.find(
+        (t) =>
+          t.blockchain === defaultToChain && t.address === defaultToTokenAddress
+      )
+      setFromChain(fromChain || null)
+      setToChain(toChain || null)
+      setFromToken(fromToken || null)
+      setToToken(toToken || null)
     })
-    rangoClient.messagingProtocols().then((res) => {
-      const protocols = res.protocols.map((p) => p.id)
-      setProtocols(protocols)
-      setSelectedProtocols(protocols)
+    rangoClient.messagingProtocols().then(({ protocols }) => {
+      const protocolsList = protocols.map((p) => p.id)
+      setProtocols(protocolsList)
       setLoadingProtocols(false)
     })
   }, [rangoClient])
@@ -94,65 +115,28 @@ export const App = () => {
       const address = await getUserWallet()
       setAddress(address)
       for (const blockchain of tokensMeta?.blockchains || []) {
-        if (blockchain.type === 'EVM') {
-          await rangoClient
-            .balance({
-              address,
-              blockchain: blockchain.name,
-            })
-            .then(({ wallets }) => {
-              allBalances = [...allBalances, ...wallets]
-            })
+        if (blockchain.type === TransactionType.EVM) {
+          const { wallets } = await rangoClient.balance({
+            address,
+            blockchain: blockchain.name,
+          })
+          allBalances = [...allBalances, ...wallets]
         }
       }
       setBlances(allBalances)
-      setLoadingMeta(false)
     } catch (err) {
       setError(
         'Error connecting to MetMask. Please check Metamask and try again.'
       )
-      setLoadingMeta(false)
-
       return
     }
   }
+
   useEffect(() => {
     if (tokensMeta?.blockchains.length) {
       getBalances()
     }
   }, [tokensMeta])
-
-  // 1inch sample: POLYGON.USDT -> POLYGON.MATIC
-  // const sourceChainId = 137
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
-
-  // 1inch sample: BSC.BAKE -> BSC.BNB
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === "0xe02df9e3e622debdd69fb838bb799e3f168902c5")
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
-
-  // anyswap sample: POLYGON.USDT to BSC.USDT
-  // const sourceChainId = 137
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
-
-  // aggregator sample 1: BSC.BNB to FTM.USDT
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
-
-  // aggregator sample 2: BSC.BNB to FTM.FTM
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
-
-  // aggregator sample 3: POLYGON.USDC to BSC.USDC
-  // const sourceChainId = 137
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0x2791bca1f2de4661ed88a30c99a7a9449aa84174')
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d')
-
-  // aggregator sample 4: BSC.BNB to FTM.FTM
 
   const getUserWallet = async () => {
     await provider.send('eth_requestAccounts', [])
@@ -241,27 +225,25 @@ export const App = () => {
     const amount: string = new BigNumber(inputAmount)
       .shiftedBy(fromToken?.decimals as number)
       .toString()
-    const quoteResponse = await rangoClient.quote({
+
+    const request = {
       amount,
       from,
       to,
-      swappers: disabledLiquiditySources,
+      // swapperGroups: disabledLiquiditySources,
+      // swappersGroupsExclude: true,
       messagingProtocols: selectedProtocols,
       // sourceContract: "0x123...",
       // destinationContract: "0x123...",
-      imMessage,
-    })
-    setQuote(quoteResponse)
-    console.log({ quoteResponse })
+      // imMessage,
+    }
 
-    if (
-      !quoteResponse ||
-      !quoteResponse?.route ||
-      quoteResponse.resultType !== 'OK'
-    ) {
-      setError(
-        `Invalid quote response: ${quoteResponse.resultType}, please try again.`
-      )
+    const quote = await rangoClient.quote(request)
+    setQuote(quote)
+    console.log({ quoteResponse: quote })
+
+    if (!quote || !quote?.route || quote.resultType !== RoutingResultType.OK) {
+      setError(`Invalid quote response: ${quote.resultType}, please try again.`)
       setLoadingSwap(false)
       return
     } else {
@@ -280,9 +262,9 @@ export const App = () => {
     const signer = provider.getSigner()
     if (!fromToken || !toToken) return
 
-    let swapResponse: SwapResponse | null = null
+    let swap: SwapResponse | null = null
     try {
-      swapResponse = await rangoClient.swap({
+      swap = await rangoClient.swap({
         from,
         to,
         amount: inputAmount,
@@ -292,28 +274,24 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        swappers: disabledLiquiditySources,
+        // swapperGroups: disabledLiquiditySources,
+        // swappersGroupsExclude: true,
         messagingProtocols: selectedProtocols,
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
-        imMessage,
+        // imMessage,
       })
-      console.log({ swapResponse })
+      console.log({ swapResponse: swap })
 
-      if (
-        !!swapResponse.error ||
-        swapResponse.resultType === 'NO_ROUTE' ||
-        swapResponse.resultType === 'INPUT_LIMIT_ISSUE'
-      ) {
+      if (!!swap.error || swap.resultType !== RoutingResultType.OK) {
         setError(
-          `Error swapping, error message: ${swapResponse.error}, result type: ${swapResponse.resultType}`
+          `Error swapping, routing result: ${swap.resultType}, error: ${swap.error}`
         )
         setLoadingSwap(false)
         return
       }
 
-      const evmTransaction = swapResponse.tx as EvmTransaction
-      console.log({ evmTransaction })
+      const evmTransaction = swap.tx as EvmTransaction
 
       // if approve data is not null, it means approve needed, otherwise it's already approved.
       if (!!evmTransaction.approveData) {
@@ -321,13 +299,13 @@ export const App = () => {
         const finalTx = prepareEvmTransaction(evmTransaction, true)
         console.log('approve tx', { finalTx })
         const txHash = (await signer.sendTransaction(finalTx)).hash
-        await checkApprovalSync(swapResponse.requestId, txHash, rangoClient)
+        await checkApprovalSync(swap.requestId, txHash, rangoClient)
         console.log('transaction approved successfully')
       }
       const finalTx = prepareEvmTransaction(evmTransaction, false)
       const txHash = (await signer.sendTransaction(finalTx)).hash
       const txStatus = await checkTransactionStatusSync(
-        swapResponse.requestId,
+        swap.requestId,
         txHash,
         rangoClient
       )
@@ -339,11 +317,11 @@ export const App = () => {
       setLoadingSwap(false)
       setError(rawMessage)
       // report transaction failure to server if something went wrong in client for signing and sending the transaction
-      if (!!swapResponse) {
+      if (!!swap) {
         await rangoClient.reportFailure({
           data: { message: rawMessage },
           eventType: 'TX_FAIL',
-          requestId: swapResponse.requestId,
+          requestId: swap.requestId,
         })
       }
     }
@@ -360,7 +338,7 @@ export const App = () => {
           requestId: requestId,
           txId: txHash,
         })
-        .catch((error: any) => {
+        .catch((error) => {
           console.log(error)
         })
       if (!!txStatus) {
@@ -390,7 +368,7 @@ export const App = () => {
     setToToken(fromToken)
   }
 
-  const onchangeProtocols = (protocol: string) => {
+  const onChangeProtocols = (protocol: string) => {
     const selects = [...selectedProtocols]
     const i = selects.findIndex((p) => p === protocol)
     if (i === -1) {
@@ -427,12 +405,13 @@ export const App = () => {
           />
           <Spacer />
           <Button
+            size="small"
             onClick={() => setOpen(true)}
             variant="outlined"
             type="primary"
             loading={loadingProtocols}
           >
-            Select Message Sender
+            Messaging Protocols
           </Button>
         </div>
 
@@ -584,12 +563,13 @@ export const App = () => {
           </div>
           <br />
           <Button
+            style={{ width: '92%' }}
             onClick={swap}
             loading={loadingSwap}
             type="primary"
-            disabled={loadingMeta || loadingSwap}
+            // disabled={loadingMeta || loadingSwap}
           >
-            swap
+            Swap
           </Button>
         </div>
       </div>
@@ -607,7 +587,7 @@ export const App = () => {
                   suffix={
                     <Switch
                       checked={selectedProtocols.includes(protocol)}
-                      onChange={() => onchangeProtocols(protocol)}
+                      onChange={() => onChangeProtocols(protocol)}
                     />
                   }
                   align="start"
@@ -620,7 +600,7 @@ export const App = () => {
             ))}
           </div>
         }
-        title={'Select Messaging Protocols'}
+        title={'Messaging Protocols'}
         containerStyle={{ width: '560px', height: 'auto' }}
       />
     </div>
