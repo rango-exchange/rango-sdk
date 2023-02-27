@@ -10,3 +10,4 @@ yarn-debug.log*
 yarn-error.log*
 .yalc
 yalc.lock
+.parcel-cache
