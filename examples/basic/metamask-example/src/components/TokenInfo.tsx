@@ -9,10 +9,12 @@ import {
   TokenSelector,
   Typography,
 } from '@rangodev/ui'
-import { isEvmBlockchain } from 'rango-sdk'
+import { isEvmBlockchain, WalletDetail } from 'rango-sdk'
 import { BlockchainMeta, Token } from 'rango-sdk-basic/lib'
+import BigNumber from 'bignumber.js'
 
 import { useState } from 'react'
+import { getBalanceFromWallet, numberToString } from '../utils'
 
 interface PropTypes {
   type: 'From' | 'To'
@@ -25,6 +27,7 @@ interface PropTypes {
   setToken: React.Dispatch<React.SetStateAction<Token | null>>
   setInputAmount?: React.Dispatch<React.SetStateAction<string>>
   amount: string
+  balances: WalletDetail[]
 }
 
 const Box = styled('div', {
@@ -54,6 +57,7 @@ const ImagePlaceholder = styled('span', {
   backgroundColor: '$neutrals300',
   borderRadius: '99999px',
 })
+const ZERO = new BigNumber(0)
 
 export function TokenInfo(props: PropTypes) {
   const {
@@ -67,11 +71,45 @@ export function TokenInfo(props: PropTypes) {
     setChain,
     amount,
     setInputAmount,
+    balances,
   } = props
   const [modal, setModal] = useState({
     open: false,
     isChain: false,
     isToken: false,
+  })
+
+  const tokenWithSelectedChain = tokens.filter(
+    (token) => token.blockchain === chain?.name
+  )
+
+  const TokensWithBalance = tokenWithSelectedChain.map((token) => {
+    const balance = getBalanceFromWallet(
+      balances,
+      token.blockchain,
+      token.symbol,
+      token.address
+    )
+    const amount = balance
+      ? new BigNumber(balance?.amount.amount)
+          .shiftedBy(-balance.amount.decimals)
+          .toFixed()
+      : ZERO
+
+    const tokenAmount = numberToString(new BigNumber(amount))
+
+    let tokenUsdValue = ''
+    if (token.usdPrice)
+      tokenUsdValue = numberToString(
+        new BigNumber(amount).multipliedBy(token.usdPrice)
+      )
+    return {
+      ...token,
+      balance: {
+        amount: tokenAmount !== '0' ? tokenAmount : '',
+        usdValue: tokenUsdValue !== '0' ? tokenUsdValue : '',
+      },
+    }
   })
 
   const onClose = () =>
@@ -161,16 +199,10 @@ export function TokenInfo(props: PropTypes) {
           ) : (
             modal.isToken && (
               <TokenSelector
-                list={
-                  tokens
-                    ? (tokens.filter(
-                        (token) => token.blockchain === chain?.name
-                      ) as any)
-                    : []
-                }
+                list={TokensWithBalance as any}
                 hasHeader={false}
-                onChange={(token: any) => {
-                  setToken(token)
+                onChange={(token) => {
+                  setToken(token as any)
                   onClose()
                 }}
                 selected={token as any}

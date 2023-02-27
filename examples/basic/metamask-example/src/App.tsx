@@ -12,6 +12,7 @@ import {
   BlockchainMeta,
   Token,
   MetaResponse,
+  WalletDetail,
 } from 'rango-sdk-basic'
 import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
 import BigNumber from 'bignumber.js'
@@ -23,12 +24,12 @@ import {
   Spacer,
   styled,
   Switch,
+  globalCss,
 } from '@rangodev/ui'
 import { TokenInfo } from './components/TokenInfo'
 import { LiquiditySources } from './components/LiquiditySources'
 
 declare let window: any
-
 const SwitchButtonContainer = styled('div', {
   display: 'flex',
   justifyContent: 'center',
@@ -36,9 +37,20 @@ const SwitchButtonContainer = styled('div', {
   position: 'relative',
   top: '11px',
 })
+
+const globalStyles = globalCss({
+  '*': {
+    fontFamily: 'Roboto',
+    boxSizing: 'border-box',
+    margin: 0,
+    padding: 0,
+    listStyleType: 'none',
+  },
+})
+const provider = new ethers.providers.Web3Provider(window.ethereum)
+
 export const App = () => {
   const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
-
   const rangoClient = useMemo(() => new RangoClient(RANGO_API_KEY), [])
   const [fromChain, setFromChain] = useState<BlockchainMeta | null>(null)
   const [fromToken, setFromToken] = useState<Token | null>(null)
@@ -58,19 +70,57 @@ export const App = () => {
   const [disabledLiquiditySources, setDisabledLiquiditySources] = useState<
     string[]
   >([])
+  globalStyles()
+  const [balances, setBlances] = useState<WalletDetail[]>([])
+
+  const [address, setAddress] = useState<string>('')
   useEffect(() => {
     setLoadingMeta(true)
     // Meta provides all blockchains, tokens and swappers information supported by Rango
     rangoClient.meta().then((meta) => {
       setTokenMeta(meta)
-      setLoadingMeta(false)
     })
     rangoClient.messagingProtocols().then((res) => {
       const protocols = res.protocols.map((p) => p.id)
       setProtocols(protocols)
+      setSelectedProtocols(protocols)
       setLoadingProtocols(false)
     })
   }, [rangoClient])
+
+  const getBalances = async () => {
+    try {
+      let allBalances: WalletDetail[] = []
+      const address = await getUserWallet()
+      setAddress(address)
+      for (const blockchain of tokensMeta?.blockchains || []) {
+        if (blockchain.type === 'EVM') {
+          await rangoClient
+            .balance({
+              address,
+              blockchain: blockchain.name,
+            })
+            .then(({ wallets }) => {
+              allBalances = [...allBalances, ...wallets]
+            })
+        }
+      }
+      setBlances(allBalances)
+      setLoadingMeta(false)
+    } catch (err) {
+      setError(
+        'Error connecting to MetMask. Please check Metamask and try again.'
+      )
+      setLoadingMeta(false)
+
+      return
+    }
+  }
+  useEffect(() => {
+    if (tokensMeta?.blockchains.length) {
+      getBalances()
+    }
+  }, [tokensMeta])
 
   // 1inch sample: POLYGON.USDT -> POLYGON.MATIC
   // const sourceChainId = 137
@@ -105,7 +155,6 @@ export const App = () => {
   // aggregator sample 4: BSC.BNB to FTM.FTM
 
   const getUserWallet = async () => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
     await provider.send('eth_requestAccounts', [])
     return await provider.getSigner().getAddress()
   }
@@ -113,15 +162,17 @@ export const App = () => {
   const swap = async () => {
     setError('')
     setQuote(null)
-    let userAddress = ''
-    try {
-      userAddress = await getUserWallet()
-      console.log({ userAddress })
-    } catch (err) {
-      setError(
-        'Error connecting to MetMask. Please check Metamask and try again.'
-      )
-      return
+    let userAddress = address
+    if (!userAddress) {
+      try {
+        userAddress = await getUserWallet()
+        console.log({ userAddress })
+      } catch (err) {
+        setError(
+          'Error connecting to MetMask. Please check Metamask and try again.'
+        )
+        return
+      }
     }
 
     if (!window.ethereum.isConnected()) {
@@ -153,10 +204,9 @@ export const App = () => {
       parseInt(window.ethereum.chainId) !== parseInt(fromChain?.chainId)
     ) {
       try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${Number(fromChain.chainId).toString(16)}` }],
-        })
+        await provider.send('wallet_switchEthereumChain', [
+          { chainId: `0x${Number(fromChain.chainId).toString(16)}` },
+        ])
       } catch (e) {
         setError(`Change meta mask network to '${fromChain?.name}'.`)
         return
@@ -220,9 +270,7 @@ export const App = () => {
     fromAddress: string,
     inputAmount: string
   ) => {
-    const provider = await new ethers.providers.Web3Provider(
-      window.ethereum as any
-    )
+    const provider = new ethers.providers.Web3Provider(window.ethereum as any)
     const signer = provider.getSigner()
     if (!fromToken || !toToken) return
 
@@ -391,6 +439,7 @@ export const App = () => {
           loading={loadingMeta}
           setInputAmount={setInputAmount}
           amount={inputAmount}
+          balances={balances}
           blockchains={tokensMeta?.blockchains || []}
           tokens={tokensMeta?.tokens || []}
         />
@@ -402,6 +451,7 @@ export const App = () => {
 
         <TokenInfo
           chain={toChain}
+          balances={balances}
           token={toToken}
           setToken={setToToken}
           setChain={setToChain}
@@ -409,7 +459,7 @@ export const App = () => {
           blockchains={tokensMeta?.blockchains || []}
           tokens={tokensMeta?.tokens || []}
           loading={loadingMeta}
-          amount={new BigNumber(quote?.route?.outputAmount || '0')
+          amount={new BigNumber(quote?.route?.outputAmount || '')
             .shiftedBy(-(toToken?.decimals || 0))
             .toString()}
         />
