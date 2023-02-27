@@ -166,7 +166,7 @@ export const App = () => {
     if (!userAddress) {
       try {
         userAddress = await getUserWallet()
-        console.log({ userAddress })
+        setAddress(userAddress)
       } catch (err) {
         setError(
           'Error connecting to MetMask. Please check Metamask and try again.'
@@ -223,6 +223,11 @@ export const App = () => {
     }
 
     setLoadingSwap(true)
+
+    const imMessage = ethers.utils.defaultAbiCoder.encode(
+      ['(address,address)'],
+      [[fromToken.address, userAddress]]
+    )
     const from: Asset = {
       blockchain: fromToken?.blockchain as string,
       symbol: fromToken?.symbol as string,
@@ -244,7 +249,7 @@ export const App = () => {
       messagingProtocols: selectedProtocols,
       // sourceContract: "0x123...",
       // destinationContract: "0x123...",
-      // imMessage: "0x"
+      imMessage,
     })
     setQuote(quoteResponse)
     console.log({ quoteResponse })
@@ -260,7 +265,7 @@ export const App = () => {
       setLoadingSwap(false)
       return
     } else {
-      await executeRoute(from, to, userAddress, amount)
+      await executeRoute(from, to, userAddress, amount, imMessage)
     }
   }
 
@@ -268,7 +273,8 @@ export const App = () => {
     from: Asset,
     to: Asset,
     fromAddress: string,
-    inputAmount: string
+    inputAmount: string,
+    imMessage: string
   ) => {
     const provider = new ethers.providers.Web3Provider(window.ethereum as any)
     const signer = provider.getSigner()
@@ -290,7 +296,7 @@ export const App = () => {
         messagingProtocols: selectedProtocols,
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
-        // imMessage: "0x"
+        imMessage,
       })
       console.log({ swapResponse })
 
