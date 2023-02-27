@@ -206,12 +206,13 @@ export function TokenInfo(props: PropTypes) {
                   onClose()
                 }}
                 selected={token as any}
+                loadingStatus="success"
               />
             )
           )
         }
         title={`Select ${type === 'From' ? 'Source' : 'Destination'} Network`}
-        containerStyle={{ width: '560px', height: '610px' }}
+        containerStyle={{ width: '560px', height: '625px' }}
         contentStyle={{ overflowY: 'hidden' }}
       />
     </Box>

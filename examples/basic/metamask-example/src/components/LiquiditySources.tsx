@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, LiquiditySourcesSelector, Modal, styled } from '@rangodev/ui'
+import { Button, LiquiditySourcesSelector, Modal } from '@rangodev/ui'
 import { SwapperMeta } from 'rango-sdk-basic/lib'
 
 import { useState } from 'react'
@@ -9,10 +9,12 @@ interface PropTypes {
   disabledLiquiditySources: string[]
   loading: boolean
   toggleLiquiditySource: (name: string) => void
+  setDisabledLiquiditySources: React.Dispatch<React.SetStateAction<string[]>>
 }
 export function LiquiditySources({
   swappers,
   toggleLiquiditySource,
+  setDisabledLiquiditySources,
   loading,
   disabledLiquiditySources,
 }: PropTypes) {
@@ -39,6 +41,15 @@ export function LiquiditySources({
         }
       }
     })
+  const toggleAllLiquiditySources = () => {
+    if (swappers.length - disabledLiquiditySources.length === 0) {
+      setDisabledLiquiditySources([])
+    } else {
+      const allSwappers = swappers.map((swapper) => swapper.swapperGroup)
+      setDisabledLiquiditySources(allSwappers)
+    }
+  }
+
   return (
     <>
       <Button
@@ -53,19 +64,30 @@ export function LiquiditySources({
       <Modal
         onClose={() => setOpen(false)}
         open={open}
+        action={
+          <Button
+            type="primary"
+            variant="ghost"
+            onClick={toggleAllLiquiditySources}
+          >
+            {swappers.length - disabledLiquiditySources.length === 0
+              ? 'Select All'
+              : 'Clear All'}
+          </Button>
+        }
         content={
           <LiquiditySourcesSelector
             listContainerStyle={{ height: 'auto', paddingBottom: 20 }}
             list={uniqueSwappersGroups}
+            hasHeader={false}
             onChange={(liquiditySource) =>
               toggleLiquiditySource(liquiditySource.title)
             }
-            hasHeader={false}
           />
         }
         title="Liquidity Sources"
-        containerStyle={{ width: '560px', height: '610px' }}
-        contentStyle={{ overflowY: 'hidden' }}
+        containerStyle={{ width: '560px', height: '625px' }}
+        contentStyle={{ overflow: 'hidden' }}
       />
     </>
   )

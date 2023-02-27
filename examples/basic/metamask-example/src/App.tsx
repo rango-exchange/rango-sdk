@@ -399,6 +399,7 @@ export const App = () => {
         <div className="row">
           <LiquiditySources
             loading={loadingMeta}
+            setDisabledLiquiditySources={setDisabledLiquiditySources}
             toggleLiquiditySource={toggleLiquiditySource}
             swappers={tokensMeta?.swappers || []}
             disabledLiquiditySources={disabledLiquiditySources}
