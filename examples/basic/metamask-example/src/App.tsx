@@ -74,7 +74,7 @@ export const App = () => {
   >([])
   globalStyles()
   const [balances, setBlances] = useState<WalletDetail[]>([])
-
+  const [testMessagePassing, setTestMessagePassing] = useState<boolean>(false)
   const [address, setAddress] = useState<string>('')
   useEffect(() => {
     rangoClient.meta().then((meta) => {
@@ -208,10 +208,12 @@ export const App = () => {
 
     setLoadingSwap(true)
 
-    const imMessage = ethers.utils.defaultAbiCoder.encode(
-      ['(address,address)'],
-      [[fromToken.address, userAddress]]
-    )
+    const imMessage = testMessagePassing
+      ? ethers.utils.defaultAbiCoder.encode(
+          ['(address,address)'],
+          [[fromToken.address, userAddress]]
+        )
+      : undefined
     const from: Asset = {
       blockchain: fromToken?.blockchain as string,
       symbol: fromToken?.symbol as string,
@@ -235,7 +237,7 @@ export const App = () => {
       messagingProtocols: selectedProtocols,
       // sourceContract: "0x123...",
       // destinationContract: "0x123...",
-      // imMessage,
+      imMessage,
     }
 
     const quote = await rangoClient.quote(request)
@@ -256,7 +258,7 @@ export const App = () => {
     to: Asset,
     fromAddress: string,
     inputAmount: string,
-    imMessage: string
+    imMessage?: string
   ) => {
     const provider = new ethers.providers.Web3Provider(window.ethereum as any)
     const signer = provider.getSigner()
@@ -279,7 +281,7 @@ export const App = () => {
         messagingProtocols: selectedProtocols,
         // sourceContract: "0x123...",
         // destinationContract: "0x123...",
-        // imMessage,
+        imMessage,
       })
       console.log({ swapResponse: swap })
 
@@ -415,6 +417,21 @@ export const App = () => {
             Messaging Protocols
           </Button>
         </div>
+        <Spacer size={16} direction="vertical" />
+        <hr />
+        <Button
+          variant="ghost"
+          size="small"
+          suffix={
+            <Switch
+              checked={testMessagePassing}
+              onChange={() => setTestMessagePassing((prev) => !prev)}
+            />
+          }
+          align="start"
+        >
+          Test Message Passing
+        </Button>
 
         <TokenInfo
           type="From"
