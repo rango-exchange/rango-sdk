@@ -1,8 +1,6 @@
-import React from 'react'
-import { Button, LiquiditySourcesSelector, Modal } from '@rangodev/ui'
-import { SwapperMeta } from 'rango-sdk-basic/lib'
-
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { Button, LiquiditySourcesSelector, Modal } from '@rango-dev/ui'
+import { SwapperMeta } from 'rango-sdk-basic'
 
 interface PropTypes {
   swappers: SwapperMeta[]

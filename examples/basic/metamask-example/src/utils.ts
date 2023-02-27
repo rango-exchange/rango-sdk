@@ -3,6 +3,7 @@ import {
   EvmTransaction,
   Amount,
   WalletDetail,
+  MetaResponse,
 } from 'rango-sdk-basic'
 import { TransactionRequest } from '@ethersproject/abstract-provider/src.ts/index'
 import BigNumber from 'bignumber.js'
@@ -160,4 +161,23 @@ export function getBalanceFromWallet(
       )
       .find(() => true) || null
   )
+}
+
+export const getSampleDefaultTokens = (meta: MetaResponse) => {
+  const { blockchains, tokens } = meta
+  const defaultFromChain = 'BSC'
+  const defaultFromTokenAddress = '0x55d398326f99059ff775485246999027b3197955' // usdt in bsc
+  const defaultToChain = 'BSC'
+  const defaultToTokenAddress = null // native
+  const fromChain = blockchains.find((b) => b.name === defaultFromChain)
+  const toChain = blockchains.find((b) => b.name === defaultToChain)
+  const fromToken = tokens.find(
+    (t) =>
+      t.blockchain === defaultFromChain && t.address === defaultFromTokenAddress
+  )
+  const toToken = tokens.find(
+    (t) =>
+      t.blockchain === defaultToChain && t.address === defaultToTokenAddress
+  )
+  return { fromChain, fromToken, toChain, toToken }
 }

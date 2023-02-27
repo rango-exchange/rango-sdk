@@ -2,6 +2,12 @@ body {
   text-align: center;
 }
 
+table td {
+  border: 1px solid gray;
+  padding: 5px 4px;
+  min-width: 200px;
+}
+
 .green-text {
   color: darkgreen;
 }
@@ -30,7 +36,7 @@ button:hover {
 }
 
 .container {
-  background-color: #FAFAFA;
+  /* background-color: #fafafa; */
   padding: 2rem;
   display: flex;
 }
@@ -40,6 +46,9 @@ button:hover {
   justify-content: center;
   flex-direction: column;
   width: 512px;
+  background: rgb(220, 220, 220);
+  padding: 30px 20px;
+  border-radius: 10px;
 }
 
 .from,
@@ -50,6 +59,10 @@ button:hover {
 .arrow {
   margin-top: 3rem;
   width: 100px;
+}
+
+.margin-bottom-5 {
+  margin-bottom: 5px;
 }
 
 .failure {

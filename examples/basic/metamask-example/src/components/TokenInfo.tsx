@@ -8,7 +8,7 @@ import {
   TextField,
   TokenSelector,
   Typography,
-} from '@rangodev/ui'
+} from '@rango-dev/ui'
 import { isEvmBlockchain, WalletDetail } from 'rango-sdk'
 import { BlockchainMeta, Token } from 'rango-sdk-basic/lib'
 import BigNumber from 'bignumber.js'
@@ -120,7 +120,7 @@ export function TokenInfo(props: PropTypes) {
 
   return (
     <Box>
-      <div>
+      <div className="margin-bottom-5">
         <Typography variant="body2">{type}</Typography>
       </div>
       <Container>
