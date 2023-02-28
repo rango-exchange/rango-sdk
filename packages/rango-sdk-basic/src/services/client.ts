@@ -111,6 +111,10 @@ export class RangoClient {
         !!quoteRequest.swappers && quoteRequest.swappers.length > 0
           ? quoteRequest.swappers.join(',')
           : undefined,
+      swapperGroups:
+        !!quoteRequest.swapperGroups && quoteRequest.swapperGroups.length > 0
+          ? quoteRequest.swapperGroups.join(',')
+          : undefined,
       messagingProtocols:
         !!quoteRequest.messagingProtocols &&
         quoteRequest.messagingProtocols.length > 0
