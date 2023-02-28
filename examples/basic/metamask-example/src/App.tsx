@@ -225,8 +225,8 @@ export const App = () => {
       amount,
       from,
       to,
-      // swapperGroups: disabledLiquiditySources, // TODO
-      // swappersGroupsExclude: true, // TODO
+      swapperGroups: disabledLiquiditySources,
+      swappersGroupsExclude: true,
     }
     if (testMessagePassing) {
       request = {
@@ -283,8 +283,8 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        // swapperGroups: disabledLiquiditySources, // TODO
-        // swappersGroupsExclude: true, // TODO
+        swapperGroups: disabledLiquiditySources,
+        swappersGroupsExclude: true,
       }
       if (testMessagePassing) {
         swapRequest = {
