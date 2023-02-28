@@ -66,7 +66,7 @@ export const App = () => {
 
   const sdk = useMemo(
     () => new RangoClient(RANGO_API_KEY, undefined, baseUrl),
-    []
+    [baseUrl]
   )
 
   const [fromChain, setFromChain] = useState<BlockchainMeta | null>(null)
@@ -93,6 +93,8 @@ export const App = () => {
   const [address, setAddress] = useState<string>('')
   useEffect(() => {
     sdk.meta().then((meta) => {
+      if (meta instanceof MetaResponse) {
+      }
       setTokenMeta(meta)
       setLoadingMeta(false)
       const { fromChain, fromToken, toChain, toToken } =
@@ -132,7 +134,7 @@ export const App = () => {
   }
 
   useEffect(() => {
-    if (tokensMeta?.blockchains.length) {
+    if (tokensMeta?.blockchains?.length) {
       getBalances()
     }
   }, [tokensMeta])
