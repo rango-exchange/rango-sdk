@@ -58,7 +58,6 @@ const globalStyles = globalCss({
     listStyleType: 'none',
   },
 })
-const provider = new ethers.providers.Web3Provider(window.ethereum)
 
 export const App = () => {
   const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
@@ -93,8 +92,6 @@ export const App = () => {
   const [address, setAddress] = useState<string>('')
   useEffect(() => {
     sdk.meta().then((meta) => {
-      if (meta instanceof MetaResponse) {
-      }
       setTokenMeta(meta)
       setLoadingMeta(false)
       const { fromChain, fromToken, toChain, toToken } =
@@ -140,6 +137,7 @@ export const App = () => {
   }, [tokensMeta])
 
   const getUserAddress = async () => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum)
     await provider.send('eth_requestAccounts', [])
     return await provider.getSigner().getAddress()
   }
@@ -189,6 +187,7 @@ export const App = () => {
       parseInt(window.ethereum.chainId) !== parseInt(fromChain?.chainId)
     ) {
       try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum)
         await provider.send('wallet_switchEthereumChain', [
           { chainId: `0x${Number(fromChain.chainId).toString(16)}` },
         ])
