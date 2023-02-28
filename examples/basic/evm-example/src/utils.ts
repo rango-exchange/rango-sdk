@@ -5,7 +5,7 @@ import {
   WalletDetail,
   MetaResponse,
 } from 'rango-sdk-basic'
-import { TransactionRequest } from '@ethersproject/abstract-provider/src.ts/index'
+import { TransactionRequest } from '@ethersproject/abstract-provider/src.ts'
 import BigNumber from 'bignumber.js'
 
 export function prepareEvmTransaction(
