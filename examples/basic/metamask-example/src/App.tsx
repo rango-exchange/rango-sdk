@@ -1,27 +1,78 @@
 import './App.css'
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import {
   EvmTransaction,
-  MetaResponse,
   RangoClient,
   TransactionStatus,
   QuoteResponse,
   StatusResponse,
   Asset,
   SwapResponse,
+  BlockchainMeta,
+  Token,
+  MetaResponse,
+  WalletDetail,
+  TransactionType,
+  RoutingResultType,
+  QuoteRequest,
+  SwapRequest,
 } from 'rango-sdk-basic'
-import { checkApprovalSync, prepareEvmTransaction, sleep } from './utils'
+import {
+  checkApprovalSync,
+  getSampleDefaultTokens,
+  prepareEvmTransaction,
+  sleep,
+} from './utils'
 import BigNumber from 'bignumber.js'
-import React from 'react'
+import {
+  Button,
+  VerticalSwapIcon,
+  Modal,
+  Typography,
+  Spacer,
+  styled,
+  TextField,
+  Switch,
+  globalCss,
+} from '@rango-dev/ui'
+import { TokenInfo } from './components/TokenInfo'
+import { LiquiditySources } from './components/LiquiditySources'
+import { SwapDetails } from './components/SwapDetails'
 
 declare let window: any
+const SwitchButtonContainer = styled('div', {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  position: 'relative',
+  top: '11px',
+})
+
+const globalStyles = globalCss({
+  '*': {
+    fontFamily: 'Roboto',
+    boxSizing: 'border-box',
+    margin: 0,
+    padding: 0,
+    listStyleType: 'none',
+  },
+})
+const provider = new ethers.providers.Web3Provider(window.ethereum)
 
 export const App = () => {
   const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
+  const [baseUrl, setBaseUrl] = useState<string>('https://api.rango.exchange/')
 
-  const rangoClient = useMemo(() => new RangoClient(RANGO_API_KEY), [])
+  const sdk = useMemo(
+    () => new RangoClient(RANGO_API_KEY, undefined, baseUrl),
+    [baseUrl]
+  )
 
+  const [fromChain, setFromChain] = useState<BlockchainMeta | null>(null)
+  const [fromToken, setFromToken] = useState<Token | null>(null)
+  const [toChain, setToChain] = useState<BlockchainMeta | null>(null)
+  const [toToken, setToToken] = useState<Token | null>(null)
   const [tokensMeta, setTokenMeta] = useState<MetaResponse | null>()
   const [inputAmount, setInputAmount] = useState<string>('100')
   const [quote, setQuote] = useState<QuoteResponse | null>()
@@ -29,57 +80,66 @@ export const App = () => {
   const [loadingMeta, setLoadingMeta] = useState<boolean>(true)
   const [loadingSwap, setLoadingSwap] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
-
+  const [open, setOpen] = useState<boolean>(false)
+  const [protocols, setProtocols] = useState<string[]>([])
+  const [selectedProtocols, setSelectedProtocols] = useState<string[]>([])
+  const [loadingProtocols, setLoadingProtocols] = useState<boolean>(true)
+  const [disabledLiquiditySources, setDisabledLiquiditySources] = useState<
+    string[]
+  >([])
+  globalStyles()
+  const [balances, setBlances] = useState<WalletDetail[]>([])
+  const [testMessagePassing, setTestMessagePassing] = useState<boolean>(false)
+  const [address, setAddress] = useState<string>('')
   useEffect(() => {
-    setLoadingMeta(true)
-    // Meta provides all blockchains, tokens and swappers information supported by Rango
-    rangoClient.meta().then((meta) => {
+    sdk.meta().then((meta) => {
+      if (meta instanceof MetaResponse) {
+      }
       setTokenMeta(meta)
       setLoadingMeta(false)
+      const { fromChain, fromToken, toChain, toToken } =
+        getSampleDefaultTokens(meta)
+
+      setFromChain(fromChain || null)
+      setToChain(toChain || null)
+      setFromToken(fromToken || null)
+      setToToken(toToken || null)
     })
-  }, [rangoClient])
+    sdk.messagingProtocols().then(({ protocols }) => {
+      const protocolsList = protocols.map((p) => p.id)
+      setProtocols(protocolsList)
+      setLoadingProtocols(false)
+    })
+  }, [sdk])
 
-  // 1inch sample: POLYGON.USDT -> POLYGON.MATIC
-  // const sourceChainId = 137
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === null)
+  const getBalances = async () => {
+    try {
+      const address = await getUserAddress()
+      setAddress(address)
+      const promises =
+        tokensMeta?.blockchains
+          .filter((chain) => chain.type === TransactionType.EVM)
+          .map((chain) => sdk.balance({ address, blockchain: chain.name })) ||
+        []
+      const allBalances = (await Promise.allSettled(promises)).flatMap((p) =>
+        p.status === 'fulfilled' ? p.value.wallets : []
+      )
+      setBlances(allBalances)
+    } catch (err) {
+      setError(
+        'Error connecting to MetMask. Please check Metamask and try again.'
+      )
+      return
+    }
+  }
 
-  // 1inch sample: BSC.BAKE -> BSC.BNB
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === "0xe02df9e3e622debdd69fb838bb799e3f168902c5")
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
+  useEffect(() => {
+    if (tokensMeta?.blockchains?.length) {
+      getBalances()
+    }
+  }, [tokensMeta])
 
-  // anyswap sample: POLYGON.USDT to BSC.USDT
-  // const sourceChainId = 137
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0xc2132d05d31c914a87c6611c10748aeb04b58e8f')
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x55d398326f99059ff775485246999027b3197955')
-
-  // aggregator sample 1: BSC.BNB to FTM.USDT
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === '0x049d68029688eabf473097a2fc38ef61633a3c7a')
-
-  // aggregator sample 2: BSC.BNB to FTM.FTM
-  // const sourceChainId = 56
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === null)
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "FANTOM" && t.address === null)
-
-  // aggregator sample 3: POLYGON.USDC to BSC.USDC
-  // const sourceChainId = 137
-  // const sourceToken = tokensMeta?.tokens.find(t => t.blockchain === "POLYGON" && t.address === '0x2791bca1f2de4661ed88a30c99a7a9449aa84174')
-  // const destinationToken = tokensMeta?.tokens.find(t => t.blockchain === "BSC" && t.address === '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d')
-
-  // aggregator sample 4: BSC.BNB to FTM.FTM
-  const sourceChainId = 250
-  const sourceToken = tokensMeta?.tokens.find(
-    (t) => t.blockchain === 'FANTOM' && t.address === null
-  )
-  const destinationToken = tokensMeta?.tokens.find(
-    (t) => t.blockchain === 'BSC' && t.address === null
-  )
-
-  const getUserWallet = async () => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+  const getUserAddress = async () => {
     await provider.send('eth_requestAccounts', [])
     return await provider.getSigner().getAddress()
   }
@@ -87,16 +147,17 @@ export const App = () => {
   const swap = async () => {
     setError('')
     setQuote(null)
-    setTxStatus(null)
-    let userAddress = ''
-    try {
-      userAddress = await getUserWallet()
-      console.log({ userAddress })
-    } catch (err) {
-      setError(
-        'Error connecting to MetMask. Please check Metamask and try again.'
-      )
-      return
+    let userAddress = address
+    if (!userAddress) {
+      try {
+        userAddress = await getUserAddress()
+        setAddress(userAddress)
+      } catch (err) {
+        setError(
+          'Error connecting to MetMask. Please check Metamask and try again.'
+        )
+        return
+      }
     }
 
     if (!window.ethereum.isConnected()) {
@@ -105,13 +166,36 @@ export const App = () => {
       )
       return
     }
+    if (!fromChain) {
+      setError(`Please select source blockchain.`)
+      return
+    }
+    if (!fromToken) {
+      setError(`Please select source token.`)
+      return
+    }
+    if (!toChain) {
+      setError(`Please select destination blockchain.`)
+      return
+    }
+    if (!toToken) {
+      setError(`Please select destination token.`)
+      return
+    }
 
     if (
       window.ethereum.chainId &&
-      parseInt(window.ethereum.chainId) !== sourceChainId
+      fromChain?.chainId &&
+      parseInt(window.ethereum.chainId) !== parseInt(fromChain?.chainId)
     ) {
-      setError(`Change meta mask network to '${sourceToken?.blockchain}'.`)
-      return
+      try {
+        await provider.send('wallet_switchEthereumChain', [
+          { chainId: `0x${Number(fromChain.chainId).toString(16)}` },
+        ])
+      } catch (e) {
+        setError(`Change meta mask network to '${fromChain?.name}'.`)
+        return
+      }
     }
 
     if (!userAddress) {
@@ -122,48 +206,64 @@ export const App = () => {
       setError(`Set input amount`)
       return
     }
-    if (!sourceToken || !destinationToken) return
 
     setLoadingSwap(true)
+
+    const sampleImMessage = ethers.utils.defaultAbiCoder.encode(
+      ['(address,address)'],
+      [[fromToken.address, userAddress]]
+    )
+
     const from: Asset = {
-      blockchain: sourceToken?.blockchain,
-      symbol: sourceToken?.symbol,
-      address: sourceToken.address,
+      blockchain: fromToken?.blockchain as string,
+      symbol: fromToken?.symbol as string,
+      address: fromToken?.address as string,
     }
     const to: Asset = {
-      blockchain: destinationToken?.blockchain,
-      symbol: destinationToken?.symbol,
-      address: destinationToken.address,
+      blockchain: toToken?.blockchain,
+      symbol: toToken?.symbol as string,
+      address: toToken?.address as string,
     }
     const amount: string = new BigNumber(inputAmount)
-      .shiftedBy(sourceToken.decimals)
+      .shiftedBy(fromToken?.decimals as number)
       .toString()
 
-    const quoteResponse = await rangoClient.quote({
+    let request: QuoteRequest = {
       amount,
       from,
       to,
-      // swappers: ['cBridge v2.0', 'OneInchPolygon'],
-      // messagingProtocols: ['axelar', 'cbridge'],
-      // sourceContract: "0x123...",
-      // destinationContract: "0x123...",
-      // imMessage: "0x"
-    })
-    setQuote(quoteResponse)
-    console.log({ quoteResponse })
+      swapperGroups: disabledLiquiditySources,
+      swappersGroupsExclude: true,
+    }
+    if (testMessagePassing) {
+      request = {
+        ...request,
+        messagingProtocols: selectedProtocols,
+        sourceContract: '???', // TODO
+        destinationContract: '???', // TODO
+      }
+    }
 
-    if (
-      !quoteResponse ||
-      !quoteResponse?.route ||
-      quoteResponse.resultType !== 'OK'
-    ) {
-      setError(
-        `Invalid quote response: ${quoteResponse.resultType}, please try again.`
-      )
+    try {
+      const quote = await sdk.quote(request)
+      setQuote(quote)
+      console.log({ quoteResponse: quote })
+
+      if (
+        !quote ||
+        !quote?.route ||
+        quote.resultType !== RoutingResultType.OK
+      ) {
+        setError(
+          `Invalid quote response: ${quote.resultType}, please try again.`
+        )
+        setLoadingSwap(false)
+      } else {
+        await executeRoute(from, to, userAddress, amount, sampleImMessage)
+      }
+    } catch (error) {
+      setError(`Error requesting quote: ${error}`)
       setLoadingSwap(false)
-      return
-    } else {
-      await executeRoute(from, to, userAddress, amount)
     }
   }
 
@@ -171,17 +271,16 @@ export const App = () => {
     from: Asset,
     to: Asset,
     fromAddress: string,
-    inputAmount: string
+    inputAmount: string,
+    imMessage?: string
   ) => {
-    const provider = await new ethers.providers.Web3Provider(
-      window.ethereum as any
-    )
+    const provider = new ethers.providers.Web3Provider(window.ethereum)
     const signer = provider.getSigner()
-    if (!sourceToken || !destinationToken) return
+    if (!fromToken || !toToken) return
 
-    let swapResponse: SwapResponse | null = null
+    let swap: SwapResponse | null = null
     try {
-      swapResponse = await rangoClient.swap({
+      let swapRequest: SwapRequest = {
         from,
         to,
         amount: inputAmount,
@@ -191,28 +290,31 @@ export const App = () => {
         referrerAddress: null,
         referrerFee: null,
         slippage: '1.0',
-        // swappers: ['cBridge v2.0', 'OneInchPolygon'],
-        // messagingProtocols: ['axelar', 'cbridge'],
-        // sourceContract: "0x123...",
-        // destinationContract: "0x123...",
-        // imMessage: "0x"
-      })
-      console.log({ swapResponse })
+        swapperGroups: disabledLiquiditySources,
+        swappersGroupsExclude: true,
+      }
+      if (testMessagePassing) {
+        swapRequest = {
+          ...swapRequest,
+          messagingProtocols: selectedProtocols,
+          sourceContract: '???', // TODO
+          destinationContract: '???', // TODO
+          imMessage,
+        }
+      }
 
-      if (
-        !!swapResponse.error ||
-        swapResponse.resultType === 'NO_ROUTE' ||
-        swapResponse.resultType === 'INPUT_LIMIT_ISSUE'
-      ) {
+      swap = await sdk.swap(swapRequest)
+      console.log({ swapResponse: swap })
+
+      if (!!swap.error || swap.resultType !== RoutingResultType.OK) {
         setError(
-          `Error swapping, error message: ${swapResponse.error}, result type: ${swapResponse.resultType}`
+          `Error swapping, routing result: ${swap.resultType}, error: ${swap.error}`
         )
         setLoadingSwap(false)
         return
       }
 
-      const evmTransaction = swapResponse.tx as EvmTransaction
-      console.log({ evmTransaction })
+      const evmTransaction = swap.tx as EvmTransaction
 
       // if approve data is not null, it means approve needed, otherwise it's already approved.
       if (!!evmTransaction.approveData) {
@@ -220,15 +322,15 @@ export const App = () => {
         const finalTx = prepareEvmTransaction(evmTransaction, true)
         console.log('approve tx', { finalTx })
         const txHash = (await signer.sendTransaction(finalTx)).hash
-        await checkApprovalSync(swapResponse.requestId, txHash, rangoClient)
+        await checkApprovalSync(swap.requestId, txHash, sdk)
         console.log('transaction approved successfully')
       }
       const finalTx = prepareEvmTransaction(evmTransaction, false)
       const txHash = (await signer.sendTransaction(finalTx)).hash
       const txStatus = await checkTransactionStatusSync(
-        swapResponse.requestId,
+        swap.requestId,
         txHash,
-        rangoClient
+        sdk
       )
       console.log('transaction finished', { txStatus })
       console.log('bridged data?', txStatus.bridgeData)
@@ -238,11 +340,11 @@ export const App = () => {
       setLoadingSwap(false)
       setError(rawMessage)
       // report transaction failure to server if something went wrong in client for signing and sending the transaction
-      if (!!swapResponse) {
-        await rangoClient.reportFailure({
+      if (!!swap) {
+        await sdk.reportFailure({
           data: { message: rawMessage },
           eventType: 'TX_FAIL',
-          requestId: swapResponse.requestId,
+          requestId: swap.requestId,
         })
       }
     }
@@ -259,7 +361,7 @@ export const App = () => {
           requestId: requestId,
           txId: txHash,
         })
-        .catch((error: any) => {
+        .catch((error) => {
           console.log(error)
         })
       if (!!txStatus) {
@@ -282,6 +384,34 @@ export const App = () => {
     }
   }
 
+  const switchFromAndTo = () => {
+    setFromChain(toChain)
+    setFromToken(toToken)
+    setToChain(fromChain)
+    setToToken(fromToken)
+  }
+
+  const onChangeProtocols = (protocol: string) => {
+    const selects = [...selectedProtocols]
+    const i = selects.findIndex((p) => p === protocol)
+    if (i === -1) {
+      selects.push(protocol)
+      setSelectedProtocols(selects)
+    } else {
+      selects.splice(i, 1)
+      setSelectedProtocols(selects)
+    }
+  }
+
+  const toggleLiquiditySources = (name: string) => {
+    const result = disabledLiquiditySources.includes(name)
+      ? disabledLiquiditySources.filter(
+          (liquiditySource) => liquiditySource !== name
+        )
+      : disabledLiquiditySources.concat(name)
+    setDisabledLiquiditySources(result)
+  }
+
   return (
     <div className="container">
       {!RANGO_API_KEY && (
@@ -290,162 +420,138 @@ export const App = () => {
         </div>
       )}
       <div className="tokens-container">
-        <div className="from">
-          {loadingMeta && <div className="loading" />}
-          {!loadingMeta && (
-            <img src={sourceToken?.image} alt="USDT" height="50px" />
-          )}
-          <div>
-            <input
-              type="number"
-              className="from-amount"
-              value={inputAmount}
-              onChange={(e) => {
-                setInputAmount(e.target.value)
-              }}
-              min="0.01"
-              step="0.01"
-            />
-          </div>
-          <div className="symbol">from</div>
-          <div className="blockchain">
-            {sourceToken?.blockchain}.{sourceToken?.symbol}
-          </div>
-        </div>
-        <div className="swap-details-container">
-          <div className="swap-details">
-            <img src="./img/arrow.png" className="arrow" alt="to" />
-            {quote && (
-              <div className="green-text">
-                {quote.route?.swapper && (
-                  <img
-                    src={quote.route?.swapper?.logo}
-                    alt="swapper logo"
-                    width={50}
-                  />
-                )}{' '}
-                <br />
-                {quote.route?.swapper?.title}
-              </div>
-            )}
-            <br />
-            {quote && (
-              <div>
-                <table className="border-collapse border">
-                  <tbody>
-                    {quote && (
-                      <React.Fragment>
-                        <tr>
-                          <td>expected output</td>
-                          <td>
-                            {new BigNumber(quote?.route?.outputAmount || '0')
-                              .shiftedBy(-(destinationToken?.decimals || 0))
-                              .toString()}{' '}
-                            {destinationToken?.symbol}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>time estimate</td>
-                          <td>{quote.route?.estimatedTimeInSeconds}s</td>
-                        </tr>
-                      </React.Fragment>
-                    )}
-                    {txStatus && (
-                      <React.Fragment>
-                        <tr>
-                          <td>status</td>
-                          <td>
-                            {txStatus.status || TransactionStatus.RUNNING}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>output</td>
-                          <td>
-                            {new BigNumber(txStatus.output?.amount || '0')
-                              .shiftedBy(-(destinationToken?.decimals || 0))
-                              .toString() || '?'}{' '}
-                            {txStatus.output?.receivedToken?.symbol || ''}{' '}
-                            {txStatus.output?.type || ''}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>error?</td>
-                          <td>{txStatus.error || '-'}</td>
-                        </tr>
-                        {txStatus.explorerUrl?.map((item, id) => (
-                          <tr key={id}>
-                            <td>explorer url [{id}]</td>
-                            <td>
-                              <a href={item.url}>
-                                {item.description || 'Tx Hash'}
-                              </a>
-                            </td>
-                          </tr>
-                        ))}
-                        {!!txStatus.bridgeData && (
-                          <React.Fragment>
-                            <tr>
-                              <td>srcChainId</td>
-                              <td>{txStatus.bridgeData.srcChainId}</td>
-                            </tr>
-                            <tr>
-                              <td>destChainId</td>
-                              <td>{txStatus.bridgeData.destChainId}</td>
-                            </tr>
-                            <tr>
-                              <td>srcToken</td>
-                              <td>{txStatus.bridgeData.srcToken}</td>
-                            </tr>
-                            <tr>
-                              <td>destToken</td>
-                              <td>{txStatus.bridgeData.destToken}</td>
-                            </tr>
-                            <tr>
-                              <td>srcTokenAmt</td>
-                              <td>{txStatus.bridgeData.srcTokenAmt}</td>
-                            </tr>
-                            <tr>
-                              <td>destTokenAmt</td>
-                              <td>{txStatus.bridgeData.destTokenAmt}</td>
-                            </tr>
-                            <tr>
-                              <td>srcTxHash</td>
-                              <td>{txStatus.bridgeData.srcTxHash}</td>
-                            </tr>
-                            <tr>
-                              <td>destTxHash</td>
-                              <td>{txStatus.bridgeData.destTxHash}</td>
-                            </tr>
-                          </React.Fragment>
-                        )}
-                      </React.Fragment>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {!!error && <div className="error-message">{error}</div>}
-          </div>
-          <br />
-          <button
-            id="swap"
-            onClick={swap}
-            disabled={loadingMeta || loadingSwap}
+        <TextField
+          placeholder="Base URL"
+          value={baseUrl}
+          onChange={(e) => setBaseUrl(e.target.value)}
+          size="medium"
+          style={{
+            position: 'relative',
+            backgroundColor: '$background !important',
+          }}
+          onResize={undefined}
+          onResizeCapture={undefined}
+        />
+        <Spacer size={16} direction="vertical" />
+
+        <div className="row">
+          <LiquiditySources
+            loading={loadingMeta}
+            setDisabledLiquiditySources={setDisabledLiquiditySources}
+            toggleLiquiditySource={toggleLiquiditySources}
+            swappers={tokensMeta?.swappers || []}
+            disabledLiquiditySources={disabledLiquiditySources}
+          />
+          <Spacer />
+          <Button
+            size="small"
+            onClick={() => setOpen(true)}
+            variant="outlined"
+            type="primary"
+            loading={loadingProtocols}
           >
-            swap
-          </button>
+            Messaging Protocols
+          </Button>
         </div>
-        <div className="to">
-          {loadingMeta && <div className="loading" />}
-          {!loadingMeta && (
-            <img src={destinationToken?.image} alt="Matic" height="50px" />
-          )}
-          <div className="symbol">to</div>
-          <div className="blockchain">
-            {destinationToken?.blockchain}.{destinationToken?.symbol}
-          </div>
+        <Spacer size={16} direction="vertical" />
+        <div className="row">
+          <Button
+            variant="outlined"
+            size="small"
+            type="primary"
+            suffix={
+              <Switch
+                checked={testMessagePassing}
+                // onChange={() => setTestMessagePassing((prev) => !prev)}
+              />
+            }
+            onClick={() => setTestMessagePassing((prev) => !prev)}
+          >
+            Test Message Passing
+          </Button>
+        </div>
+        <Spacer size={16} direction="vertical" />
+        <TokenInfo
+          type="From"
+          chain={fromChain}
+          setToken={setFromToken}
+          setChain={setFromChain}
+          token={fromToken}
+          loading={loadingMeta}
+          setInputAmount={setInputAmount}
+          amount={inputAmount}
+          balances={balances}
+          blockchains={tokensMeta?.blockchains || []}
+          tokens={tokensMeta?.tokens || []}
+        />
+        <SwitchButtonContainer>
+          <Button variant="ghost" onClick={switchFromAndTo}>
+            <VerticalSwapIcon size={36} />
+          </Button>
+        </SwitchButtonContainer>
+        <TokenInfo
+          chain={toChain}
+          balances={balances}
+          token={toToken}
+          setToken={setToToken}
+          setChain={setToChain}
+          type="To"
+          blockchains={tokensMeta?.blockchains || []}
+          tokens={tokensMeta?.tokens || []}
+          loading={loadingMeta}
+          amount={new BigNumber(quote?.route?.outputAmount || '')
+            .shiftedBy(-(toToken?.decimals || 0))
+            .toString()}
+        />
+        <div className="swap-details-container">
+          <SwapDetails
+            quote={quote || null}
+            toToken={toToken}
+            txStatus={txStatus}
+          />
+          {!!error && <div className="error-message">{error}</div>}
+          <br />
+          <Button
+            style={{ width: '92%' }}
+            onClick={swap}
+            loading={loadingSwap}
+            type="primary"
+            // disabled={loadingMeta || loadingSwap}
+          >
+            Swap
+          </Button>
         </div>
       </div>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen((prev) => !prev)}
+        content={
+          <div>
+            {protocols.map((protocol, index) => (
+              <>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  suffix={
+                    <Switch
+                      checked={selectedProtocols.includes(protocol)}
+                      onChange={() => onChangeProtocols(protocol)}
+                    />
+                  }
+                  align="start"
+                  key={index}
+                >
+                  <Typography variant="body2">{protocol}</Typography>
+                </Button>
+                <Spacer size={16} direction="vertical" />
+              </>
+            ))}
+          </div>
+        }
+        title={'Messaging Protocols'}
+        containerStyle={{ width: '560px', height: 'auto' }}
+      />
     </div>
   )
 }
