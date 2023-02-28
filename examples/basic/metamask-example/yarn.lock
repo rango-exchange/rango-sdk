@@ -1763,26 +1763,26 @@
   dependencies:
     "@babel/runtime" "^7.13.10"
 
-"@rango-dev/ui@^0.1.10-next.69":
-  version "0.1.10-next.69"
-  resolved "https://registry.yarnpkg.com/@rango-dev/ui/-/ui-0.1.10-next.69.tgz#0868dbdc852d02616f14bf7b4bee5df2ff679146"
-  integrity sha512-7Z2rso/nh5Zws28y0wKB+XeyB5VPQeDij4/HkssGt8NEYxNlarB6ywe89i9PhxDfMinhldYTvNKDwKjJwNwVxg==
+"@rango-dev/ui@^0.1.10-next.70":
+  version "0.1.10-next.70"
+  resolved "https://registry.yarnpkg.com/@rango-dev/ui/-/ui-0.1.10-next.70.tgz#3e7cd8722cda6a576a3ab071e52b8e071b291a38"
+  integrity sha512-gRweWLQkk+yvQ1hB9N+9IYckoyNJ/7Ny2FmNVxpVYhpJDvvQyNQGS8AzjVKtFf80SAD8p7NpPRBxvl9l/Vgx2A==
   dependencies:
     "@radix-ui/react-checkbox" "^1.0.1"
     "@radix-ui/react-radio-group" "^1.1.1"
     "@radix-ui/react-switch" "^1.0.1"
     "@radix-ui/react-tooltip" "^1.0.2"
-    "@rango-dev/wallets-shared" "^0.1.11-next.69"
+    "@rango-dev/wallets-shared" "^0.1.11-next.70"
     "@stitches/react" "^1.2.8"
     rango-sdk "^0.1.11"
     react-virtualized-auto-sizer "^1.0.7"
     react-window "^1.8.8"
     react-window-infinite-loader "^1.0.8"
 
-"@rango-dev/wallets-shared@^0.1.11-next.69":
-  version "0.1.11-next.69"
-  resolved "https://registry.yarnpkg.com/@rango-dev/wallets-shared/-/wallets-shared-0.1.11-next.69.tgz#c45d4f96f87557d2b7c12ec20698f28072128243"
-  integrity sha512-YJnuxwvQcSUaETJI1pER+rlYqRRlJfyJ/sDa0tf8TeHQxnb5FUVSLAaki6YjyodpMuoekn4E0KdqY+HPPN+lFg==
+"@rango-dev/wallets-shared@^0.1.11-next.70":
+  version "0.1.11-next.70"
+  resolved "https://registry.yarnpkg.com/@rango-dev/wallets-shared/-/wallets-shared-0.1.11-next.70.tgz#635b8175081ec6be3dd52d7e715be1285bb2855c"
+  integrity sha512-qGs8XxbpOOaU+25HamQqxQ5i12Az8xXvQGI8uUA8EmfVNwz4HSZ6wg3vTEjAmnk/KTdCNAes3nmPrxY70cOfOA==
   dependencies:
     "@cosmjs/launchpad" "^0.27.1"
     "@cosmjs/stargate" "^0.29.4"
