@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@rango-dev/ui'
 import { isEvmBlockchain, WalletDetail } from 'rango-sdk'
-import { BlockchainMeta, Token } from 'rango-sdk-basic/lib'
+import { BlockchainMeta, Token } from 'rango-sdk-basic'
 import BigNumber from 'bignumber.js'
 
 import { useState } from 'react'
