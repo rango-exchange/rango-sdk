@@ -1,6 +1,4 @@
 import uuid from 'uuid-random'
-
-import { httpService } from './httpService'
 import {
   MetaResponse,
   BestRouteRequest,
@@ -14,15 +12,18 @@ import {
   WalletDetailsResponse,
   RequestOptions,
 } from '../types'
+import axios, { AxiosInstance } from 'axios'
 
 type WalletAddresses = { blockchain: string; address: string }[]
 
 export class RangoClient {
   private readonly deviceId: string
-
   private readonly apiKey: string
+  private readonly apiUrl: string
+  private readonly httpService: AxiosInstance
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, apiUrl?: string) {
+    this.apiUrl = apiUrl || 'https://api.rango.exchange'
     this.apiKey = apiKey
     try {
       if (typeof window !== 'undefined') {
@@ -40,10 +41,13 @@ export class RangoClient {
     } catch (e) {
       this.deviceId = uuid()
     }
+    this.httpService = axios.create({
+      baseURL: this.apiUrl,
+    })
   }
 
   public async getAllMetadata(options?: RequestOptions): Promise<MetaResponse> {
-    const axiosResponse = await httpService.get<MetaResponse>(
+    const axiosResponse = await this.httpService.get<MetaResponse>(
       `/meta?apiKey=${this.apiKey}`,
       { ...options }
     )
@@ -54,7 +58,7 @@ export class RangoClient {
     requestBody: BestRouteRequest,
     options?: RequestOptions
   ): Promise<BestRouteResponse> {
-    const axiosResponse = await httpService.post<BestRouteResponse>(
+    const axiosResponse = await this.httpService.post<BestRouteResponse>(
       `/routing/best?apiKey=${this.apiKey}`,
       requestBody,
       { headers: { 'X-Rango-Id': this.deviceId }, ...options }
@@ -66,7 +70,7 @@ export class RangoClient {
     requestId: string,
     options?: RequestOptions
   ): Promise<CheckApprovalResponse> {
-    const axiosResponse = await httpService.get<CheckApprovalResponse>(
+    const axiosResponse = await this.httpService.get<CheckApprovalResponse>(
       `/tx/${requestId}/check-approval?apiKey=${this.apiKey}`,
       { ...options }
     )
@@ -77,11 +81,12 @@ export class RangoClient {
     requestBody: CheckTxStatusRequest,
     options?: RequestOptions
   ): Promise<TransactionStatusResponse> {
-    const axiosResponse = await httpService.post<TransactionStatusResponse>(
-      `/tx/check-status?apiKey=${this.apiKey}`,
-      requestBody,
-      { ...options }
-    )
+    const axiosResponse =
+      await this.httpService.post<TransactionStatusResponse>(
+        `/tx/check-status?apiKey=${this.apiKey}`,
+        requestBody,
+        { ...options }
+      )
     return axiosResponse.data
   }
 
@@ -89,11 +94,12 @@ export class RangoClient {
     requestBody: CreateTransactionRequest,
     options?: RequestOptions
   ): Promise<CreateTransactionResponse> {
-    const axiosResponse = await httpService.post<CreateTransactionResponse>(
-      `/tx/create?apiKey=${this.apiKey}`,
-      requestBody,
-      { ...options }
-    )
+    const axiosResponse =
+      await this.httpService.post<CreateTransactionResponse>(
+        `/tx/create?apiKey=${this.apiKey}`,
+        requestBody,
+        { ...options }
+      )
     return axiosResponse.data
   }
 
@@ -101,9 +107,13 @@ export class RangoClient {
     requestBody: ReportTransactionRequest,
     options?: RequestOptions
   ): Promise<void> {
-    await httpService.post(`/tx/report-tx?apiKey=${this.apiKey}`, requestBody, {
-      ...options,
-    })
+    await this.httpService.post(
+      `/tx/report-tx?apiKey=${this.apiKey}`,
+      requestBody,
+      {
+        ...options,
+      }
+    )
   }
 
   public async getWalletsDetails(
@@ -115,7 +125,7 @@ export class RangoClient {
       const walletAddress = walletAddresses[i]
       walletAddressesQueryParams += `&address=${walletAddress.blockchain}.${walletAddress.address}`
     }
-    const axiosResponse = await httpService.get<WalletDetailsResponse>(
+    const axiosResponse = await this.httpService.get<WalletDetailsResponse>(
       `/wallets/details?apiKey=${this.apiKey}${walletAddressesQueryParams}`,
       { ...options }
     )
