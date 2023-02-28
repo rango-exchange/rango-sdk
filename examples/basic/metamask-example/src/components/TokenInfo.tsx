@@ -206,7 +206,6 @@ export function TokenInfo(props: PropTypes) {
                   onClose()
                 }}
                 selected={token as any}
-                loadingStatus="success"
               />
             )
           )

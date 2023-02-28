@@ -32,6 +32,7 @@ import {
   Typography,
   Spacer,
   styled,
+  TextField,
   Switch,
   globalCss,
 } from '@rango-dev/ui'
@@ -61,7 +62,12 @@ const provider = new ethers.providers.Web3Provider(window.ethereum)
 
 export const App = () => {
   const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
-  const sdk = useMemo(() => new RangoClient(RANGO_API_KEY), [])
+  const [baseUrl, setBaseUrl] = useState<string>('https://api.rango.exchange/')
+
+  const sdk = useMemo(
+    () => new RangoClient(RANGO_API_KEY, undefined, baseUrl),
+    []
+  )
 
   const [fromChain, setFromChain] = useState<BlockchainMeta | null>(null)
   const [fromToken, setFromToken] = useState<Token | null>(null)
@@ -85,7 +91,6 @@ export const App = () => {
   const [balances, setBlances] = useState<WalletDetail[]>([])
   const [testMessagePassing, setTestMessagePassing] = useState<boolean>(false)
   const [address, setAddress] = useState<string>('')
-
   useEffect(() => {
     sdk.meta().then((meta) => {
       setTokenMeta(meta)
@@ -413,6 +418,20 @@ export const App = () => {
         </div>
       )}
       <div className="tokens-container">
+        <TextField
+          placeholder="Base URL"
+          value={baseUrl}
+          onChange={(e) => setBaseUrl(e.target.value)}
+          size="medium"
+          style={{
+            position: 'relative',
+            backgroundColor: '$background !important',
+          }}
+          onResize={undefined}
+          onResizeCapture={undefined}
+        />
+        <Spacer size={16} direction="vertical" />
+
         <div className="row">
           <LiquiditySources
             loading={loadingMeta}
