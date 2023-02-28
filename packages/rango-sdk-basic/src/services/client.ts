@@ -167,9 +167,16 @@ export class RangoClient {
       ...swapRequest,
       from: assetToString(swapRequest.from),
       to: assetToString(swapRequest.to),
+      referrerAddress: swapRequest.referrerAddress || null,
+      referrerFee: swapRequest.referrerFee || null,
+      disableEstimate: swapRequest.disableEstimate || false,
       swappers:
         !!swapRequest.swappers && swapRequest.swappers.length > 0
           ? swapRequest.swappers.join(',')
+          : undefined,
+      swapperGroups:
+        !!swapRequest.swapperGroups && swapRequest.swapperGroups.length > 0
+          ? swapRequest.swapperGroups.join(',')
           : undefined,
       messagingProtocols:
         !!swapRequest.messagingProtocols &&
