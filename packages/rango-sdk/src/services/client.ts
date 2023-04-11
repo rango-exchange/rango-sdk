@@ -68,11 +68,12 @@ export class RangoClient {
 
   public async checkApproval(
     requestId: string,
+    txId?: string,
     options?: RequestOptions
   ): Promise<CheckApprovalResponse> {
     const axiosResponse = await this.httpService.get<CheckApprovalResponse>(
       `/tx/${requestId}/check-approval?apiKey=${this.apiKey}`,
-      { ...options }
+      { params: { txId }, ...options }
     )
     return axiosResponse.data
   }
