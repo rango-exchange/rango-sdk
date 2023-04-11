@@ -134,7 +134,7 @@ export class RangoClient {
 
   public async isApproved(
     requestId: string,
-    txId: string,
+    txId?: string,
     options?: RequestOptions
   ): Promise<CheckApprovalResponse> {
     const axiosResponse = await this.httpService.get<CheckApprovalResponse>(
