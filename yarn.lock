@@ -1799,10 +1799,10 @@ queue-microtask@^1.2.2:
   resolved "https://registry.npmjs.org/queue-microtask/-/queue-microtask-1.2.3.tgz"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
 
-rango-types@^0.1.37:
-  version "0.1.37"
-  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.37.tgz#1336e3002507649f90faf2982860c713181fcc16"
-  integrity sha512-4ACq2XU2euAbkahOuwK6cRPrPXWLdRaV9rSuXIddkH2UiXOVGGoZRzApiDP4eT5rObT34Flv/EFWtUJoz7K3Yg==
+rango-types@^0.1.38:
+  version "0.1.38"
+  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.38.tgz#e204df207f4c8baff80a655a8e99106d10e42df9"
+  integrity sha512-99eYs/NzKvHZuZBc9mOpaU4v1GTkdkXa/saKep/fU+QK1a36ytFqoh8kS8bBJ4HBiJ+Cq51H/GoqFB8kgrtlLg==
 
 regexp.prototype.flags@^1.4.3:
   version "1.4.3"
