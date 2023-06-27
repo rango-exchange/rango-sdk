@@ -11,6 +11,8 @@ import {
   ReportTransactionRequest,
   WalletDetailsResponse,
   RequestOptions,
+  BlockchainMeta,
+  SwapperMeta,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
 
@@ -49,6 +51,24 @@ export class RangoClient {
   public async getAllMetadata(options?: RequestOptions): Promise<MetaResponse> {
     const axiosResponse = await this.httpService.get<MetaResponse>(
       `/meta?apiKey=${this.apiKey}`,
+      { ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async getBlockchains(
+    options?: RequestOptions
+  ): Promise<BlockchainMeta[]> {
+    const axiosResponse = await this.httpService.get<BlockchainMeta[]>(
+      `/meta/blockchains?apiKey=${this.apiKey}`,
+      { ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async getSwappers(options?: RequestOptions): Promise<SwapperMeta[]> {
+    const axiosResponse = await this.httpService.get<SwapperMeta[]>(
+      `/meta/swappers?apiKey=${this.apiKey}`,
       { ...options }
     )
     return axiosResponse.data
