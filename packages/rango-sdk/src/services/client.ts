@@ -13,6 +13,9 @@ import {
   RequestOptions,
   BlockchainMeta,
   SwapperMeta,
+  CompactMetaResponse,
+  CompactToken,
+  Token,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
 
@@ -49,11 +52,29 @@ export class RangoClient {
   }
 
   public async getAllMetadata(options?: RequestOptions): Promise<MetaResponse> {
-    const axiosResponse = await this.httpService.get<MetaResponse>(
-      `/meta?apiKey=${this.apiKey}`,
+    const axiosResponse = await this.httpService.get<CompactMetaResponse>(
+      `/meta/compact?apiKey=${this.apiKey}`,
       { ...options }
     )
-    return axiosResponse.data
+    const reformatTokens = (tokens: CompactToken[]): Token[] =>
+      tokens.map((tm) => ({
+        blockchain: tm.b,
+        symbol: tm.s,
+        image: tm.i,
+        address: tm.a || null,
+        usdPrice: tm.p || null,
+        isSecondaryCoin: tm.is || false,
+        coinSource: tm.c || null,
+        coinSourceUrl: tm.cu || null,
+        name: tm.n || null,
+        decimals: tm.d,
+        isPopular: tm.ip || false,
+        supportedSwappers: tm.ss || [],
+      }))
+
+    const tokens = reformatTokens(axiosResponse.data.tokens)
+    const popularTokens = reformatTokens(axiosResponse.data.popularTokens)
+    return { ...axiosResponse.data, tokens, popularTokens }
   }
 
   public async getBlockchains(
