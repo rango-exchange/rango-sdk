@@ -18,8 +18,8 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
-          cache: "yarn"
+          node-version: '18'
+          cache: 'yarn'
 
       - name: Set Git Config
         run: |
@@ -40,6 +40,9 @@ jobs:
       - name: Pull latest changes
         run: git pull origin master
 
+      - name: Build packages
+        run: yarn build
+
       - name: Bump version of packages
         run: |
           # Get the list of packages in the packages folder
@@ -56,9 +59,6 @@ jobs:
         run: |
           git commit -a -m "Bump package versions"
           git push origin master
-
-      - name: Build packages
-        run: yarn build
 
       - name: Publish packages
         run: |
