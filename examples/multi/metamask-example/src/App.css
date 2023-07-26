@@ -1,76 +1,93 @@
 body {
     text-align: center;
-}
-
-.green-text {
+  }
+  
+  table td {
+    border: 1px solid gray;
+    padding: 5px 4px;
+    min-width: 200px;
+  }
+  
+  .green-text {
     color: darkgreen;
-}
-
-.red-text {
+  }
+  
+  .red-text {
     color: darkred;
-}
-
-button:hover {
+  }
+  
+  button:hover {
     cursor: pointer;
-}
-
-.container, .swap-details {
+  }
+  
+  .container,
+  .swap-details {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}
-
-.swap-details-container {
+  }
+  
+  .swap-details-container {
     display: flex;
     flex-direction: column;
     justify-content: space-around;
     align-items: center;
-}
-
-.container {
-    background-color: gainsboro;
+  }
+  
+  .container {
+    /* background-color: #fafafa; */
     padding: 2rem;
     display: flex;
-}
-
-.tokens-container {
+  }
+  
+  .tokens-container {
     display: flex;
-}
-
-.from,
-.to {
+    justify-content: center;
+    flex-direction: column;
+    width: 512px;
+    background: rgb(220, 220, 220);
+    padding: 30px 20px;
+    border-radius: 10px;
+  }
+  
+  .from,
+  .to {
     margin: 6rem;
-}
-
-.arrow {
+  }
+  
+  .arrow {
     margin-top: 3rem;
     width: 100px;
-}
-
-.failure {
+  }
+  
+  .margin-bottom-5 {
+    margin-bottom: 5px;
+  }
+  
+  .failure {
     width: 40px;
-}
-
-.success {
+  }
+  
+  .success {
     width: 50px;
-}
-
-.from-amount {
+  }
+  
+  .from-amount {
     width: 4rem;
-}
-
-#swap {
+  }
+  
+  #swap {
     width: 4rem;
-}
-
-.loading {
+  }
+  
+  .loading {
     display: inline-block;
     width: 40px;
     height: 40px;
-}
-
-.loading:after {
+  }
+  
+  .loading:after {
     content: ' ';
     display: block;
     width: 32px;
@@ -80,17 +97,22 @@ button:hover {
     border: 3px solid #000;
     border-color: #000 transparent #000 transparent;
     animation: loading 1.2s linear infinite;
-}
-
-@keyframes loading {
+  }
+  
+  @keyframes loading {
     0% {
-        transform: rotate(0deg);
+      transform: rotate(0deg);
     }
     100% {
-        transform: rotate(360deg);
+      transform: rotate(360deg);
     }
-}
-
-.error-message {
+  }
+  
+  .error-message {
     color: red;
-}
+  }
+  .row {
+    display: flex;
+    justify-content: end;
+  }
+  
