@@ -73,6 +73,7 @@ export class RangoClient {
       ...metaRequest,
       blockchains: metaRequest?.blockchains?.join(),
       swappers: metaRequest?.swappers?.join(),
+      swappersGroups: metaRequest?.swappersGroups?.join(),
       transactionTypes: metaRequest?.transactionTypes?.join(),
     }
     const axiosResponse = await this.httpService.get<MetaResponse>(
