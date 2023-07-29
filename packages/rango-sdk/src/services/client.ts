@@ -1,5 +1,6 @@
 import uuid from 'uuid-random'
 import {
+  MetaRequest,
   MetaResponse,
   BestRouteRequest,
   BestRouteResponse,
@@ -51,10 +52,22 @@ export class RangoClient {
     })
   }
 
-  public async getAllMetadata(options?: RequestOptions): Promise<MetaResponse> {
+  public async getAllMetadata(
+    metaRequest?: MetaRequest,
+    options?: RequestOptions
+  ): Promise<MetaResponse> {
+    const params = {
+      ...metaRequest,
+      blockchains: metaRequest?.blockchains?.join(),
+      swappers: metaRequest?.swappers?.join(),
+      transactionTypes: metaRequest?.transactionTypes?.join(),
+    }
     const axiosResponse = await this.httpService.get<CompactMetaResponse>(
       `/meta/compact?apiKey=${this.apiKey}`,
-      { ...options }
+      {
+        params,
+        ...options,
+      }
     )
     const reformatTokens = (tokens: CompactToken[]): Token[] =>
       tokens.map((tm) => ({

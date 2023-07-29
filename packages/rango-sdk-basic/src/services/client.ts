@@ -1,6 +1,7 @@
 import uuid from 'uuid-random'
 
 import {
+  MetaRequest,
   MetaResponse,
   QuoteRequest,
   QuoteResponse,
@@ -64,10 +65,22 @@ export class RangoClient {
     }
   }
 
-  public async meta(options?: RequestOptions): Promise<MetaResponse> {
+  public async meta(
+    metaRequest?: MetaRequest,
+    options?: RequestOptions
+  ): Promise<MetaResponse> {
+    const params = {
+      ...metaRequest,
+      blockchains: metaRequest?.blockchains?.join(),
+      swappers: metaRequest?.swappers?.join(),
+      transactionTypes: metaRequest?.transactionTypes?.join(),
+    }
     const axiosResponse = await this.httpService.get<MetaResponse>(
       `/basic/meta?apiKey=${this.apiKey}`,
-      { ...options }
+      {
+        params,
+        ...options,
+      }
     )
     return axiosResponse.data
   }
