@@ -1,0 +1,68 @@
+name: Publish Packages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish-packages:
+    name: Publish Packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Set Git Config
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> .npmrc
+          npm whoami
+
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Pull latest changes
+        run: git pull origin master
+
+      - name: Build packages
+        run: yarn build
+
+      - name: Bump version of packages
+        run: |
+          # Get the list of packages in the packages folder
+          packages=$(ls packages)
+
+          # Loop through each package and bump the version
+          for package in $packages; do
+            cd packages/$package
+            npm version patch --no-git-tag-version
+            cd ../../
+          done
+
+      - name: Commit and push changes
+        run: |
+          git commit -a -m "Bump package versions"
+          git push origin master
+
+      - name: Publish packages
+        run: |
+          cd packages/rango-sdk
+          npm publish --access public
+          cd ../rango-sdk-basic 
+          npm publish --access public
