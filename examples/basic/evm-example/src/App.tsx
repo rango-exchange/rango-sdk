@@ -60,12 +60,13 @@ const globalStyles = globalCss({
 })
 
 export const App = () => {
-  const RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32' // put your RANGO-API-KEY here
   const [baseUrl, setBaseUrl] = useState<string>('https://api.rango.exchange/')
-
+  const [rangoApiKey, setRangoApiKey] = useState<string>(
+    'c6381a79-2817-4602-83bf-6a641a409e32'
+  )
   const sdk = useMemo(
-    () => new RangoClient(RANGO_API_KEY, undefined, baseUrl),
-    [baseUrl]
+    () => new RangoClient(rangoApiKey, undefined, baseUrl),
+    [baseUrl, rangoApiKey]
   )
 
   const [fromChain, setFromChain] = useState<BlockchainMeta | null>(null)
@@ -413,16 +414,24 @@ export const App = () => {
 
   return (
     <div className="container">
-      {!RANGO_API_KEY && (
-        <div className="red-text">
-          <b>Set RANGO_API_KEY inside App.tsx to make it work!</b>
-        </div>
-      )}
       <div className="tokens-container">
         <TextField
           placeholder="Base URL"
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
+          size="medium"
+          style={{
+            position: 'relative',
+            backgroundColor: '$background !important',
+          }}
+          onResize={undefined}
+          onResizeCapture={undefined}
+        />
+        <Spacer size={16} direction="vertical" />
+        <TextField
+          placeholder="API Key"
+          value={rangoApiKey}
+          onChange={(e) => setRangoApiKey(e.target.value)}
           size="medium"
           style={{
             position: 'relative',
