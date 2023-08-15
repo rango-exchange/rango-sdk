@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "husky install",
     "build": "yarn workspaces run build",
     "clean": "yarn workspaces run clean",
     "dev": "yarn workspaces run watch",
@@ -12,6 +13,7 @@
     "lint": "yarn workspaces run lint"
   },
   "devDependencies": {
+    "husky": "^8.0.3",
     "@rollup/plugin-replace": "^5.0.2",
     "@types/node": "^18.11.18",
     "@types/uuid": "^9.0.0",
