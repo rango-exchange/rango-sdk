@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish-packages:
-    if: "!contains(github.event.head_commit.message, 'publish workflow')"
+    if: "!contains(github.event.head_commit.message, 'ci(release):')"
 
     name: Publish Packages
     runs-on: ubuntu-latest
@@ -61,7 +61,8 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git commit -am "ci: bump package versions [publish workflow]"
+          git stash -- yarn.lock
+          git commit -am "ci(release): bump package versions"
           git push origin master
 
       - name: Publish packages
