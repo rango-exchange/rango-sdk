@@ -11,24 +11,38 @@ type TokenContainerProps = {
 
 export default function TokenContainer(props: TokenContainerProps) {
   return (
-    <div className={props.variant}>
-      <div className="header">{props.variant} Token</div>
-      <div className="body">
-        <div className="img-container">
+    <div className="w-64 min-h-[256px] bg-secondary rounded-xl border-white border-2 ">
+      <div className="bg-white w-full border-solid border-white rounded-t-md text-primary text-center py-1 capitalize">
+        {props.variant} Token
+      </div>
+      <div className="py-7">
+        <div className="h-12">
           {props.loading && <div className="loading" />}
           {!props.loading && (
-            <img src={props.token?.image} alt={props.token?.symbol} />
+            <img
+              src={props.token?.image}
+              alt={props.token?.symbol}
+              className="w-12 h-12 m-auto"
+            />
           )}
         </div>
-        <div className="symbol">{props.token?.symbol ?? '?'}</div>
-        <div className="blockchain">on {props.token?.blockchain ?? '?'}</div>
-        <div className="amount">
+        <div className="font-medium pt-4 pb-0">
+          {props.token?.symbol ?? '?'}
+        </div>
+        <div className="font-medium pb-4 text-[#b9b9b9]">
+          on {props.token?.blockchain ?? '?'}
+        </div>
+        <div className="h-12">
           {props.variant === 'from' ? 'Input:' : 'Output:'}&nbsp;
           {props.outputLoading && <div className="loading output-loading" />}
           {!props.outputLoading && (
             <input
               type="number"
-              className={`${props.variant}-amount`}
+              className={`w-28 text-lg ${
+                props.variant === 'to'
+                  ? 'text-success border-none bg-transparent text-center text-xl'
+                  : 'text-primary pl-2'
+              }`}
               disabled={props.variant === 'to'}
               value={props.amount}
               onChange={(e) => {

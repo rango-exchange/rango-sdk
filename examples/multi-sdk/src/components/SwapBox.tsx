@@ -21,7 +21,7 @@ export default function SwapBox({
   outputAmount,
 }: SwapBoxProps) {
   return (
-    <div className="tokens-container">
+    <div className="flex my-6 mx-auto font-medium">
       <TokenContainer
         variant="from"
         loading={loadingMeta}

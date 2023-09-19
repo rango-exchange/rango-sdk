@@ -10,7 +10,7 @@ export default function ExampleSelect(props: ExampleSelectProps) {
     <div className="text-left w-full">
       Select Example:{' '}
       <select
-        className="example-type"
+        className="p-1 pr-5 pl-0 text-primary"
         onChange={(e) => {
           props?.onChange(e.target.value as ExampleTxType)
         }}

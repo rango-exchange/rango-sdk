@@ -1,24 +1,6 @@
 body {
-  background-color: #282c34;
-  color: white;
+  background-color: #070917;
   font-family: 'Roboto', sans-serif;
-  text-align: center;
-}
-
-.green-text {
-  color: darkgreen;
-}
-
-.red-text {
-  color: darkred;
-}
-
-.text-left {
-  text-align: left;
-}
-
-.w-full {
-  width: 100%;
 }
 
 button:hover {
@@ -40,82 +22,8 @@ button:hover {
   align-items: center;
 }
 
-.container {
-  padding: 48px 16px;
-  display: flex;
-  margin: auto;
-  width: 710px;
-}
-
-.tokens-container {
-  display: flex;
-  margin: 100px auto;
-  font-size: medium;
-}
-
-.tokens-container input {
-  font-size: medium;
-  width: 100px;
-  font-size: large;
-}
-
 .tokens-container .to input {
-  color: rgb(58 255 156);
-  background: none;
-  border: none;
   box-shadow: none;
-  text-align: center;
-  font-size: x-large;
-}
-
-.tokens-container img {
-  height: 50px;
-  width: 50px;
-}
-
-.tokens-container .header {
-  background-color: white;
-  width: 100%;
-  border: 1px solid white;
-  border-top-right-radius: 12px;
-  border-top-left-radius: 12px;
-  color: #282c34;
-  text-align: center;
-  padding: 5px 0;
-  text-transform: capitalize;
-}
-
-.tokens-container .body {
-  padding: 30px 0;
-}
-
-.tokens-container .amount {
-  height: 50px;
-}
-
-.tokens-container .symbol {
-  padding: 15px 0 2px;
-  font-size: medium;
-}
-
-.tokens-container .img-container {
-  height: 50px;
-  margin: auto;
-}
-
-.tokens-container .blockchain {
-  font-size: medium;
-  padding-bottom: 15px;
-  color: rgb(185, 185, 185);
-}
-
-.from,
-.to {
-  border: 2px solid white;
-  border-radius: 15px;
-  width: 250px;
-  min-height: 265px;
-  background-color: #3b414f;
 }
 
 .arrow {
@@ -124,6 +32,11 @@ button:hover {
   display: inline-block;
   content: '\2192';
   font-size: 6rem;
+}
+
+.arrow.arrow-sm {
+  padding: 0;
+  font-size: 2rem;
 }
 
 .failure {
@@ -140,11 +53,6 @@ button:hover {
 
 #swap {
   width: 4rem;
-}
-
-.example-type {
-  font-size: 1rem;
-  padding: 5px 20px 5px 0;
 }
 
 .loading {

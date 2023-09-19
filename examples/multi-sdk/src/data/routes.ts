@@ -1,5 +1,5 @@
 import { Token, TransactionType } from 'rango-sdk'
-import { ExampleTxType } from './types'
+import { ExampleTxType } from '../types'
 
 const sampleTokens = {
   [TransactionType.EVM]: { from: 'BSC.BNB', to: 'AVAX_CCHAIN.AVAX' },

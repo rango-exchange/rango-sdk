@@ -6,12 +6,14 @@ import {
   Token,
   TransactionType,
 } from 'rango-sdk'
-import TxTypeSelect from './components/ExampleSelect'
+import ExampleSelect from './components/ExampleSelect'
 import { ExampleTxType } from './types'
-import { chooseSampleToken } from './helpers'
-import './App.css'
+import { chooseSampleToken } from './data/routes'
 import SwapBox from './components/SwapBox'
 import RoutePreview from './components/RoutePreview'
+import './App.css'
+import ConnectWallet from './components/ConnectWallet'
+import { sampleWallets } from './data/wallets'
 
 function App() {
   const [txType, setTxType] = useState<ExampleTxType>(TransactionType.EVM)
@@ -22,6 +24,10 @@ function App() {
   const [fromInputAmount, setFromInputAmount] = useState<string>('1.0')
   const [route, setRoute] = useState<BestRouteResponse | null>(null)
   const [loadingRoute, setLoadingRoute] = useState<boolean>(true)
+  const [walletAddress, setWalletAddress] = useState<string>('')
+  const [executionState, setExecutionState] = useState<
+    'start' | 'connected' | 'confirm-route'
+  >('start')
 
   useEffect(() => {
     if (!tokensMeta) return
@@ -29,6 +35,7 @@ function App() {
     const toToken = chooseSampleToken(tokensMeta.tokens, txType, 'to')
     setFromToken(fromToken)
     setToToken(toToken)
+    setExecutionState('start')
   }, [txType, tokensMeta])
 
   // put your RANGO-API-KEY here
@@ -43,19 +50,14 @@ function App() {
       .finally(() => setLoadingMeta(false))
   }, [sdk])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!fromToken || !toToken || !fromInputAmount) return
     setLoadingRoute(true)
     setRoute(null)
-    // If you just want to show route to user, set checkPrerequisites: false.
-    // Also for multi steps swap, it is faster to get route first with {checkPrerequisites: false} and if users confirms.
-    // check his balance with {checkPrerequisites: true} in another get best route request
     sdk
       .getBestRoute({
         amount: fromInputAmount,
-        affiliateRef: null,
-        checkPrerequisites: true,
+        checkPrerequisites: false,
         connectedWallets: [],
         selectedWallets: {},
         from: fromToken,
@@ -65,13 +67,33 @@ function App() {
         setRoute(route)
         setLoadingRoute(false)
       })
+      .catch(() => setLoadingRoute(false))
   }, [fromToken, toToken, fromInputAmount, sdk])
 
   return (
-    <div className="App">
-      <div className="container">
-        <TxTypeSelect onChange={setTxType} />
-        <RoutePreview />
+    <div className="text-center text-white">
+      <div className="container min-w-fit max-w-2xl flex m-auto mt-12">
+        <div className="flex flex-row w-full">
+          <ExampleSelect onChange={setTxType} />
+        </div>
+        <RoutePreview route={route} loading={loadingRoute} />
+        {executionState === 'start' && (
+          <ConnectWallet
+            wallet={sampleWallets[txType]}
+            onConnect={(address: string) => {
+              setWalletAddress(address)
+              setExecutionState('connected')
+            }}
+          />
+        )}
+        {executionState === 'connected' && (
+          <button
+            onClick={async () => {}}
+            className="bg-button text-white w-full text-sm border-white border-2 border-t-0 rounded-b-xl px-2 py-1"
+          >
+            Execute Route
+          </button>
+        )}
         <SwapBox
           outputLoading={loadingRoute}
           loadingMeta={loadingMeta}
