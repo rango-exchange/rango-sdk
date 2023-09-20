@@ -56,7 +56,12 @@ function App() {
   useEffect(() => {
     if (!fromToken || !toToken || !fromInputAmount) return
     if (loadingRoute) return
-    if (executionState === 'start' && !!route) return
+    if (
+      executionState === 'start' &&
+      !!route &&
+      route.requestAmount === fromInputAmount
+    )
+      return
     if (executionState === 'confirm-route') return
     const swaps = route?.result?.swaps
     setLoadingRoute(true)

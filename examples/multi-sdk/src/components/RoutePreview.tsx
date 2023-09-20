@@ -1,4 +1,5 @@
 import { BestRouteResponse, SwapResultAsset } from 'rango-sdk'
+import { RoutePreviewValidationStatus } from './RoutePreviewValidationStatus'
 
 type RoutePreviewProps = {
   route: BestRouteResponse | null
@@ -22,15 +23,16 @@ function RouteItem(props: { token: SwapResultAsset; amount: string }) {
 
 export default function RoutePreview(props: RoutePreviewProps) {
   const { route, loading } = props
-  const result = route?.result
+  const { result } = route ?? {}
   const swaps = result?.swaps
+
   return (
-    <div className="border-2 bg-secondary w-full rounded-t-lg mt-6 pb-8">
+    <div className="border-2 bg-secondary w-full rounded-t-lg mt-6">
       <div className="bg-white w-full border-solid border-white rounded-t-md text-primary text-center py-1 capitalize">
         Route Preview
       </div>
-      <div className="flex flex-row pt-4 justify-center h-20 px-4">
-        {loading && <div className="loading pt-4" />}
+      <div className="flex flex-row pt-4 justify-center h-28 px-4">
+        {loading && <div className="loading pt-6" />}
         {swaps && (
           <>
             <div key={0}>
@@ -40,7 +42,7 @@ export default function RoutePreview(props: RoutePreviewProps) {
               />
             </div>
             {swaps.map((swap, i) => (
-              <div key={i}>
+              <div key={i + 1}>
                 <div>
                   <div className="inline-block w-7">
                     <span className="text-2xl -top-6 relative">&#8594;</span>
@@ -55,6 +57,7 @@ export default function RoutePreview(props: RoutePreviewProps) {
           </>
         )}
       </div>
+      <RoutePreviewValidationStatus route={route} />
     </div>
   )
 }
