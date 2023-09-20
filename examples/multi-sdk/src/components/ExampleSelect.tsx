@@ -7,17 +7,21 @@ type ExampleSelectProps = {
 
 export default function ExampleSelect(props: ExampleSelectProps) {
   return (
-    <div className="text-left w-full">
-      Select Example:{' '}
-      <select
-        className="p-1 pr-5 pl-0 text-primary"
-        onChange={(e) => {
-          props?.onChange(e.target.value as ExampleTxType)
-        }}
-      >
-        <option value={TransactionType.EVM}>{TransactionType.EVM}</option>
-        <option value={TransactionType.COSMOS}>{TransactionType.COSMOS}</option>
-      </select>
+    <div className="flex flex-row w-full">
+      <div className="text-left w-full">
+        Select Example:{' '}
+        <select
+          className="p-1 pr-5 pl-0 text-primary"
+          onChange={(e) => {
+            props?.onChange(e.target.value as ExampleTxType)
+          }}
+        >
+          <option value={TransactionType.EVM}>{TransactionType.EVM}</option>
+          <option value={TransactionType.COSMOS}>
+            {TransactionType.COSMOS}
+          </option>
+        </select>
+      </div>
     </div>
   )
 }

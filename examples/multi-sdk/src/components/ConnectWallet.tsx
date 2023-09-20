@@ -2,12 +2,15 @@ import { ExampleWallet } from '../types'
 
 type ConnectWalletProps = {
   wallet: ExampleWallet
-  onConnect: (address: string) => void
+  onConnect: (address?: string, error?: string) => void
 }
 
 async function connectMetamask() {
+  if (!window.ethereum) {
+    throw new Error('Metamask is not installed')
+  }
   return (
-    await (window as any).ethereum.request({
+    await window.ethereum.request({
       method: 'eth_requestAccounts',
     })
   )?.[0]
@@ -27,7 +30,21 @@ export default function ConnectWallet({
 }: ConnectWalletProps) {
   return (
     <button
-      onClick={async () => onConnect(await connect(wallet))}
+      onClick={async () => {
+        try {
+          const address = await connect(wallet)
+          if (!address) onConnect(undefined, 'Connect failed')
+          else onConnect(address)
+        } catch (error) {
+          onConnect(
+            undefined,
+            (error as Error)?.message ||
+              JSON.stringify(error) ||
+              'Connect failed'
+          )
+          return
+        }
+      }}
       className="bg-button text-white w-full text-sm border-white border-2 border-t-0 rounded-b-xl px-2 py-1"
     >
       Connect {wallet}

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  BestRouteRequest,
   BestRouteResponse,
   MetaResponse,
   RangoClient,
@@ -23,7 +24,7 @@ function App() {
   const [toToken, setToToken] = useState<Token | undefined>()
   const [fromInputAmount, setFromInputAmount] = useState<string>('1.0')
   const [route, setRoute] = useState<BestRouteResponse | null>(null)
-  const [loadingRoute, setLoadingRoute] = useState<boolean>(true)
+  const [loadingRoute, setLoadingRoute] = useState<boolean>(false)
   const [walletAddress, setWalletAddress] = useState<string>('')
   const [executionState, setExecutionState] = useState<
     'start' | 'connected' | 'confirm-route'
@@ -36,6 +37,8 @@ function App() {
     setFromToken(fromToken)
     setToToken(toToken)
     setExecutionState('start')
+    setRoute(null)
+    setLoadingRoute(false)
   }, [txType, tokensMeta])
 
   // put your RANGO-API-KEY here
@@ -52,46 +55,91 @@ function App() {
 
   useEffect(() => {
     if (!fromToken || !toToken || !fromInputAmount) return
+    if (loadingRoute) return
+    if (executionState === 'start' && !!route) return
+    if (executionState === 'confirm-route') return
+    const swaps = route?.result?.swaps
     setLoadingRoute(true)
     setRoute(null)
+    let data: BestRouteRequest = {
+      amount: fromInputAmount,
+      checkPrerequisites: false,
+      connectedWallets: [],
+      selectedWallets: {},
+      from: fromToken,
+      to: toToken,
+    }
+    if (executionState === 'connected') {
+      const selectedWallets =
+        swaps
+          ?.map((swap) => ({
+            [swap.from.blockchain]: walletAddress,
+            [swap.to.blockchain]: walletAddress,
+          }))
+          ?.reduce((prev, curr) => ({ ...prev, ...curr }), {}) || {}
+      const connectedWallets = Object.entries(selectedWallets).map(
+        ([blockchain, address]) => ({ blockchain, addresses: [address] })
+      )
+      data = {
+        ...data,
+        connectedWallets,
+        selectedWallets,
+        checkPrerequisites: true,
+      }
+    }
     sdk
-      .getBestRoute({
-        amount: fromInputAmount,
-        checkPrerequisites: false,
-        connectedWallets: [],
-        selectedWallets: {},
-        from: fromToken,
-        to: toToken,
-      })
+      .getBestRoute(data)
       .then((route) => {
         setRoute(route)
         setLoadingRoute(false)
       })
-      .catch(() => setLoadingRoute(false))
-  }, [fromToken, toToken, fromInputAmount, sdk])
+      .catch(() => {
+        setRoute(null)
+        setExecutionState('start')
+      })
+      .finally(() => {
+        setLoadingRoute(false)
+        if (executionState === 'connected') setExecutionState('confirm-route')
+      })
+  }, [
+    fromToken,
+    toToken,
+    fromInputAmount,
+    sdk,
+    route?.result?.swaps,
+    executionState,
+    walletAddress,
+    loadingRoute,
+    route,
+  ])
+
+  const onWalletConnect = useCallback((address?: string, error?: string) => {
+    if (error || !address) {
+      alert(error)
+      return
+    }
+    setWalletAddress(address)
+    setExecutionState('connected')
+  }, [])
 
   return (
     <div className="text-center text-white">
       <div className="container min-w-fit max-w-2xl flex m-auto mt-12">
-        <div className="flex flex-row w-full">
-          <ExampleSelect onChange={setTxType} />
-        </div>
+        <ExampleSelect onChange={setTxType} />
         <RoutePreview route={route} loading={loadingRoute} />
         {executionState === 'start' && (
           <ConnectWallet
             wallet={sampleWallets[txType]}
-            onConnect={(address: string) => {
-              setWalletAddress(address)
-              setExecutionState('connected')
-            }}
+            onConnect={onWalletConnect}
           />
         )}
-        {executionState === 'connected' && (
+        {(executionState === 'connected' ||
+          executionState === 'confirm-route') && (
           <button
             onClick={async () => {}}
             className="bg-button text-white w-full text-sm border-white border-2 border-t-0 rounded-b-xl px-2 py-1"
           >
-            Execute Route
+            Confirm Route
           </button>
         )}
         <SwapBox
