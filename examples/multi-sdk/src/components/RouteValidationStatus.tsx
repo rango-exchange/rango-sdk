@@ -1,12 +1,12 @@
 import { BestRouteResponse } from 'rango-sdk'
 import { numberToString, numberToBN } from '../helpers/numbers'
 
-type RoutePreviewValidationStatusProps = {
+type RouteValidationStatusProps = {
   route: BestRouteResponse | null
 }
 
-export function RoutePreviewValidationStatus(
-  props: RoutePreviewValidationStatusProps
+export default function RouteValidationStatus(
+  props: RouteValidationStatusProps
 ) {
   const routeBalanceChecks = props.route?.validationStatus?.flatMap((status) =>
     status.wallets.flatMap((wallet) =>

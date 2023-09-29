@@ -1,9 +1,11 @@
 import { BestRouteResponse, SwapResultAsset } from 'rango-sdk'
-import { RoutePreviewValidationStatus } from './RoutePreviewValidationStatus'
+import RouteValidationStatus from './RouteValidationStatus'
+import RouteExecutionDetail from './RouteExecutionDetail'
 
 type RoutePreviewProps = {
   route: BestRouteResponse | null
   loading: boolean
+  executionLogs: string[]
 }
 
 function RouteItem(props: { token: SwapResultAsset; amount: string }) {
@@ -22,7 +24,7 @@ function RouteItem(props: { token: SwapResultAsset; amount: string }) {
 }
 
 export default function RoutePreview(props: RoutePreviewProps) {
-  const { route, loading } = props
+  const { route, loading, executionLogs } = props
   const { result } = route ?? {}
   const swaps = result?.swaps
 
@@ -57,7 +59,8 @@ export default function RoutePreview(props: RoutePreviewProps) {
           </>
         )}
       </div>
-      <RoutePreviewValidationStatus route={route} />
+      {executionLogs?.length === 0 && <RouteValidationStatus route={route} />}
+      <RouteExecutionDetail logs={executionLogs} />
     </div>
   )
 }

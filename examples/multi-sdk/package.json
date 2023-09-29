@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@rango-dev/signer-cosmos": "^0.15.0",
+    "@rango-dev/signer-evm": "^0.15.0",
     "@types/node": "^16.18.52",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",

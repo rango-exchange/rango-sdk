@@ -7,14 +7,18 @@ import {
   Token,
   TransactionType,
 } from 'rango-sdk'
-import ExampleSelect from './components/ExampleSelect'
 import { ExampleTxType } from './types'
 import { chooseSampleToken } from './data/routes'
-import SwapBox from './components/SwapBox'
-import RoutePreview from './components/RoutePreview'
 import './App.css'
-import ConnectWallet from './components/ConnectWallet'
 import { sampleWallets } from './data/wallets'
+import {
+  ExampleSelect,
+  RoutePreview,
+  ConnectWallet,
+  SwapBox,
+} from './components'
+import { DefaultEvmSigner } from '@rango-dev/signer-evm'
+import { DefaultCosmosSigner } from '@rango-dev/signer-cosmos'
 
 function App() {
   const [txType, setTxType] = useState<ExampleTxType>(TransactionType.EVM)
@@ -26,8 +30,9 @@ function App() {
   const [route, setRoute] = useState<BestRouteResponse | null>(null)
   const [loadingRoute, setLoadingRoute] = useState<boolean>(false)
   const [walletAddress, setWalletAddress] = useState<string>('')
+  const [executionLogs, setExecutionLogs] = useState<string[]>([])
   const [executionState, setExecutionState] = useState<
-    'start' | 'connected' | 'confirm-route'
+    'start' | 'wallet-connected' | 'confirm-route'
   >('start')
 
   useEffect(() => {
@@ -50,6 +55,7 @@ function App() {
     sdk
       .getAllMetadata()
       .then((meta) => setTokenMeta(meta))
+      .catch(() => {})
       .finally(() => setLoadingMeta(false))
   }, [sdk])
 
@@ -74,7 +80,7 @@ function App() {
       from: fromToken,
       to: toToken,
     }
-    if (executionState === 'connected') {
+    if (executionState === 'wallet-connected') {
       const selectedWallets =
         swaps
           ?.map((swap) => ({
@@ -104,7 +110,8 @@ function App() {
       })
       .finally(() => {
         setLoadingRoute(false)
-        if (executionState === 'connected') setExecutionState('confirm-route')
+        if (executionState === 'wallet-connected')
+          setExecutionState('confirm-route')
       })
   }, [
     fromToken,
@@ -124,24 +131,58 @@ function App() {
       return
     }
     setWalletAddress(address)
-    setExecutionState('connected')
+    setExecutionState('wallet-connected')
   }, [])
+
+  const addLog = useCallback((message: string) => {
+    setExecutionLogs((prevMessages) => [...prevMessages, message])
+  }, [])
+
+  const onExecuteRoute = useCallback(async () => {
+    if (!route) return
+
+    for (const swap of route?.result?.swaps || []) {
+      addLog(
+        'Executing swap from ' + swap.from.symbol + ' to ' + swap.to.symbol
+      )
+      const txRes = await sdk.createTransaction({
+        requestId: route?.requestId,
+        step: 1,
+        userSettings: { slippage: '3' },
+        validations: { balance: false, fee: false },
+      })
+      if (!txRes.transaction) {
+        addLog('Error creating transaction')
+        return
+      }
+      const tx = txRes.transaction
+      if (tx.type === TransactionType.EVM) {
+        const signer = new DefaultEvmSigner(window.ethereum)
+        const txHash = await signer.signAndSendTx(tx, walletAddress, null)
+      }
+      addLog('Transaction created. Waiting for confirmation...')
+    }
+  }, [route, addLog, sdk, walletAddress])
 
   return (
     <div className="text-center text-white">
       <div className="container min-w-fit max-w-2xl flex m-auto mt-12">
         <ExampleSelect onChange={setTxType} />
-        <RoutePreview route={route} loading={loadingRoute} />
+        <RoutePreview
+          route={route}
+          loading={loadingRoute}
+          executionLogs={executionLogs}
+        />
         {executionState === 'start' && (
           <ConnectWallet
             wallet={sampleWallets[txType]}
             onConnect={onWalletConnect}
           />
         )}
-        {(executionState === 'connected' ||
+        {(executionState === 'wallet-connected' ||
           executionState === 'confirm-route') && (
           <button
-            onClick={async () => {}}
+            onClick={onExecuteRoute}
             className="bg-button text-white w-full text-sm border-white border-2 border-t-0 rounded-b-xl px-2 py-1"
           >
             Confirm Route
