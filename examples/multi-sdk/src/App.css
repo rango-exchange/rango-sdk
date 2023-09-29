@@ -1,0 +1,100 @@
+body {
+  background-color: #070917;
+  font-family: 'Roboto', sans-serif;
+}
+
+button:hover {
+  cursor: pointer;
+}
+
+.container,
+.swap-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.swap-details-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.tokens-container .to input {
+  box-shadow: none;
+}
+
+.arrow {
+  height: 100%;
+  padding: 60px 30px;
+  display: inline-block;
+  content: '\2192';
+  font-size: 6rem;
+}
+
+.arrow.arrow-sm {
+  padding: 0;
+  font-size: 2rem;
+}
+
+.failure {
+  width: 40px;
+}
+
+.success {
+  width: 50px;
+}
+
+.from-amount {
+  width: 4rem;
+}
+
+#swap {
+  width: 4rem;
+}
+
+.loading {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+}
+
+.loading.output-loading {
+  width: 15px;
+  height: 15px;
+}
+
+.loading.output-loading::after {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-color: #fff transparent #fff transparent;
+  border-radius: 50%;
+}
+
+.loading:after {
+  content: ' ';
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  border-color: #fff transparent #fff transparent;
+  animation: loading 1.2s linear infinite;
+}
+
+@keyframes loading {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-message {
+  color: red;
+}
