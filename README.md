@@ -34,5 +34,5 @@
 
 Please checkout the examples' folder for sample usage of the SDK. We will add more examples there soon.
 
-- [Documents](https://docs.rango.exchange/integration/overview)
+- [Docs](https://docs.rango.exchange/integration/overview)
 - [Examples](https://github.com/rango-exchange/rango-sdk/tree/master/examples/)
