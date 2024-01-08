@@ -75,6 +75,7 @@ export function LiquiditySources({
         }
         content={
           <LiquiditySourcesSelector
+            loadingStatus="success"
             listContainerStyle={{ height: 'auto', paddingBottom: 20 }}
             list={uniqueSwappersGroups}
             hasHeader={false}
@@ -85,7 +86,6 @@ export function LiquiditySources({
         }
         title="Liquidity Sources"
         containerStyle={{ width: '560px', height: '625px' }}
-        contentStyle={{ overflow: 'hidden' }}
       />
     </>
   )
