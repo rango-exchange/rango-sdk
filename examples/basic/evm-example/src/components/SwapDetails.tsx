@@ -72,7 +72,7 @@ export function SwapDetails({ toToken, quote, txStatus }: PropTypes) {
                   </tr>
                   <tr>
                     <td>error?</td>
-                    <td>{txStatus.error || '-'}</td>
+                    <td>{txStatus.error || '--'}</td>
                   </tr>
                   {txStatus.explorerUrl?.map((item, id) => (
                     <tr key={id}>
