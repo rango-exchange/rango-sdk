@@ -17,6 +17,10 @@ import {
   CompactMetaResponse,
   CompactToken,
   Token,
+  MultiRouteRequest,
+  MultiRouteResponse,
+  ConfirmRouteResponse,
+  ConfirmRouteRequest,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
 
@@ -115,6 +119,30 @@ export class RangoClient {
   ): Promise<BestRouteResponse> {
     const axiosResponse = await this.httpService.post<BestRouteResponse>(
       `/routing/best?apiKey=${this.apiKey}`,
+      requestBody,
+      { headers: { 'X-Rango-Id': this.deviceId }, ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async getAllRoutes(
+    requestBody: MultiRouteRequest,
+    options?: RequestOptions
+  ): Promise<MultiRouteResponse> {
+    const axiosResponse = await this.httpService.post<MultiRouteResponse>(
+      `/routing/bests?apiKey=${this.apiKey}`,
+      requestBody,
+      { headers: { 'X-Rango-Id': this.deviceId }, ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async confirmRouteRequest(
+    requestBody: ConfirmRouteRequest,
+    options?: RequestOptions
+  ): Promise<ConfirmRouteResponse> {
+    const axiosResponse = await this.httpService.post<ConfirmRouteResponse>(
+      `/routing/confirm?apiKey=${this.apiKey}`,
       requestBody,
       { headers: { 'X-Rango-Id': this.deviceId }, ...options }
     )
