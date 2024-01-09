@@ -211,7 +211,12 @@ export const App = () => {
 
     const sampleImMessage = ethers.utils.defaultAbiCoder.encode(
       ['(address,address)'],
-      [[fromToken.address, userAddress]]
+      [
+        [
+          fromToken.address || '0x0000000000000000000000000000000000000000',
+          userAddress,
+        ],
+      ]
     )
 
     const from: Asset = {
@@ -302,7 +307,7 @@ export const App = () => {
           imMessage,
         }
       }
-
+      console.log({ swapRequest })
       swap = await sdk.swap(swapRequest)
       console.log({ swapResponse: swap })
 
