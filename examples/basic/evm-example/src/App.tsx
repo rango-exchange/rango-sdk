@@ -137,6 +137,14 @@ export const App = () => {
     }
   }, [tokensMeta])
 
+  useEffect(() => {
+    setFromToken(null)
+  }, [fromChain])
+
+  useEffect(() => {
+    setToToken(null)
+  }, [toChain])
+
   const getUserAddress = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum)
     await provider.send('eth_requestAccounts', [])
