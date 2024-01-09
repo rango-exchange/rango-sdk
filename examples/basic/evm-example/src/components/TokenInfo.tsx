@@ -82,35 +82,43 @@ export function TokenInfo(props: PropTypes) {
   const tokenWithSelectedChain = tokens.filter(
     (token) => token.blockchain === chain?.name
   )
-
-  const TokensWithBalance = tokenWithSelectedChain.map((token) => {
-    const balance = getBalanceFromWallet(
-      balances,
-      token.blockchain,
-      token.symbol,
-      token.address
-    )
-    const amount = balance
-      ? new BigNumber(balance?.amount.amount)
-          .shiftedBy(-balance.amount.decimals)
-          .toFixed()
-      : ZERO
-
-    const tokenAmount = numberToString(new BigNumber(amount))
-
-    let tokenUsdValue = ''
-    if (token.usdPrice)
-      tokenUsdValue = numberToString(
-        new BigNumber(amount).multipliedBy(token.usdPrice)
+  const TokensWithBalance = tokenWithSelectedChain
+    .map((token) => {
+      const balance = getBalanceFromWallet(
+        balances,
+        token.blockchain,
+        token.symbol,
+        token.address
       )
-    return {
-      ...token,
-      balance: {
-        amount: tokenAmount !== '0' ? tokenAmount : '',
-        usdValue: tokenUsdValue !== '0' ? tokenUsdValue : '',
-      },
-    }
-  })
+      const amount = balance
+        ? new BigNumber(balance?.amount.amount)
+            .shiftedBy(-balance.amount.decimals)
+            .toFixed()
+        : ZERO
+
+      const tokenAmount = numberToString(new BigNumber(amount))
+
+      let tokenUsdValue = ''
+      if (token.usdPrice)
+        tokenUsdValue = numberToString(
+          new BigNumber(amount).multipliedBy(token.usdPrice)
+        )
+      return {
+        ...token,
+        balance: {
+          amount: tokenAmount !== '0' ? tokenAmount : '',
+          usdValue: tokenUsdValue !== '0' ? tokenUsdValue : '',
+          usdValueReal: new BigNumber(amount || '0').multipliedBy(
+            token.usdPrice || '0'
+          ),
+        },
+      }
+    })
+    .toSorted((a, b) => {
+      return (
+        b.balance.usdValueReal.toNumber() - a.balance.usdValueReal.toNumber()
+      )
+    })
 
   const onClose = () =>
     setModal((prev) => ({
@@ -199,6 +207,7 @@ export function TokenInfo(props: PropTypes) {
           ) : (
             modal.isToken && (
               <TokenSelector
+                loadingStatus="success"
                 list={TokensWithBalance as any}
                 hasHeader={false}
                 onChange={(token) => {
