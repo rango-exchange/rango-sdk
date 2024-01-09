@@ -356,7 +356,7 @@ export const App = () => {
       if (!!swap) {
         await sdk.reportFailure({
           data: { message: rawMessage },
-          eventType: 'TX_FAIL',
+          eventType: 'SEND_TX_FAILED',
           requestId: swap.requestId,
         })
       }
