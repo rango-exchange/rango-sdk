@@ -10,7 +10,12 @@ import {
   Typography,
 } from '@rango-dev/ui'
 import { isEvmBlockchain, WalletDetail } from 'rango-sdk'
-import { BlockchainMeta, Token } from 'rango-sdk-basic'
+import {
+  BlockchainMeta,
+  isCosmosBlockchain,
+  isSolanaBlockchain,
+  Token,
+} from 'rango-sdk-basic'
 import BigNumber from 'bignumber.js'
 
 import { useState } from 'react'
@@ -186,6 +191,7 @@ export function TokenInfo(props: PropTypes) {
           }}
           onResize={undefined}
           onResizeCapture={undefined}
+          crossOrigin={undefined}
         />
       </Container>
       <Modal
@@ -194,7 +200,12 @@ export function TokenInfo(props: PropTypes) {
         content={
           modal.isChain ? (
             <BlockchainSelector
-              list={blockchains.filter((chain) => isEvmBlockchain(chain))}
+              list={blockchains.filter(
+                (chain) =>
+                  isEvmBlockchain(chain) ||
+                  isCosmosBlockchain(chain) ||
+                  isSolanaBlockchain(chain)
+              )}
               hasHeader={false}
               selected={chain}
               onChange={(chain) => {

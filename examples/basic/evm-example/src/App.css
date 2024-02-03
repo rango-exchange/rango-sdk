@@ -36,12 +36,11 @@ button:hover {
 }
 
 .container {
-  /* background-color: #fafafa; */
-  padding: 2rem;
   display: flex;
+  height: 100vh;
 }
 
-.tokens-container {
+.main-content {
   display: flex;
   justify-content: center;
   flex-direction: column;
@@ -49,6 +48,14 @@ button:hover {
   background: rgb(220, 220, 220);
   padding: 30px 20px;
   border-radius: 10px;
+}
+
+.switch-button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  top: 11px;
 }
 
 .from,
