@@ -19,12 +19,7 @@ import {
   CosmosTransaction,
   Transfer,
 } from 'rango-sdk-basic'
-import {
-  checkApprovalSync,
-  getSampleDefaultTokens,
-  prepareEvmTransaction,
-  sleep,
-} from '../../utils'
+import { checkApprovalSync, getSampleDefaultTokens, sleep } from '../../utils'
 import BigNumber from 'bignumber.js'
 import { Button, VerticalSwapIcon } from '@rango-dev/ui'
 import { TokenInfo } from '../../components/TokenInfo'

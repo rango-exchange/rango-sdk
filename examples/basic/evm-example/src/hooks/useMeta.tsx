@@ -23,10 +23,12 @@ export const MetaContextProvider = ({
   const { sdk } = useRangoClient()
 
   useEffect(() => {
-    sdk.meta().then((meta) => {
-      setMeta(meta)
-      setMetaLoading(false)
-    })
+    if (sdk) {
+      sdk.meta().then((meta) => {
+        setMeta(meta)
+        setMetaLoading(false)
+      })
+    }
   }, [sdk])
 
   return (

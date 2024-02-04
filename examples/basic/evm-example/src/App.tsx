@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react'
-import { BlockchainMeta, TransactionType } from 'rango-sdk-basic'
+import React, { useState } from 'react'
 import { Provider as WalletsProvider } from '@rango-dev/wallets-react'
 import * as metamask from '@rango-dev/provider-metamask'
 import * as keplr from '@rango-dev/provider-keplr'
@@ -11,7 +10,7 @@ import {
   MessagingProtocolsContextProvider,
   useMessagingProtocols,
 } from './hooks/useMessagingProtocols'
-import { MetaContextProvider, useMeta } from './hooks/useMeta'
+import { useMeta } from './hooks/useMeta'
 import MessagingProtocolsModal from './components/MessagingProtocolsModal'
 import LiquiditySourcesModal from './components/LiquiditySourcesModal'
 import ConnectWalletButton from './components/ConnectWalletButton'
@@ -22,7 +21,6 @@ export const App = () => {
   const { meta, metaLoading } = useMeta()
   const { loadingProtocols } = useMessagingProtocols()
 
-  const [allBlockChains, setAllBlockChains] = useState<BlockchainMeta[]>([])
   const [disabledLiquiditySources, setDisabledLiquiditySources] = useState<
     string[]
   >([])
@@ -34,106 +32,91 @@ export const App = () => {
   const [liquiditySourcesModalOpen, setLiquiditySourcesModalOpen] =
     useState(false)
 
-  useEffect(() => {
-    if (meta) {
-      setAllBlockChains(
-        meta.blockchains?.filter(
-          (chain) =>
-            chain.type === TransactionType.EVM ||
-            chain.type === TransactionType.COSMOS ||
-            chain.type === TransactionType.SOLANA
-        )
-      )
-    }
-  }, [meta])
-
   return (
     <WalletsProvider
       providers={[metamask, keplr, phantom]}
-      allBlockChains={allBlockChains}
+      allBlockChains={meta?.blockchains || []}
     >
-      <MetaContextProvider>
-        <MessagingProtocolsContextProvider>
-          <main className="container">
-            <div className="main-content">
-              <BaseURLInput />
-              <Spacer size={16} direction="vertical" />
-              <APIKeyInput />
-              <Spacer size={16} direction="vertical" />
-              <div className="row">
-                <Button
-                  loading={metaLoading}
-                  variant="outlined"
-                  type="primary"
-                  size="small"
-                  onClick={() => setLiquiditySourcesModalOpen(true)}
-                >
-                  Liquidity Sources
-                </Button>
-                <Spacer />
-                <Button
-                  size="small"
-                  onClick={() => setMessagingProtocolsModalOpen(true)}
-                  variant="outlined"
-                  type="primary"
-                  loading={loadingProtocols}
-                >
-                  Messaging Protocols
-                </Button>
-              </div>
-              <Spacer size={16} direction="vertical" />
-              <div className="row">
-                <Button
-                  variant="outlined"
-                  size="small"
-                  type="primary"
-                  suffix={<Switch checked={testMessagePassing} />}
-                  onClick={() => setTestMessagePassing((prev) => !prev)}
-                >
-                  Test Message Passing
-                </Button>
-              </div>
-              <Spacer size={16} direction="vertical" />
-              <div>
-                <ConnectWalletButton
-                  title="Metamask"
-                  type={WalletTypes.META_MASK}
-                  setError={setError}
-                />
-                <Spacer direction="vertical" />
-                <ConnectWalletButton
-                  title="Keplr"
-                  type={WalletTypes.KEPLR}
-                  setError={setError}
-                />
-                <Spacer direction="vertical" />
-                <ConnectWalletButton
-                  title="Phantom"
-                  type={WalletTypes.PHANTOM}
-                  setError={setError}
-                />
-              </div>
-              <Spacer size={16} direction="vertical" />
-              <SwapContent
-                disabledLiquiditySources={disabledLiquiditySources}
-                testMessagePassing={testMessagePassing}
-                error={error}
+      <MessagingProtocolsContextProvider>
+        <main className="container">
+          <div className="main-content">
+            <BaseURLInput />
+            <Spacer size={16} direction="vertical" />
+            <APIKeyInput />
+            <Spacer size={16} direction="vertical" />
+            <div className="row">
+              <Button
+                loading={metaLoading}
+                variant="outlined"
+                type="primary"
+                size="small"
+                onClick={() => setLiquiditySourcesModalOpen(true)}
+              >
+                Liquidity Sources
+              </Button>
+              <Spacer />
+              <Button
+                size="small"
+                onClick={() => setMessagingProtocolsModalOpen(true)}
+                variant="outlined"
+                type="primary"
+                loading={loadingProtocols}
+              >
+                Messaging Protocols
+              </Button>
+            </div>
+            <Spacer size={16} direction="vertical" />
+            <div className="row">
+              <Button
+                variant="outlined"
+                size="small"
+                type="primary"
+                suffix={<Switch checked={testMessagePassing} />}
+                onClick={() => setTestMessagePassing((prev) => !prev)}
+              >
+                Test Message Passing
+              </Button>
+            </div>
+            <Spacer size={16} direction="vertical" />
+            <div>
+              <ConnectWalletButton
+                title="Metamask"
+                type={WalletTypes.META_MASK}
+                setError={setError}
+              />
+              <Spacer direction="vertical" />
+              <ConnectWalletButton
+                title="Keplr"
+                type={WalletTypes.KEPLR}
+                setError={setError}
+              />
+              <Spacer direction="vertical" />
+              <ConnectWalletButton
+                title="Phantom"
+                type={WalletTypes.PHANTOM}
                 setError={setError}
               />
             </div>
-            <MessagingProtocolsModal
-              open={messagingProtocolsModalOpen}
-              handleClose={() => setMessagingProtocolsModalOpen(false)}
-            />
-            <LiquiditySourcesModal
-              open={liquiditySourcesModalOpen}
-              handleClose={() => setLiquiditySourcesModalOpen(false)}
+            <Spacer size={16} direction="vertical" />
+            <SwapContent
               disabledLiquiditySources={disabledLiquiditySources}
-              setDisabledLiquiditySources={setDisabledLiquiditySources}
+              testMessagePassing={testMessagePassing}
+              error={error}
+              setError={setError}
             />
-          </main>
-        </MessagingProtocolsContextProvider>
-      </MetaContextProvider>
+          </div>
+          <MessagingProtocolsModal
+            open={messagingProtocolsModalOpen}
+            handleClose={() => setMessagingProtocolsModalOpen(false)}
+          />
+          <LiquiditySourcesModal
+            open={liquiditySourcesModalOpen}
+            handleClose={() => setLiquiditySourcesModalOpen(false)}
+            disabledLiquiditySources={disabledLiquiditySources}
+            setDisabledLiquiditySources={setDisabledLiquiditySources}
+          />
+        </main>
+      </MessagingProtocolsContextProvider>
     </WalletsProvider>
   )
 }
