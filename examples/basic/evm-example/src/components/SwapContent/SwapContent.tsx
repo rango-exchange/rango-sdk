@@ -424,31 +424,58 @@ const SwapContent = ({
       if (fromChain.type === TransactionType.EVM) {
         const tx = swap.tx as EvmTransaction
 
-        const finalTx = prepareEvmTransaction(tx, !!tx?.approveData)
+        if (tx) {
+          // if approve data is not null, it means approve needed, otherwise it's already approved.
+          if (!!tx?.approveData) {
+            // try to approve
 
-        if (!!tx?.approveData) {
-          console.log('approve tx', { finalTx })
-
-          const result = await signer.signAndSendTx(
-            finalTx,
-            fromAddress,
-            fromChain.chainId
-          )
-          await checkApprovalSync(swap.requestId, result.hash, sdk)
-          console.log('transaction approved successfully')
-        } else {
-          const result = await signer.signAndSendTx(
-            finalTx,
-            fromAddress,
-            fromChain.chainId
-          )
-          const txStatus = await checkTransactionStatusSync(
-            swap.requestId,
-            result.hash,
-            sdk
-          )
-          console.log('transaction finished', { txStatus })
-          console.log('bridged data?', txStatus.bridgeData)
+            const result = await signer.signAndSendTx(
+              {
+                type: TransactionType.EVM,
+                blockChain: tx.blockChain?.name,
+                isApprovalTx: !!tx.approveData,
+                from: tx.from,
+                to: tx.txTo,
+                data: tx.txData,
+                value: tx.value,
+                nonce: null,
+                gasLimit: tx.gasLimit,
+                gasPrice: tx.gasPrice,
+                maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+                maxFeePerGas: tx.maxFeePerGas,
+              },
+              fromAddress,
+              fromChain.chainId
+            )
+            await checkApprovalSync(swap.requestId, result.hash, sdk)
+            console.log('transaction approved successfully')
+          } else {
+            const result = await signer.signAndSendTx(
+              {
+                type: TransactionType.EVM,
+                blockChain: tx.blockChain?.name,
+                isApprovalTx: !!tx.approveData,
+                from: tx.from,
+                to: tx.txTo,
+                data: tx.txData,
+                value: tx.value,
+                nonce: null,
+                gasLimit: tx.gasLimit,
+                gasPrice: tx.gasPrice,
+                maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+                maxFeePerGas: tx.maxFeePerGas,
+              },
+              fromAddress,
+              fromChain.chainId
+            )
+            const txStatus = await checkTransactionStatusSync(
+              swap.requestId,
+              result.hash,
+              sdk
+            )
+            console.log('transaction finished', { txStatus })
+            console.log('bridged data?', txStatus.bridgeData)
+          }
         }
       } else {
         const tx = swap.tx as CosmosTransaction | Transfer
@@ -466,7 +493,6 @@ const SwapContent = ({
 
         console.log('transaction finished', { txStatus })
         console.log('bridged data?', txStatus.bridgeData)
-        setLoadingSwap(false)
       }
 
       setLoadingSwap(false)
