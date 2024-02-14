@@ -14,11 +14,11 @@ import {
   QuoteRequest,
   SwapRequest,
   TransactionType,
-  WalletDetailsResponse,
   EvmTransaction,
   CosmosTransaction,
   Transfer,
 } from 'rango-sdk-basic'
+import { ethers } from 'ethers'
 import { checkApprovalSync, getSampleDefaultTokens, sleep } from '../../utils'
 import BigNumber from 'bignumber.js'
 import { Button, VerticalSwapIcon } from '@rango-dev/ui'
@@ -29,6 +29,15 @@ import { WalletTypes } from '@rango-dev/wallets-shared'
 import { useRangoClient } from '../../hooks/useRangoClient'
 import { useMessagingProtocols } from '../../hooks/useMessagingProtocols'
 import { useMeta } from '../../hooks/useMeta'
+import {
+  getCosmosAddressByChain,
+  getCosmosBalances,
+  getEVMAddress,
+  getEvmBalances,
+  getSolanaAddress,
+  getSolanaBalances,
+  getWalletByChainType,
+} from '../../helpers/walletsHelper'
 
 const SwapContent = ({
   disabledLiquiditySources,
@@ -76,69 +85,26 @@ const SwapContent = ({
   }, [meta])
 
   useEffect(() => {
-    const getBalances = async (promises: Promise<WalletDetailsResponse>[]) => {
-      const allBalances = (await Promise.allSettled(promises)).flatMap((p) =>
-        p.status === 'fulfilled' ? p.value.wallets : []
+    if (metamaskWalletState.connected && metamaskWalletState.accounts && meta) {
+      getEvmBalances(meta, sdk, metamaskWalletState).then((evmBalances) =>
+        setEvmBalances(evmBalances)
       )
-      setEvmBalances(allBalances)
-    }
-
-    if (metamaskWalletState.connected && metamaskWalletState.accounts) {
-      const promises =
-        meta?.blockchains
-          .filter((chain) => chain.type === TransactionType.EVM)
-          .map((chain) =>
-            sdk.balance({
-              address: metamaskWalletState.accounts?.[0]?.split(':')?.[1] || '',
-              blockchain: chain.name,
-            })
-          ) || []
-
-      getBalances(promises)
     }
   }, [metamaskWalletState.connected, metamaskWalletState.accounts])
 
   useEffect(() => {
-    const getBalances = async (promises: Promise<WalletDetailsResponse>[]) => {
-      const allBalances = (await Promise.allSettled(promises)).flatMap((p) =>
-        p.status === 'fulfilled' ? p.value.wallets : []
+    if (phantomWalletState.connected && phantomWalletState.accounts && meta) {
+      getSolanaBalances(meta, sdk, phantomWalletState).then((solanaBalances) =>
+        setSolanaBalances(solanaBalances)
       )
-      setSolanaBalances(allBalances)
-    }
-
-    if (phantomWalletState.connected && phantomWalletState.accounts) {
-      const promises =
-        meta?.blockchains
-          .filter((chain) => chain.type === TransactionType.SOLANA)
-          .map((chain) =>
-            sdk.balance({
-              address: phantomWalletState.accounts?.[0]?.split(':')?.[1] || '',
-              blockchain: chain.name,
-            })
-          ) || []
-
-      getBalances(promises)
     }
   }, [phantomWalletState.connected, phantomWalletState.accounts])
 
   useEffect(() => {
-    const getBalances = async (promises: Promise<WalletDetailsResponse>[]) => {
-      const allBalances = (await Promise.allSettled(promises)).flatMap((p) =>
-        p.status === 'fulfilled' ? p.value.wallets : []
+    if (keplrWalletState.connected && keplrWalletState.accounts && meta) {
+      getCosmosBalances(meta, sdk, keplrWalletState).then((cosmosBalances) =>
+        setCosmosBalances(cosmosBalances)
       )
-      setCosmosBalances(allBalances)
-    }
-
-    if (keplrWalletState.connected && keplrWalletState.accounts) {
-      const promises =
-        keplrWalletState.accounts.map((account) =>
-          sdk.balance({
-            address: account?.split(':')?.[1] || '',
-            blockchain: account?.split(':')?.[0] || '',
-          })
-        ) || []
-
-      getBalances(promises)
     }
   }, [keplrWalletState.connected, keplrWalletState.accounts])
 
@@ -157,31 +123,29 @@ const SwapContent = ({
     setToToken(fromToken)
   }
 
-  const getWalletByChainType: (chainType: string) => WalletTypes = (
-    chainType
-  ) => {
-    if (chainType === TransactionType.EVM) {
-      return WalletTypes.META_MASK
-    } else if (chainType === TransactionType.SOLANA) {
-      return WalletTypes.PHANTOM
-    } else {
-      return WalletTypes.KEPLR
-    }
-  }
-
   const getAddressByChain = (chain: BlockchainMeta | null) => {
     if (!chain) return null
 
     console.log(chain)
 
     if (chain.type === TransactionType.EVM) {
-      return metamaskWalletState.accounts?.[0]?.split(':')?.[1]
+      return getEVMAddress(metamaskWalletState)
     } else if (chain.type === TransactionType.SOLANA) {
-      return phantomWalletState.accounts?.[0]?.split(':')?.[1]
+      return getSolanaAddress(phantomWalletState)
     } else if (chain.type === TransactionType.COSMOS) {
-      return keplrWalletState.accounts
-        ?.find((account) => account.split(':')?.[0] === chain.name)
-        ?.split(':')?.[1]
+      return getCosmosAddressByChain(chain.name, keplrWalletState)
+    }
+  }
+
+  const tryConnectWallet = async (
+    walletType: WalletTypes,
+    walletName: string
+  ) => {
+    try {
+      await connect(walletType)
+    } catch (error) {
+      console.log(error)
+      return `Error connecting to ${walletName}. Please check ${walletName} and try again.`
     }
   }
 
@@ -191,13 +155,7 @@ const SwapContent = ({
         toChain?.type === TransactionType.EVM) &&
       !metamaskWalletState.connected
     ) {
-      try {
-        await connect(WalletTypes.META_MASK)
-      } catch (error) {
-        console.log(error)
-
-        return 'Error connecting to Metamask. Please check Metamask and try again.'
-      }
+      return tryConnectWallet(WalletTypes.META_MASK, 'Metamask')
     }
 
     if (
@@ -205,13 +163,7 @@ const SwapContent = ({
         toChain?.type === TransactionType.COSMOS) &&
       !keplrWalletState.connected
     ) {
-      try {
-        await connect(WalletTypes.KEPLR)
-      } catch (error) {
-        console.log(error)
-
-        return 'Error connecting to Keplr. Please check Keplr and try again.'
-      }
+      return tryConnectWallet(WalletTypes.KEPLR, 'Keplr')
     }
 
     if (
@@ -219,13 +171,7 @@ const SwapContent = ({
         toChain?.type === TransactionType.SOLANA) &&
       !phantomWalletState.connected
     ) {
-      try {
-        await connect(WalletTypes.PHANTOM)
-      } catch (error) {
-        console.log(error)
-
-        return 'Error connecting to Phantom. Please check Phantom and try again.'
-      }
+      return tryConnectWallet(WalletTypes.PHANTOM, 'Phantom')
     }
 
     return false
@@ -307,16 +253,6 @@ const SwapContent = ({
       .shiftedBy(fromToken?.decimals as number)
       .toString()
 
-    // const sampleImMessage = ethers.utils.defaultAbiCoder.encode(
-    //   ['(address,address)'],
-    //   [
-    //     [
-    //       fromToken.address || '0x0000000000000000000000000000000000000000',
-    //       userAddress,
-    //     ],
-    //   ]
-    // )
-
     let request: QuoteRequest = {
       amount,
       from,
@@ -350,14 +286,7 @@ const SwapContent = ({
         )
         setLoadingSwap(false)
       } else {
-        await executeRoute(
-          from,
-          to,
-          fromAddress,
-          toAddress,
-          amount
-          // sampleImMessage
-        )
+        await executeRoute(from, to, fromAddress, toAddress, amount)
       }
     } catch (error) {
       setError(`Error requesting quote: ${error}`)
@@ -371,7 +300,6 @@ const SwapContent = ({
     fromAddress: string,
     toAddress: string,
     inputAmount: string
-    // imMessage?: string
   ) => {
     if (!fromToken || !toToken || !fromChain || !toChain) return
 
@@ -395,13 +323,24 @@ const SwapContent = ({
         swapperGroups: disabledLiquiditySources,
         swappersGroupsExclude: true,
       }
-      if (testMessagePassing) {
+
+      if (testMessagePassing && fromChain.type === TransactionType.EVM) {
+        const sampleImMessage = ethers.utils.defaultAbiCoder.encode(
+          ['(address,address)'],
+          [
+            [
+              fromToken.address || '0x0000000000000000000000000000000000000000',
+              toAddress,
+            ],
+          ]
+        )
+
         swapRequest = {
           ...swapRequest,
           messagingProtocols: selectedProtocols,
           sourceContract: '???', // TODO
           destinationContract: '???', // TODO
-          // imMessage,
+          imMessage: sampleImMessage,
         }
       }
       console.log({ swapRequest })
@@ -430,8 +369,8 @@ const SwapContent = ({
                 blockChain: tx.blockChain?.name,
                 isApprovalTx: !!tx.approveData,
                 from: tx.from,
-                to: tx.txTo,
-                data: tx.txData,
+                to: !!tx.approveTo ? tx.approveTo : tx.txTo,
+                data: !!tx.approveData ? tx.approveData : tx.txData,
                 value: tx.value,
                 nonce: null,
                 gasLimit: tx.gasLimit,
@@ -444,33 +383,32 @@ const SwapContent = ({
             )
             await checkApprovalSync(swap.requestId, result.hash, sdk)
             console.log('transaction approved successfully')
-          } else {
-            const result = await signer.signAndSendTx(
-              {
-                type: TransactionType.EVM,
-                blockChain: tx.blockChain?.name,
-                isApprovalTx: !!tx.approveData,
-                from: tx.from,
-                to: tx.txTo,
-                data: tx.txData,
-                value: tx.value,
-                nonce: null,
-                gasLimit: tx.gasLimit,
-                gasPrice: tx.gasPrice,
-                maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-                maxFeePerGas: tx.maxFeePerGas,
-              },
-              fromAddress,
-              fromChain.chainId
-            )
-            const txStatus = await checkTransactionStatusSync(
-              swap.requestId,
-              result.hash,
-              sdk
-            )
-            console.log('transaction finished', { txStatus })
-            console.log('bridged data?', txStatus.bridgeData)
           }
+          const result = await signer.signAndSendTx(
+            {
+              type: TransactionType.EVM,
+              blockChain: tx.blockChain?.name,
+              isApprovalTx: !!tx.approveData,
+              from: tx.from,
+              to: tx.txTo,
+              data: tx.txData,
+              value: tx.value,
+              nonce: null,
+              gasLimit: tx.gasLimit,
+              gasPrice: tx.gasPrice,
+              maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+              maxFeePerGas: tx.maxFeePerGas,
+            },
+            fromAddress,
+            fromChain.chainId
+          )
+          const txStatus = await checkTransactionStatusSync(
+            swap.requestId,
+            result.hash,
+            sdk
+          )
+          console.log('transaction finished', { txStatus })
+          console.log('bridged data?', txStatus.bridgeData)
         }
       } else {
         const tx = swap.tx as CosmosTransaction | Transfer
