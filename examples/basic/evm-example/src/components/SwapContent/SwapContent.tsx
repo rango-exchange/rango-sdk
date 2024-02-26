@@ -67,7 +67,7 @@ const SwapContent = ({
   const { sdk } = useRangoClient()
   const { meta, metaLoading } = useMeta()
   const { selectedProtocols } = useMessagingProtocols()
-  const { state, getSigners, connect, providers } = useWallets()
+  const { state, getSigners, connect, providers, disconnect } = useWallets()
 
   const metamaskWalletState = state(WalletTypes.META_MASK)
   const keplrWalletState = state(WalletTypes.KEPLR)
@@ -220,6 +220,8 @@ const SwapContent = ({
         await provider.send('wallet_switchEthereumChain', [
           { chainId: `0x${Number(fromChain.chainId).toString(16)}` },
         ])
+        await disconnect(WalletTypes.META_MASK)
+        await connect(WalletTypes.META_MASK, fromChain.name)
       } catch (e) {
         setError(`Change meta mask network to '${fromChain?.name}'.`)
         return
