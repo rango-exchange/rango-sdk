@@ -1,2 +1,2 @@
-export const DEFAULT_BASE_URL = 'https://api-edge.rango.exchange/'
-export const DEFAULT_RANGO_API_KEY = '4a624ab5-16ff-4f96-90b7-ab00ddfc342c'
+export const DEFAULT_BASE_URL = 'https://api.rango.exchange/'
+export const DEFAULT_RANGO_API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32'
