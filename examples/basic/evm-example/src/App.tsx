@@ -3,6 +3,8 @@ import { Provider as WalletsProvider } from '@rango-dev/wallets-react'
 import * as metamask from '@rango-dev/provider-metamask'
 import * as keplr from '@rango-dev/provider-keplr'
 import * as phantom from '@rango-dev/provider-phantom'
+import * as tronLink from '@rango-dev/provider-tron-link'
+import * as xdefi from '@rango-dev/provider-xdefi'
 import BaseURLInput from './components/BaseURLInput'
 import { Button, Spacer, Switch } from '@rango-dev/ui'
 import APIKeyInput from './components/APIKeyInput'
@@ -16,6 +18,7 @@ import LiquiditySourcesModal from './components/LiquiditySourcesModal'
 import ConnectWalletButton from './components/ConnectWalletButton'
 import { WalletTypes } from '@rango-dev/wallets-shared'
 import SwapContent from './components/SwapContent'
+import { useRangoClient } from './hooks/useRangoClient'
 
 export const App = () => {
   const { meta, metaLoading } = useMeta()
@@ -32,9 +35,12 @@ export const App = () => {
   const [liquiditySourcesModalOpen, setLiquiditySourcesModalOpen] =
     useState(false)
 
+  const { enabledCentralizedSwappers, toggleEnabledCentralizedSwappers } =
+    useRangoClient()
+
   return (
     <WalletsProvider
-      providers={[metamask, keplr, phantom]}
+      providers={[metamask, keplr, phantom, tronLink, xdefi]}
       allBlockChains={meta?.blockchains || []}
     >
       <MessagingProtocolsContextProvider>
@@ -78,6 +84,18 @@ export const App = () => {
               </Button>
             </div>
             <Spacer size={16} direction="vertical" />
+            <div className="row">
+              <Button
+                variant="outlined"
+                size="small"
+                type="primary"
+                suffix={<Switch checked={enabledCentralizedSwappers} />}
+                onClick={toggleEnabledCentralizedSwappers}
+              >
+                Enabled Central Swappers
+              </Button>
+            </div>
+            <Spacer size={16} direction="vertical" />
             <div>
               <ConnectWalletButton
                 title="Metamask"
@@ -94,6 +112,18 @@ export const App = () => {
               <ConnectWalletButton
                 title="Phantom"
                 type={WalletTypes.PHANTOM}
+                setError={setError}
+              />
+              <Spacer direction="vertical" />
+              <ConnectWalletButton
+                title="XDefi"
+                type={WalletTypes.XDEFI}
+                setError={setError}
+              />
+              <Spacer direction="vertical" />
+              <ConnectWalletButton
+                title="Tron Link"
+                type={WalletTypes.TRON_LINK}
                 setError={setError}
               />
             </div>

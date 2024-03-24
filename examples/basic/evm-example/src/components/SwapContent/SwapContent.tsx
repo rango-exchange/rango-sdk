@@ -15,9 +15,13 @@ import {
   SwapRequest,
   TransactionType,
   EvmTransaction,
+} from 'rango-sdk-basic'
+import {
+  TronTransaction,
   CosmosTransaction,
   Transfer,
-} from 'rango-sdk-basic'
+  SolanaTransaction,
+} from 'rango-types'
 import { ethers } from 'ethers'
 import { checkApprovalSync, getSampleDefaultTokens, sleep } from '../../utils'
 import BigNumber from 'bignumber.js'
@@ -36,6 +40,10 @@ import {
   getEvmBalances,
   getSolanaAddress,
   getSolanaBalances,
+  getTransferAddressByChain,
+  getTransferBalances,
+  getTronAddress,
+  getTronBalances,
   getWalletByChainType,
 } from '../../helpers/walletsHelper'
 
@@ -63,8 +71,10 @@ const SwapContent = ({
   const [evmBalances, setEvmBalances] = useState<WalletDetail[]>([])
   const [cosmosBalances, setCosmosBalances] = useState<WalletDetail[]>([])
   const [solanaBalances, setSolanaBalances] = useState<WalletDetail[]>([])
+  const [tronBalances, setTronBalances] = useState<WalletDetail[]>([])
+  const [transferBalances, setTransferBalances] = useState<WalletDetail[]>([])
 
-  const { sdk } = useRangoClient()
+  const { sdk, enabledCentralizedSwappers } = useRangoClient()
   const { meta, metaLoading } = useMeta()
   const { selectedProtocols } = useMessagingProtocols()
   const { state, getSigners, connect, providers, disconnect } = useWallets()
@@ -72,6 +82,8 @@ const SwapContent = ({
   const metamaskWalletState = state(WalletTypes.META_MASK)
   const keplrWalletState = state(WalletTypes.KEPLR)
   const phantomWalletState = state(WalletTypes.PHANTOM)
+  const tronLinkWalletState = state(WalletTypes.TRON_LINK)
+  const xdefiWalletState = state(WalletTypes.XDEFI)
 
   useEffect(() => {
     if (meta) {
@@ -109,6 +121,22 @@ const SwapContent = ({
   }, [keplrWalletState.connected, keplrWalletState.accounts])
 
   useEffect(() => {
+    if (tronLinkWalletState.connected && tronLinkWalletState.accounts && meta) {
+      getTronBalances(meta, sdk, keplrWalletState).then((tronBalances) =>
+        setTronBalances(tronBalances)
+      )
+    }
+  }, [tronLinkWalletState.connected, tronLinkWalletState.accounts])
+
+  useEffect(() => {
+    if (xdefiWalletState.connected && xdefiWalletState.accounts && meta) {
+      getTransferBalances(meta, sdk, xdefiWalletState).then(
+        (transferBalances) => setTransferBalances(transferBalances)
+      )
+    }
+  }, [xdefiWalletState.connected, xdefiWalletState.accounts])
+
+  useEffect(() => {
     setFromToken(null)
   }, [fromChain])
 
@@ -134,6 +162,10 @@ const SwapContent = ({
       return getSolanaAddress(phantomWalletState)
     } else if (chain.type === TransactionType.COSMOS) {
       return getCosmosAddressByChain(chain.name, keplrWalletState)
+    } else if (chain.type === TransactionType.TRANSFER) {
+      return getTransferAddressByChain(chain.name, xdefiWalletState)
+    } else if (chain.type === TransactionType.TRON) {
+      return getTronAddress(tronLinkWalletState)
     }
   }
 
@@ -172,6 +204,22 @@ const SwapContent = ({
       !phantomWalletState.connected
     ) {
       return tryConnectWallet(WalletTypes.PHANTOM, 'Phantom')
+    }
+
+    if (
+      (fromChain?.type === TransactionType.TRANSFER ||
+        toChain?.type === TransactionType.TRANSFER) &&
+      !xdefiWalletState.connected
+    ) {
+      return tryConnectWallet(WalletTypes.XDEFI, 'Xdefi')
+    }
+
+    if (
+      (fromChain?.type === TransactionType.TRON ||
+        toChain?.type === TransactionType.TRON) &&
+      !tronLinkWalletState.connected
+    ) {
+      return tryConnectWallet(WalletTypes.TRON_LINK, 'TronLink')
     }
 
     return false
@@ -270,6 +318,9 @@ const SwapContent = ({
         destinationContract: '???', // TODO
       }
     }
+    if (enabledCentralizedSwappers) {
+      request.enabledCentralizedSwappers = true
+    }
 
     setLoadingSwap(true)
 
@@ -324,6 +375,10 @@ const SwapContent = ({
         slippage: '1.0',
         swapperGroups: disabledLiquiditySources,
         swappersGroupsExclude: true,
+      }
+
+      if (enabledCentralizedSwappers) {
+        swapRequest.enabledCentralizedSwappers = true
       }
 
       if (testMessagePassing && fromChain.type === TransactionType.EVM) {
@@ -413,7 +468,11 @@ const SwapContent = ({
           console.log('bridged data?', txStatus.bridgeData)
         }
       } else {
-        const tx = swap.tx as CosmosTransaction | Transfer
+        const tx = swap.tx as
+          | CosmosTransaction
+          | Transfer
+          | TronTransaction
+          | SolanaTransaction
         const result = await signer.signAndSendTx(
           tx,
           fromAddress,
@@ -491,7 +550,13 @@ const SwapContent = ({
         loading={metaLoading}
         setInputAmount={setInputAmount}
         amount={inputAmount}
-        balances={[...evmBalances, ...solanaBalances, ...cosmosBalances]}
+        balances={[
+          ...evmBalances,
+          ...solanaBalances,
+          ...cosmosBalances,
+          ...tronBalances,
+          ...transferBalances,
+        ]}
         blockchains={meta?.blockchains || []}
         tokens={meta?.tokens || []}
       />
@@ -502,7 +567,13 @@ const SwapContent = ({
       </div>
       <TokenInfo
         chain={toChain}
-        balances={[...evmBalances, ...solanaBalances, ...cosmosBalances]}
+        balances={[
+          ...evmBalances,
+          ...solanaBalances,
+          ...cosmosBalances,
+          ...tronBalances,
+          ...transferBalances,
+        ]}
         token={toToken}
         setToken={setToToken}
         setChain={setToChain}

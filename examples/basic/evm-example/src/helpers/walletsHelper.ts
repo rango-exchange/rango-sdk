@@ -1,5 +1,10 @@
 import { WalletState, WalletTypes } from '@rango-dev/wallets-shared'
-import { MetaResponse, RangoClient, TransactionType } from 'rango-sdk-basic'
+import {
+  MetaResponse,
+  RangoClient,
+  TransactionType,
+  WalletDetailsResponse,
+} from 'rango-sdk-basic'
 
 export const getWalletByChainType: (chainType: string) => WalletTypes = (
   chainType
@@ -8,8 +13,12 @@ export const getWalletByChainType: (chainType: string) => WalletTypes = (
     return WalletTypes.META_MASK
   } else if (chainType === TransactionType.SOLANA) {
     return WalletTypes.PHANTOM
-  } else {
+  } else if (chainType === TransactionType.COSMOS) {
     return WalletTypes.KEPLR
+  } else if (chainType === TransactionType.TRANSFER) {
+    return WalletTypes.XDEFI
+  } else {
+    return WalletTypes.TRON_LINK
   }
 }
 
@@ -30,6 +39,21 @@ export const getCosmosAddressByChain = (
   return keplrWalletState.accounts
     ?.find((account) => account.split(':')?.[0] === chainName)
     ?.split(':')?.[1]
+}
+
+export const getTransferAddressByChain = (
+  chainName: string,
+  xdefiWalletState: WalletState
+) => {
+  if (!chainName) return null
+
+  return xdefiWalletState.accounts
+    ?.find((account) => account.split(':')?.[0] === chainName)
+    ?.split(':')?.[1]
+}
+
+export const getTronAddress = (tronLinkWalletState: WalletState) => {
+  return tronLinkWalletState.accounts?.[0]?.split(':')?.[1]
 }
 
 export const getEvmBalances = async (
@@ -94,4 +118,57 @@ export const getCosmosBalances = async (
   )
 
   return cosmosBalances
+}
+
+export const getTransferBalances = async (
+  meta: MetaResponse,
+  sdk: RangoClient,
+  xdefiWalletState: WalletState
+) => {
+  const transferChains = meta.blockchains.filter(
+    (blockchain) => blockchain.type === TransactionType.TRANSFER
+  )
+
+  const promises =
+    xdefiWalletState.accounts
+      ?.filter(
+        (account) =>
+          !!transferChains.find(
+            (chain) => chain.name === account?.split(':')?.[0]
+          )
+      )
+      .map((account) =>
+        sdk.balance({
+          address: account?.split(':')?.[1] || '',
+          blockchain: account?.split(':')?.[0] || '',
+        })
+      ) || []
+
+  const transferBalances = (await Promise.allSettled(promises)).flatMap((p) =>
+    p.status === 'fulfilled' ? p.value.wallets : []
+  )
+
+  return transferBalances
+}
+
+export const getTronBalances = async (
+  meta: MetaResponse,
+  sdk: RangoClient,
+  tronLinkWalletState: WalletState
+) => {
+  const promises =
+    meta?.blockchains
+      .filter((chain) => chain.type === TransactionType.TRON)
+      .map((chain) =>
+        sdk.balance({
+          address: getTronAddress(tronLinkWalletState) || '',
+          blockchain: chain.name,
+        })
+      ) || []
+
+  const balances = (await Promise.allSettled(promises)).flatMap((p) =>
+    p.status === 'fulfilled' ? p.value.wallets : []
+  )
+
+  return balances
 }
