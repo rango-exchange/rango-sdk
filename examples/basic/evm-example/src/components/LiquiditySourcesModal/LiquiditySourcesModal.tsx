@@ -30,12 +30,22 @@ const LiquiditySourcesModal = ({
     .find((s) => {
       if (s) {
         for (const type of s.types) {
-          uniqueSwappersGroups.push({
-            title: s.swapperGroup,
-            logo: s.logo,
-            type,
-            selected: !disabledLiquiditySources.includes(s.swapperGroup),
-          })
+          // @ts-ignore
+          if (type === "OFF_CHAIN") {
+            uniqueSwappersGroups.push({
+              title: s.swapperGroup,
+              logo: s.logo,
+              type: "BRIDGE",
+              selected: !disabledLiquiditySources.includes(s.swapperGroup),
+            })
+          } else {
+            uniqueSwappersGroups.push({
+              title: s.swapperGroup,
+              logo: s.logo,
+              type,
+              selected: !disabledLiquiditySources.includes(s.swapperGroup),
+            })
+          }
         }
       }
     })
