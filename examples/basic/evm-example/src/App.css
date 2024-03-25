@@ -20,7 +20,15 @@ button:hover {
   cursor: pointer;
 }
 
-.container,
+.container {
+  display: flex;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+}
+
 .swap-details {
   display: flex;
   flex-direction: column;
@@ -35,13 +43,7 @@ button:hover {
   align-items: center;
 }
 
-.container {
-  /* background-color: #fafafa; */
-  padding: 2rem;
-  display: flex;
-}
-
-.tokens-container {
+.main-content {
   display: flex;
   justify-content: center;
   flex-direction: column;
@@ -49,6 +51,14 @@ button:hover {
   background: rgb(220, 220, 220);
   padding: 30px 20px;
   border-radius: 10px;
+}
+
+.switch-button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  top: 11px;
 }
 
 .from,

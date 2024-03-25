@@ -1,4 +1,4 @@
-# Basic Example of using SDK for EvmTransactions + MetaMask
+# Basic SDK Example
 
 ## How to run?
 
