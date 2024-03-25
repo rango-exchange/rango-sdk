@@ -74,7 +74,7 @@ const SwapContent = ({
   const [tronBalances, setTronBalances] = useState<WalletDetail[]>([])
   const [transferBalances, setTransferBalances] = useState<WalletDetail[]>([])
 
-  const { sdk, enabledCentralizedSwappers } = useRangoClient()
+  const { sdk, enableCentralizedSwappers } = useRangoClient()
   const { meta, metaLoading } = useMeta()
   const { selectedProtocols } = useMessagingProtocols()
   const { state, getSigners, connect, providers, disconnect } = useWallets()
@@ -318,8 +318,8 @@ const SwapContent = ({
         destinationContract: '???', // TODO
       }
     }
-    if (enabledCentralizedSwappers) {
-      request.enabledCentralizedSwappers = true
+    if (enableCentralizedSwappers) {
+      request.enableCentralizedSwappers = true
     }
 
     setLoadingSwap(true)
@@ -377,8 +377,8 @@ const SwapContent = ({
         swappersGroupsExclude: true,
       }
 
-      if (enabledCentralizedSwappers) {
-        swapRequest.enabledCentralizedSwappers = true
+      if (enableCentralizedSwappers) {
+        swapRequest.enableCentralizedSwappers = true
       }
 
       if (testMessagePassing && fromChain.type === TransactionType.EVM) {

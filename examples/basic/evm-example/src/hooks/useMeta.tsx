@@ -20,22 +20,20 @@ export const MetaContextProvider = ({
   const [meta, setMeta] = useState<MetaResponse | null>(null)
   const [metaLoading, setMetaLoading] = useState<boolean>(true)
 
-  const { sdk, enabledCentralizedSwappers } = useRangoClient()
+  const { sdk, enableCentralizedSwappers } = useRangoClient()
 
   useEffect(() => {
     if (sdk) {
       sdk
         .meta(
-          enabledCentralizedSwappers
-            ? { enabledCentralizedSwappers: enabledCentralizedSwappers }
-            : undefined
+          enableCentralizedSwappers ? { enableCentralizedSwappers } : undefined
         )
         .then((meta) => {
           setMeta(meta)
           setMetaLoading(false)
         })
     }
-  }, [sdk, enabledCentralizedSwappers])
+  }, [sdk, enableCentralizedSwappers])
 
   return (
     <MetaContext.Provider

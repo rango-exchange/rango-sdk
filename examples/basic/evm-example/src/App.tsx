@@ -35,7 +35,7 @@ export const App = () => {
   const [liquiditySourcesModalOpen, setLiquiditySourcesModalOpen] =
     useState(false)
 
-  const { enabledCentralizedSwappers, toggleEnabledCentralizedSwappers } =
+  const { enableCentralizedSwappers, toggleEnableCentralizedSwappers } =
     useRangoClient()
 
   return (
@@ -89,8 +89,8 @@ export const App = () => {
                 variant="outlined"
                 size="small"
                 type="primary"
-                suffix={<Switch checked={enabledCentralizedSwappers} />}
-                onClick={toggleEnabledCentralizedSwappers}
+                suffix={<Switch checked={enableCentralizedSwappers} />}
+                onClick={toggleEnableCentralizedSwappers}
               >
                 Enabled Central Swappers
               </Button>

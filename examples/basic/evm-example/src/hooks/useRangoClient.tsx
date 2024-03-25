@@ -9,8 +9,8 @@ export type RangoClientType = {
   handleBaseUrlChange: (baseUrl: string) => void
   rangoApiKey: string
   handleRangoApiKeyChange: (rangoApiKey: string) => void
-  enabledCentralizedSwappers: boolean
-  toggleEnabledCentralizedSwappers: () => void
+  enableCentralizedSwappers: boolean
+  toggleEnableCentralizedSwappers: () => void
 }
 
 export const RangoClientContext = createContext<RangoClientType>({
@@ -19,8 +19,8 @@ export const RangoClientContext = createContext<RangoClientType>({
   handleBaseUrlChange: () => {},
   rangoApiKey: DEFAULT_RANGO_API_KEY,
   handleRangoApiKeyChange: () => {},
-  enabledCentralizedSwappers: false,
-  toggleEnabledCentralizedSwappers: () => {},
+  enableCentralizedSwappers: false,
+  toggleEnableCentralizedSwappers: () => {},
 })
 
 export const RangoClientContextProvider = ({
@@ -31,7 +31,7 @@ export const RangoClientContextProvider = ({
   const [baseUrl, setBaseUrl] = useState<string>(DEFAULT_BASE_URL)
   const [rangoApiKey, setRangoApiKey] = useState<string>(DEFAULT_RANGO_API_KEY)
 
-  const [enabledCentralizedSwappers, setEnabledCentralizedSwappers] =
+  const [enableCentralizedSwappers, setEnableCentralizedSwappers] =
     useState<boolean>(false)
 
   const rangoClient = useMemo(
@@ -47,9 +47,9 @@ export const RangoClientContextProvider = ({
         handleBaseUrlChange: (baseUrl) => setBaseUrl(baseUrl),
         rangoApiKey,
         handleRangoApiKeyChange: (rangoApiKey) => setRangoApiKey(rangoApiKey),
-        enabledCentralizedSwappers,
-        toggleEnabledCentralizedSwappers: () =>
-          setEnabledCentralizedSwappers((prev) => !prev),
+        enableCentralizedSwappers,
+        toggleEnableCentralizedSwappers: () =>
+          setEnableCentralizedSwappers((prev) => !prev),
       }}
     >
       {children}
@@ -64,8 +64,8 @@ export function useRangoClient() {
     handleBaseUrlChange,
     rangoApiKey,
     handleRangoApiKeyChange,
-    enabledCentralizedSwappers,
-    toggleEnabledCentralizedSwappers,
+    enableCentralizedSwappers,
+    toggleEnableCentralizedSwappers,
   } = useContext(RangoClientContext)
 
   return {
@@ -74,7 +74,7 @@ export function useRangoClient() {
     handleBaseUrlChange,
     rangoApiKey,
     handleRangoApiKeyChange,
-    enabledCentralizedSwappers,
-    toggleEnabledCentralizedSwappers,
+    enableCentralizedSwappers,
+    toggleEnableCentralizedSwappers,
   }
 }
