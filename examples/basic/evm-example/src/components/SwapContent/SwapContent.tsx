@@ -74,10 +74,12 @@ const SwapContent = ({
   const [tronBalances, setTronBalances] = useState<WalletDetail[]>([])
   const [transferBalances, setTransferBalances] = useState<WalletDetail[]>([])
 
+  const [shouldInitiateSwap, setShouldInitiateSwap] = useState(false)
+
   const { sdk, enableCentralizedSwappers } = useRangoClient()
   const { meta, metaLoading } = useMeta()
   const { selectedProtocols } = useMessagingProtocols()
-  const { state, getSigners, connect, providers, disconnect } = useWallets()
+  const { state, getSigners, connect, providers } = useWallets()
 
   const metamaskWalletState = state(WalletTypes.META_MASK)
   const keplrWalletState = state(WalletTypes.KEPLR)
@@ -137,6 +139,12 @@ const SwapContent = ({
   }, [xdefiWalletState.connected, xdefiWalletState.accounts])
 
   useEffect(() => {
+    if (shouldInitiateSwap) {
+      handleSwap()
+    }
+  }, [shouldInitiateSwap])
+
+  useEffect(() => {
     setFromToken(null)
   }, [fromChain])
 
@@ -169,65 +177,45 @@ const SwapContent = ({
     }
   }
 
-  const tryConnectWallet = async (
-    walletType: WalletTypes,
-    walletName: string
-  ) => {
+  const tryConnectWallet = async (walletType: WalletTypes) => {
     try {
       await connect(walletType)
+      return true
     } catch (error) {
       console.log(error)
-      return `Error connecting to ${walletName}. Please check ${walletName} and try again.`
+      return false
     }
   }
 
-  const checkConnectedWalletError = async () => {
-    if (
-      (fromChain?.type === TransactionType.EVM ||
-        toChain?.type === TransactionType.EVM) &&
-      !metamaskWalletState.connected
-    ) {
-      return tryConnectWallet(WalletTypes.META_MASK, 'Metamask')
-    }
+  const getWalletFromChainType = (type: TransactionType) => {
+    switch (type) {
+      case TransactionType.EVM:
+        return WalletTypes.META_MASK
+      case TransactionType.COSMOS:
+        return WalletTypes.KEPLR
+      case TransactionType.SOLANA:
+        return WalletTypes.PHANTOM
+      case TransactionType.TRANSFER:
+        return WalletTypes.XDEFI
+      case TransactionType.TRON:
+        return WalletTypes.TRON_LINK
 
-    if (
-      (fromChain?.type === TransactionType.COSMOS ||
-        toChain?.type === TransactionType.COSMOS) &&
-      !keplrWalletState.connected
-    ) {
-      return tryConnectWallet(WalletTypes.KEPLR, 'Keplr')
+      default:
+        return WalletTypes.META_MASK
     }
-
-    if (
-      (fromChain?.type === TransactionType.SOLANA ||
-        toChain?.type === TransactionType.SOLANA) &&
-      !phantomWalletState.connected
-    ) {
-      return tryConnectWallet(WalletTypes.PHANTOM, 'Phantom')
-    }
-
-    if (
-      (fromChain?.type === TransactionType.TRANSFER ||
-        toChain?.type === TransactionType.TRANSFER) &&
-      !xdefiWalletState.connected
-    ) {
-      return tryConnectWallet(WalletTypes.XDEFI, 'Xdefi')
-    }
-
-    if (
-      (fromChain?.type === TransactionType.TRON ||
-        toChain?.type === TransactionType.TRON) &&
-      !tronLinkWalletState.connected
-    ) {
-      return tryConnectWallet(WalletTypes.TRON_LINK, 'TronLink')
-    }
-
-    return false
   }
+
+  const checkIsTypeWalletConnected = (type: TransactionType) =>
+    (type === TransactionType.EVM && metamaskWalletState.connected) ||
+    (type === TransactionType.COSMOS && keplrWalletState.connected) ||
+    (type === TransactionType.SOLANA && phantomWalletState.connected) ||
+    (type === TransactionType.TRANSFER && xdefiWalletState.connected) ||
+    (type === TransactionType.TRON && tronLinkWalletState.connected)
 
   const handleSwap = async () => {
     setError('')
     setQuote(null)
+    setShouldInitiateSwap(false)
 
     if (!fromChain) {
       setError(`Please select source blockchain.`)
@@ -250,10 +238,34 @@ const SwapContent = ({
       return
     }
 
-    const connectedWalletError = await checkConnectedWalletError()
+    const fromWalletIsConnected = checkIsTypeWalletConnected(fromChain?.type)
 
-    if (connectedWalletError) {
-      setError(connectedWalletError)
+    if (!fromWalletIsConnected) {
+      const fromWalletType = getWalletFromChainType(fromChain?.type)
+
+      const result = await tryConnectWallet(fromWalletType)
+
+      if (result) {
+        setShouldInitiateSwap(true)
+      } else {
+        setError(
+          `Error connecting to ${fromWalletType}. Please check ${fromWalletType} and try again.`
+        )
+      }
+      return
+    }
+
+    const ToWalletIsConnected = checkIsTypeWalletConnected(toChain?.type)
+    if (!ToWalletIsConnected) {
+      const toWalletType = getWalletFromChainType(toChain?.type)
+      const result = await tryConnectWallet(toWalletType)
+      if (result) {
+        setShouldInitiateSwap(true)
+      } else {
+        setError(
+          `Error connecting to ${toWalletType}. Please check ${toWalletType} and try again.`
+        )
+      }
       return
     }
 
@@ -268,8 +280,8 @@ const SwapContent = ({
         await provider.send('wallet_switchEthereumChain', [
           { chainId: `0x${Number(fromChain.chainId).toString(16)}` },
         ])
-        await disconnect(WalletTypes.META_MASK)
-        await connect(WalletTypes.META_MASK, fromChain.name)
+        setShouldInitiateSwap(true)
+        return
       } catch (e) {
         setError(`Change meta mask network to '${fromChain?.name}'.`)
         return
