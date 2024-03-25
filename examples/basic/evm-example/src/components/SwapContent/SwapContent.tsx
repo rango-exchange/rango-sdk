@@ -122,7 +122,7 @@ const SwapContent = ({
 
   useEffect(() => {
     if (tronLinkWalletState.connected && tronLinkWalletState.accounts && meta) {
-      getTronBalances(meta, sdk, keplrWalletState).then((tronBalances) =>
+      getTronBalances(meta, sdk, tronLinkWalletState).then((tronBalances) =>
         setTronBalances(tronBalances)
       )
     }
