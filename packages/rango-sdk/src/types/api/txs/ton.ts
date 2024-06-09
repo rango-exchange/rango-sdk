@@ -1,1 +1,1 @@
-export * from 'rango-types/lib/api/main/txs'
+export * from 'rango-types/lib/api/main/txs/ton'
