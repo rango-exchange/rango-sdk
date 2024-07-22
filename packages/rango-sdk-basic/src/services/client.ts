@@ -14,9 +14,11 @@ import {
   WalletDetailsResponse,
   assetToString,
   BlockchainMeta,
-  SwapperMeta,
   RequestOptions,
   MessagingProtocolsResponse,
+  SwapperMetaExtended,
+  ConnectedAssetsResponse,
+  ConnectedAssetsRequest,
 } from '../types'
 import { Signer } from 'ethers'
 import { executeEvmRoute as executeEvmRoute } from './executor'
@@ -94,8 +96,8 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async swappers(options?: RequestOptions): Promise<SwapperMeta[]> {
-    const axiosResponse = await this.httpService.get<SwapperMeta[]>(
+  public async swappers(options?: RequestOptions): Promise<SwapperMetaExtended[]> {
+    const axiosResponse = await this.httpService.get<SwapperMetaExtended[]>(
       `/basic/meta/swappers?apiKey=${this.apiKey}`,
       { ...options }
     )
@@ -131,7 +133,7 @@ export class RangoClient {
           : undefined,
       messagingProtocols:
         !!quoteRequest.messagingProtocols &&
-        quoteRequest.messagingProtocols.length > 0
+          quoteRequest.messagingProtocols.length > 0
           ? quoteRequest.messagingProtocols.join(',')
           : undefined,
     }
@@ -198,7 +200,7 @@ export class RangoClient {
           : undefined,
       messagingProtocols:
         !!swapRequest.messagingProtocols &&
-        swapRequest.messagingProtocols.length > 0
+          swapRequest.messagingProtocols.length > 0
           ? swapRequest.messagingProtocols.join(',')
           : undefined,
     }
@@ -263,5 +265,24 @@ export class RangoClient {
       }
       throw prettifiedError
     }
+  }
+
+  public async connectedAssets(
+    connectedAssetsRequest: ConnectedAssetsRequest,
+    options?: RequestOptions
+  ): Promise<ConnectedAssetsResponse> {
+    const body = {
+      from: assetToString(connectedAssetsRequest.from),
+    }
+
+    const axiosResponse = await this.httpService.get<ConnectedAssetsResponse>(
+      `/basic/connected-assets?apiKey=${this.apiKey}`,
+      {
+        params: body,
+        headers: { 'X-Rango-Id': this.deviceId },
+        ...options,
+      }
+    )
+    return axiosResponse.data
   }
 }
