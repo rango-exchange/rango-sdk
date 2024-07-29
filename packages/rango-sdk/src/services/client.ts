@@ -23,6 +23,7 @@ import {
   ConfirmRouteRequest,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
+import { SwapperMetaExtended } from 'rango-types';
 
 type WalletAddresses = { blockchain: string; address: string }[]
 
@@ -105,8 +106,8 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async getSwappers(options?: RequestOptions): Promise<SwapperMeta[]> {
-    const axiosResponse = await this.httpService.get<SwapperMeta[]>(
+  public async getSwappers(options?: RequestOptions): Promise<SwapperMetaExtended[]> {
+    const axiosResponse = await this.httpService.get<SwapperMetaExtended[]>(
       `/meta/swappers?apiKey=${this.apiKey}`,
       { ...options }
     )
@@ -137,7 +138,7 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async confirmRouteRequest(
+  public async confirmRoute(
     requestBody: ConfirmRouteRequest,
     options?: RequestOptions
   ): Promise<ConfirmRouteResponse> {
