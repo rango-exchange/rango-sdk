@@ -13,7 +13,6 @@ import {
   WalletDetailsResponse,
   RequestOptions,
   BlockchainMeta,
-  SwapperMeta,
   CompactMetaResponse,
   CompactToken,
   Token,
@@ -21,9 +20,13 @@ import {
   MultiRouteResponse,
   ConfirmRouteResponse,
   ConfirmRouteRequest,
+  CustomTokenRequest,
+  CustomTokenResponse,
+  TokenBalanceResponse,
+  TokenBalanceRequest,
+  SwapperMetaExtended,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
-import { SwapperMetaExtended } from 'rango-types';
 
 type WalletAddresses = { blockchain: string; address: string }[]
 
@@ -110,6 +113,17 @@ export class RangoClient {
     const axiosResponse = await this.httpService.get<SwapperMetaExtended[]>(
       `/meta/swappers?apiKey=${this.apiKey}`,
       { ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async getCustomToken(
+    customTokenRequest?: CustomTokenRequest,
+    options?: RequestOptions
+  ): Promise<CustomTokenResponse> {
+    const axiosResponse = await this.httpService.get<CustomTokenResponse>(
+      `/meta/custom-token?apiKey=${this.apiKey}`,
+      { params: customTokenRequest, ...options }
     )
     return axiosResponse.data
   }
@@ -213,6 +227,17 @@ export class RangoClient {
     const axiosResponse = await this.httpService.get<WalletDetailsResponse>(
       `/wallets/details?apiKey=${this.apiKey}${walletAddressesQueryParams}`,
       { ...options }
+    )
+    return axiosResponse.data
+  }
+
+  public async getTokenBalance(
+    tokenBalanceRequest: TokenBalanceRequest,
+    options?: RequestOptions
+  ): Promise<TokenBalanceResponse> {
+    const axiosResponse = await this.httpService.get<TokenBalanceResponse>(
+      `/wallets/token-balance?apiKey=${this.apiKey}`,
+      { params: tokenBalanceRequest, ...options }
     )
     return axiosResponse.data
   }

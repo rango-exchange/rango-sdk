@@ -19,6 +19,10 @@ import {
   SwapperMetaExtended,
   ConnectedAssetsResponse,
   ConnectedAssetsRequest,
+  CustomTokenRequest,
+  CustomTokenResponse,
+  TokenBalanceRequest,
+  TokenBalanceResponse,
 } from '../types'
 import { Signer } from 'ethers'
 import { executeEvmRoute as executeEvmRoute } from './executor'
@@ -112,6 +116,18 @@ export class RangoClient {
         `/basic/meta/messaging-protocols?apiKey=${this.apiKey}`,
         { ...options }
       )
+    return axiosResponse.data
+  }
+
+
+  public async token(
+    customTokenRequest?: CustomTokenRequest,
+    options?: RequestOptions
+  ): Promise<CustomTokenResponse> {
+    const axiosResponse = await this.httpService.get<CustomTokenResponse>(
+      `/basic/meta/custom-token?apiKey=${this.apiKey}`,
+      { params: customTokenRequest, ...options }
+    )
     return axiosResponse.data
   }
 
@@ -240,6 +256,17 @@ export class RangoClient {
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
       }
+    )
+    return axiosResponse.data
+  }
+
+  public async tokenBalance(
+    tokenBalanceRequest: TokenBalanceRequest,
+    options?: RequestOptions
+  ): Promise<TokenBalanceResponse> {
+    const axiosResponse = await this.httpService.get<TokenBalanceResponse>(
+      `/basic/token-balance?apiKey=${this.apiKey}`,
+      { params: tokenBalanceRequest, ...options }
     )
     return axiosResponse.data
   }
