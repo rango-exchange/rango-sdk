@@ -24,9 +24,6 @@ import {
   TokenBalanceRequest,
   TokenBalanceResponse,
 } from '../types'
-import { Signer } from 'ethers'
-import { executeEvmRoute as executeEvmRoute } from './executor'
-import { prettifyError } from '../utils/errors'
 import axios, { AxiosInstance } from 'axios'
 
 type WalletAddress = { blockchain: string; address: string }
@@ -269,29 +266,6 @@ export class RangoClient {
       { params: tokenBalanceRequest, ...options }
     )
     return axiosResponse.data
-  }
-
-  public async executeEvmRoute(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    signer: any,
-    route: SwapResponse
-  ): Promise<StatusResponse> {
-    try {
-      return await executeEvmRoute(this, signer as Signer, route)
-    } catch (error) {
-      const prettifiedError = prettifyError(error)
-      try {
-        const message = prettifiedError?.message || 'Error executing the route'
-        this.reportFailure({
-          requestId: route.requestId,
-          eventType: 'TX_FAIL',
-          reason: message,
-        })
-      } catch (err) {
-        console.log({ err })
-      }
-      throw prettifiedError
-    }
   }
 
   public async connectedAssets(

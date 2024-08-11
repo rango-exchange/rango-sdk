@@ -15,7 +15,7 @@ logWallet(walletWithProvider)
 
 // initiate sdk using your api key
 const API_KEY = "c6381a79-2817-4602-83bf-6a641a409e32"
-const rango = new RangoClient(API_KEY, false)
+const rango = new RangoClient(API_KEY)
 
 // get blockchains and tokens meta data
 const meta = await rango.meta()
