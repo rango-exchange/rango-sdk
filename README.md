@@ -2,9 +2,9 @@
 
 Documents:
 
-- [Basic-SDK Integration Tutorial](https://docs.rango.exchange/integration-quick-start/overview)
-- [Basic-SDK Reference](https://docs.rango.exchange/ap-integration/basic-api-single-step/api-reference)
-- [Multiple-SDK Reference](https://docs.rango.exchange/ap-integration/main-api-multi-step/api-reference)
+- [Basic-SDK Integration Tutorial](https://docs.rango.exchange/api-integration/basic-api-single-step/tutorial/sdk-example)
+- [Basic-SDK Reference](https://docs.rango.exchange/api-integration/basic-api-single-step/api-reference)
+- [Multiple-SDK Reference](https://docs.rango.exchange/api-integration/main-api-multi-step/api-reference)
 
 ## Basic SDK (Single Step Tx)
 

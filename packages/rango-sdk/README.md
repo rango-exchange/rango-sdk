@@ -1,6 +1,6 @@
 # Rango Exchange SDK
 
-- [Multiple-SDK Reference](https://docs.rango.exchange/api-integration/rango-api/main-api-multistep-txs)
+- [Multiple-SDK Reference](https://docs.rango.exchange/api-integration/main-api-multi-step/api-reference)
 
 ## Main SDK (Multi Step Tx)
 
@@ -14,10 +14,3 @@
   # or
   npm install rango-sdk --save
 ```
-
-## Usage
-
-Please checkout the examples' folder for sample usage of the SDK. We will add more examples there soon.
-
-- [Documents](https://docs.rango.exchange/integration/overview)
-- [Examples](https://github.com/rango-exchange/rango-sdk/tree/master/examples/multi/)

@@ -1,7 +1,7 @@
 # Rango Exchange SDK
 
-- [Basic-SDK Integration Tutorial](https://docs.rango.exchange/integration-quick-start/overview)
-- [Basic-SDK Reference](https://docs.rango.exchange/api-integration/rango-api/basic-api-single-tx)
+- [Basic-SDK Integration Tutorial](https://docs.rango.exchange/api-integration/basic-api-single-step/tutorial/sdk-example)
+- [Basic-SDK Reference](https://docs.rango.exchange/api-integration/basic-api-single-step/api-reference)
 
 ## Basic SDK (Single Step Tx)
 
@@ -20,5 +20,5 @@
 
 Please checkout the examples' folder for sample usage of the SDK. We will add more examples there soon.
 
-- [Documents](https://docs.rango.exchange/integration/overview)
-- [Examples](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic/)
+- [Documents](https://docs.rango.exchange/api-integration/basic-api-single-step/tutorial/sdk-example)
+- [Examples](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic)
