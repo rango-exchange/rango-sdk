@@ -2151,11 +2151,6 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bignumber.js@^9.1.1:
-  version "9.1.2"
-  resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-9.1.2.tgz#b7c4242259c008903b13707983b5f4bbd31eda0c"
-  integrity sha512-2/mKyZH9K85bzOEfhXDBFZTGd1CTs+5IHpeFQo9luiBG7hghdC851Pj2WAhb6E3R6b9tZj/XKhbg4fum+Kepug==
-
 brace-expansion@^1.1.7:
   version "1.1.11"
   resolved "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-1.1.11.tgz#3c7fcbf529d87226f3d2f52b966ff5271eb441dd"
@@ -5776,10 +5771,10 @@ randombytes@^2.1.0:
   dependencies:
     safe-buffer "^5.1.0"
 
-rango-types@^0.1.72:
-  version "0.1.72"
-  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.72.tgz#206b81519388468cfb5182dc4d395be059ebef04"
-  integrity sha512-Lnwy6/DKSrHyjx5KY72W2EZKcVyAsk+5YUNIMTOTGGzw9Hp+RWGYHOU14TRnXyb8Pi8TlrgnzUHqksHVABZVNg==
+rango-types@^0.1.73:
+  version "0.1.73"
+  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.73.tgz#2b0a96d64ae4caedd44771eb078f5b1bf03471cd"
+  integrity sha512-h4Ent3q+3X8cuSrYjuhOtFi0xsh64JE6NYE/IpTlopOsHCwG7sxAPiG6jQ7BGUoprFLHYYjSDvQBDgwAgBlF5Q==
 
 react-is@^16.12.0, react-is@^16.13.1:
   version "16.13.1"
