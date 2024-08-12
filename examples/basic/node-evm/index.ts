@@ -7,6 +7,7 @@ import { TransactionRequest, ethers } from "ethers";
 import { setTimeout } from 'timers/promises'
 
 // setup wallet & RPC provider
+// please change rpc provider url if you want to test another chain rather than BSC
 const privateKey = 'YOUR_PRIVATE_KEY';
 const wallet = new ethers.Wallet(privateKey);
 const rpcProvider = new ethers.JsonRpcProvider('https://bsc-dataseed1.defibit.io');
@@ -38,7 +39,7 @@ const quoteRequest = {
   from: sourceToken,
   to: targetToken,
   amount,
-  slippage: 1.0 as any,
+  slippage: 1.0,
 }
 const quote = await rango.quote(quoteRequest)
 logQuote(quote)
