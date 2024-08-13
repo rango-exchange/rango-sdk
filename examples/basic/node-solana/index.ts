@@ -5,7 +5,7 @@ import {
   TransactionStatus,
   TransactionType,
 } from 'rango-sdk-basic'
-import { findToken } from './utils/meta.js'
+import { findToken } from '../shared/utils/meta.js'
 import {
   logMeta,
   logSelectedTokens,
@@ -14,10 +14,10 @@ import {
   logSwap,
   logSwapStatus,
   logTransactionHash,
-} from './utils/logger.js'
+} from '../shared/utils/logger.js'
 import { setTimeout } from 'timers/promises'
 import bs58 from 'bs58'
-import { Keypair, Transaction, VersionedTransaction } from '@solana/web3.js'
+import { Keypair, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
 import {
   DefaultSolanaSigner,
   setSolanaSignerConfig,
@@ -29,27 +29,26 @@ const privateKey = bs58.decode(base58PrivateKey)
 const keypair = Keypair.fromSecretKey(privateKey)
 const walletAddress = keypair.publicKey.toString()
 
+// in web based apps, you could use injected provider instead
+// e.g. use window.phantom.solana  intead of SolanaProvider 
 class SolanaProvider {
-  public publicKey?: { toBytes(): Uint8Array; toString(): string }
+  public publicKey?: PublicKey
   private keypair: Keypair
 
   constructor(keypair: Keypair) {
     this.keypair = keypair
-    this.publicKey = {
-      toBytes: () => this.keypair.publicKey.toBytes(),
-      toString: () => this.keypair.publicKey.toString(),
-    }
+    this.publicKey = keypair.publicKey
   }
 
   async signTransaction(transaction: VersionedTransaction | Transaction) {
-    if (transaction instanceof VersionedTransaction) transaction.sign([keypair])
-    else transaction.sign(keypair)
+    if (transaction instanceof VersionedTransaction) transaction.sign([this.keypair])
+    else transaction.sign(this.keypair)
     return transaction
   }
 }
 const solana = new SolanaProvider(keypair)
 
-logWallet(keypair)
+logWallet(walletAddress)
 
 // initiate sdk using your api key
 const API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32'

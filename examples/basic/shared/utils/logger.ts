@@ -1,4 +1,3 @@
-import { Wallet } from "ethers"
 import { MetaResponse, QuoteResponse, RoutingResultType, StatusResponse, SwapResponse, Token, TransactionStatus, TransactionType } from "rango-sdk-basic"
 
 export function logMeta(meta: MetaResponse) {
@@ -23,8 +22,8 @@ export function logQuote(quote: QuoteResponse) {
     }
 }
 
-export function logWallet(walletWithProvider: Wallet) {
-    console.log(`- connected to walelt address: ${walletWithProvider.address}`)
+export function logWallet(address: string) {
+    console.log(`- connected to walelt address: ${address}`)
 }
 
 export function logSwap(swap: SwapResponse) {

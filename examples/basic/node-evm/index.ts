@@ -1,8 +1,8 @@
 // run `node --import=tsx index.ts` in the terminal
 
 import { RangoClient, TransactionStatus, TransactionType } from "rango-sdk-basic";
-import { findToken } from './utils/meta.js'
-import { logMeta, logSelectedTokens, logQuote, logWallet, logSwap, logSwapStatus, logTransactionHash, logApprovalResponse } from "./utils/logger.js";
+import { findToken } from '../shared/utils/meta.js'
+import { logMeta, logSelectedTokens, logQuote, logWallet, logSwap, logSwapStatus, logTransactionHash, logApprovalResponse } from "../shared/utils/logger.js";
 import { TransactionRequest, ethers } from "ethers";
 import { setTimeout } from 'timers/promises'
 
@@ -12,7 +12,7 @@ const privateKey = 'YOUR_PRIVATE_KEY';
 const wallet = new ethers.Wallet(privateKey);
 const rpcProvider = new ethers.JsonRpcProvider('https://bsc-dataseed1.defibit.io');
 const walletWithProvider = wallet.connect(rpcProvider);
-logWallet(walletWithProvider)
+logWallet(walletWithProvider.addresslogWallet)
 
 // initiate sdk using your api key
 const API_KEY = "c6381a79-2817-4602-83bf-6a641a409e32"

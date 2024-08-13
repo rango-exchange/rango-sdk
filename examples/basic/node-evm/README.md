@@ -8,6 +8,8 @@
 
 ### How to run the code?
 
+Set up your wallet in index.ts, then run following codes:
+
 ```sh
 cd /path/to/example/
 yarn

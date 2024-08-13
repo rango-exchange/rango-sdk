@@ -1,8 +1,5 @@
 # Rango Exchange SDK
 
-- [Basic-SDK Integration Tutorial](https://docs.rango.exchange/api-integration/basic-api-single-step/tutorial/sdk-example)
-- [Basic-SDK Reference](https://docs.rango.exchange/api-integration/basic-api-single-step/api-reference)
-
 ## Basic SDK (Single Step Tx)
 
 [![npm version](https://badge.fury.io/js/rango-sdk-basic.svg)](https://badge.fury.io/js/rango-sdk-basic)
@@ -18,7 +15,8 @@
 
 ## Usage
 
-Please checkout the examples' folder for sample usage of the SDK. We will add more examples there soon.
-
-- [Documents](https://docs.rango.exchange/api-integration/basic-api-single-step/tutorial/sdk-example)
-- [Examples](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic)
+- [Basic-SDK Integration Tutorial](https://docs.rango.exchange/api-integration/basic-api-single-step/tutorial/sdk-example)
+- [Basic-SDK Reference](https://docs.rango.exchange/api-integration/basic-api-single-step/api-reference)
+- Examples
+  - [EVM Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic/node-evm/)
+  - [Solana Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic/node-solana/)
