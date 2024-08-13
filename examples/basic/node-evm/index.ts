@@ -12,7 +12,7 @@ const privateKey = 'YOUR_PRIVATE_KEY';
 const wallet = new ethers.Wallet(privateKey);
 const rpcProvider = new ethers.JsonRpcProvider('https://bsc-dataseed1.defibit.io');
 const walletWithProvider = wallet.connect(rpcProvider);
-logWallet(walletWithProvider.addresslogWallet)
+logWallet(walletWithProvider.address)
 
 // initiate sdk using your api key
 const API_KEY = "c6381a79-2817-4602-83bf-6a641a409e32"
