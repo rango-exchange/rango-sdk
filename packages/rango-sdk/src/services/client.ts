@@ -164,6 +164,19 @@ export class RangoClient {
     return axiosResponse.data
   }
 
+  // @deprecated use confirmRoute instead
+  public async confirmRouteRequest(
+    requestBody: ConfirmRouteRequest,
+    options?: RequestOptions
+  ): Promise<ConfirmRouteResponse> {
+    const axiosResponse = await this.httpService.post<ConfirmRouteResponse>(
+      `/routing/confirm?apiKey=${this.apiKey}`,
+      requestBody,
+      { headers: { 'X-Rango-Id': this.deviceId }, ...options }
+    )
+    return axiosResponse.data
+  }
+
   public async checkApproval(
     requestId: string,
     txId?: string,
