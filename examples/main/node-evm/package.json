@@ -1,0 +1,15 @@
+{
+  "name": "node-starter",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "dependencies": {
+    "ethers": "^6.13.2",
+    "rango-sdk": "^0.1.54"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
