@@ -14,8 +14,8 @@ export function logRoutes(routingResponse: MultiRouteResponse) {
     const routes = routingResponse.results
     if (routes.length > 0) {
         console.log(`- found ${routes.length} routes:`)
-        for (const route of routes) {
-            console.log(`   - route: ${route.swaps.map(swap => swap.swapperId).join(' -> ')}`)
+        for (const [index, route] of routes.entries()) {
+            console.log(`   - route ${index}: ${route.swaps.map(swap => swap.swapperId).join(' -> ')}`)
             console.log(`       - result type: ${route.resultType}`)
             console.log(`       - output: ${route.outputAmount} ${route.swaps[route.swaps.length - 1].to.symbol}`)
             console.log(`       - tags: ${route.tags.map(tag => tag.label).join(', ') || '-'}`)
@@ -72,9 +72,9 @@ export function logStepStatus(state: TransactionStatusResponse) {
 
 export function logTransactionHash(hash: string, isApproval: boolean) {
     if (isApproval) {
-        console.log(`   - approve transaction hash: ${hash}`)
+        console.log(`   - sending approve transaction: ${hash}`)
     } else {
-        console.log(`   - main transaction hash: ${hash}`)
+        console.log(`   - sending main transaction: ${hash}`)
     }
 }
 
