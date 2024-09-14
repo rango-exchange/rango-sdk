@@ -20,3 +20,4 @@
 - [Main-SDK Reference](https://docs.rango.exchange/api-integration/main-api-multi-step/api-reference)
 - Examples
   - [EVM Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/main/node-evm/)
+  - [Solana Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/main/node-solana/)

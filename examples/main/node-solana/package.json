@@ -1,0 +1,17 @@
+{
+  "name": "node-starter",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "dependencies": {
+    "@rango-dev/signer-solana": "^0.31.0",
+    "@solana/web3.js": "^1.91.4",
+    "bs58": "^6.0.0",
+    "rango-sdk": "^0.1.56"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
