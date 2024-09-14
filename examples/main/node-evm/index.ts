@@ -1,18 +1,16 @@
 // run `node --import=tsx index.ts` in the terminal
 
-import { CreateTransactionRequest, RangoClient, TransactionStatus, TransactionType } from "rango-sdk";
+import { CreateTransactionRequest, MultiRouteRequest, RangoClient, TransactionStatus, TransactionType } from "rango-sdk";
 import { findToken } from '../shared/utils/meta.js'
 import { logMeta, logSelectedTokens, logWallet, logTransactionHash, logApprovalResponse, logRoutes, logStepStatus, logConfirmedRoute, logRouteStep } from "../shared/utils/logger.js";
 import { TransactionRequest, ethers } from "ethers";
 import { setTimeout } from 'timers/promises'
+import { getRpcUrlForBlockchain } from "./rpc.js";
 
-// setup wallet & RPC provider
-// please change rpc provider url if you want to test another chain rather than BSC
+// setup wallet
 const privateKey = 'YOUR_PRIVATE_KEY';
 const wallet = new ethers.Wallet(privateKey);
-const rpcProvider = new ethers.JsonRpcProvider('https://bsc-dataseed1.defibit.io');
-const walletWithProvider = wallet.connect(rpcProvider);
-const waleltAddress = walletWithProvider.address
+const waleltAddress = wallet.address
 logWallet(waleltAddress)
 
 // initiate sdk using your api key
@@ -26,7 +24,7 @@ logMeta(meta)
 // some example tokens for test purpose
 const sourceBlockchain = "BSC"
 const sourceTokenAddress = "0x55d398326f99059ff775485246999027b3197955"
-const targetBlockchain = "BSC"
+const targetBlockchain = "AVAX_CCHAIN"
 const targetTokenAddress = null
 const amount = "0.001"
 
@@ -36,18 +34,19 @@ const targetToken = findToken(meta.tokens, targetBlockchain, targetTokenAddress)
 logSelectedTokens(sourceToken, targetToken)
 
 // get route
-const routingRequest = {
+const routingRequest: MultiRouteRequest = {
   from: sourceToken,
   to: targetToken,
   amount,
   slippage: '1.0',
+  transactionTypes: [TransactionType.EVM]
 }
 const routingResponse = await rango.getAllRoutes(routingRequest)
 
 logRoutes(routingResponse)
 
 if (routingResponse.results.length === 0) {
-  throw new Error(`There was no route! ${routingResponse.error}`)
+  throw new Error(`No routes found! ${routingResponse.error}`)
 }
 
 // confirm one of the routes
@@ -75,11 +74,28 @@ if (!confirmedRoute) {
 
 logConfirmedRoute(confirmedRoute)
 
+// check wallet to have enough balance or fee using confirm response
+for (const validation of confirmedRoute?.validationStatus || []) {
+  for (const wallet of validation.wallets) {
+    for (const asset of wallet.requiredAssets) {
+      if (!asset.ok) {
+        const message = `Insufficient ${asset.reason}: asset: ${asset.asset.blockchain}.${asset.asset.symbol}, 
+        required balance: ${asset.requiredAmount.amount}, current balance: ${asset.currentAmount.amount}`
+        throw new Error(message)
+      }
+    }
+  }
+}
 
 let step = 1
 const swapSteps = confirmedRoute.result?.swaps || []
 for (const swap of swapSteps) {
   logRouteStep(swap, step)
+
+  // set rpc provider for this step
+  const rpcProvider = new ethers.JsonRpcProvider(getRpcUrlForBlockchain(meta, swap.from.blockchain));
+  const walletWithProvider = wallet.connect(rpcProvider);
+
   const request: CreateTransactionRequest = {
     requestId: confirmedRoute.requestId,
     step: step,

@@ -5,14 +5,13 @@ import { findToken } from '../shared/utils/meta.js'
 import { logMeta, logSelectedTokens, logQuote, logWallet, logSwap, logSwapStatus, logTransactionHash, logApprovalResponse } from "../shared/utils/logger.js";
 import { TransactionRequest, ethers } from "ethers";
 import { setTimeout } from 'timers/promises'
+import { getRpcUrlForBlockchain } from "./rpc.js";
 
-// setup wallet & RPC provider
-// please change rpc provider url if you want to test another chain rather than BSC
+// setup wallet
 const privateKey = 'YOUR_PRIVATE_KEY';
 const wallet = new ethers.Wallet(privateKey);
-const rpcProvider = new ethers.JsonRpcProvider('https://bsc-dataseed1.defibit.io');
-const walletWithProvider = wallet.connect(rpcProvider);
-logWallet(walletWithProvider.address)
+
+logWallet(wallet.address)
 
 // initiate sdk using your api key
 const API_KEY = "c6381a79-2817-4602-83bf-6a641a409e32"
@@ -61,6 +60,10 @@ if (!tx) {
 }
 
 if (tx.type === TransactionType.EVM) {
+  // set rpc provider
+  const rpcProvider = new ethers.JsonRpcProvider(getRpcUrlForBlockchain(meta, tx.blockChain.name));
+  const walletWithProvider = wallet.connect(rpcProvider);
+
   if (tx.approveData && tx.approveTo) {
     // sign the approve transaction
     const approveTransaction: TransactionRequest = {

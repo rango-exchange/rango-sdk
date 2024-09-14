@@ -64,9 +64,9 @@ export function logSwapStatus(state: StatusResponse) {
 
 export function logTransactionHash(hash: string, isApproval: boolean) {
     if (isApproval) {
-        console.log(`- approve transaction hash: ${hash}`)
+        console.log(`- sending approve transaction: ${hash}`)
     } else {
-        console.log(`- main transaction hash: ${hash}`)
+        console.log(`- sending main transaction: ${hash}`)
     }
 }
 

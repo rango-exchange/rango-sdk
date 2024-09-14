@@ -154,10 +154,10 @@ asynckit@^0.4.0:
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
   integrity sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==
 
-axios@^1.7.3:
-  version "1.7.3"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.3.tgz#a1125f2faf702bc8e8f2104ec3a76fab40257d85"
-  integrity sha512-Ar7ND9pU99eJ9GpoGQKhKf58GpUOgnzuaB7ueNQ5BMi0p+LZ5oaEnfF999fAArcTIBwXTCHAmGcHOZJaWPq9Nw==
+axios@^1.7.4:
+  version "1.7.7"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.7.tgz#2f554296f9892a72ac8d8e4c5b79c14a91d0a47f"
+  integrity sha512-S4kL7XrjgBmvdGut0sN3yJxqYzrDOnivkBiN0OFs6hLiUam3UPvswUo0kqGyhqUZGEOytHyumEdXsAkgCOUf3Q==
   dependencies:
     follow-redirects "^1.15.6"
     form-data "^4.0.0"
@@ -261,12 +261,12 @@ proxy-from-env@^1.1.0:
   resolved "https://registry.yarnpkg.com/proxy-from-env/-/proxy-from-env-1.1.0.tgz#e102f16ca355424865755d2c9e8ea4f24d58c3e2"
   integrity sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==
 
-rango-sdk-basic@^0.1.54:
-  version "0.1.54"
-  resolved "https://registry.yarnpkg.com/rango-sdk-basic/-/rango-sdk-basic-0.1.54.tgz#df24829d86a228bee04ba485c08df227a89d61b0"
-  integrity sha512-86i6atexhwGT+9plQ4Xyzvn4SftvZzFOfeknkISVQaISrxIuSfAnVg/R2LjKwpUOIpjN3DdF05XFp3GmQmWEng==
+rango-sdk-basic@^0.1.56:
+  version "0.1.56"
+  resolved "https://registry.yarnpkg.com/rango-sdk-basic/-/rango-sdk-basic-0.1.56.tgz#4554ce94e144d604cf71f0c5937a561161bd0a6b"
+  integrity sha512-To6dk+g0TiIgYfIkpGf3zm/Y+3JksTS5yO9GhUl+c1RT1PEG4EqicnS+IIyI1xP2X7y7ZNZVPzinVMZCdptoqA==
   dependencies:
-    axios "^1.7.3"
+    axios "^1.7.4"
     rango-types "^0.1.73"
     uuid-random "^1.3.2"
 
