@@ -1,0 +1,16 @@
+{
+  "name": "node-starter",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "dependencies": {
+    "rango-sdk": "^0.1.56",
+    "@rango-dev/signer-starknet": "^0.30.0",
+    "starknet": "^6.11.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
