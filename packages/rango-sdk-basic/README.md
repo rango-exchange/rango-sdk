@@ -20,3 +20,4 @@
 - Examples
   - [EVM Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic/node-evm/)
   - [Solana Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic/node-solana/)
+  - [Tron Example](https://github.com/rango-exchange/rango-sdk/tree/master/examples/basic/node-tron/)

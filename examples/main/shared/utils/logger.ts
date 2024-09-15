@@ -15,7 +15,7 @@ export function logRoutes(routingResponse: MultiRouteResponse) {
     if (routes.length > 0) {
         console.log(`- found ${routes.length} routes:`)
         for (const [index, route] of routes.entries()) {
-            console.log(`   - route ${index}: ${route.swaps.map(swap => swap.swapperId).join(' -> ')}`)
+            console.log(`   - route ${index + 1}: ${route.swaps.map(swap => swap.swapperId).join(' -> ')}`)
             console.log(`       - result type: ${route.resultType}`)
             console.log(`       - output: ${route.outputAmount} ${route.swaps[route.swaps.length - 1].to.symbol}`)
             console.log(`       - tags: ${route.tags.map(tag => tag.label).join(', ') || '-'}`)

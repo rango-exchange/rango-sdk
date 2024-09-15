@@ -1,0 +1,16 @@
+{
+  "name": "node-starter",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "dependencies": {
+    "@rango-dev/signer-tron": "^0.29.0",
+    "rango-sdk-basic": "^0.1.56",
+    "tronweb": "^6.0.0-beta.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
