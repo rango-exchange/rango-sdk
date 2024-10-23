@@ -5,10 +5,8 @@ import {
   TransactionStatus,
   TransactionType,
 } from 'rango-sdk-basic'
-import { findToken } from '../shared/utils/meta.js'
 import {
   logMeta,
-  logSelectedTokens,
   logQuote,
   logWallet,
   logSwap,
@@ -17,7 +15,12 @@ import {
 } from '../shared/utils/logger.js'
 import { setTimeout } from 'timers/promises'
 import bs58 from 'bs58'
-import { Keypair, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
+import {
+  Keypair,
+  PublicKey,
+  Transaction,
+  VersionedTransaction,
+} from '@solana/web3.js'
 import {
   DefaultSolanaSigner,
   setSolanaSignerConfig,
@@ -30,7 +33,7 @@ const keypair = Keypair.fromSecretKey(privateKey)
 const walletAddress = keypair.publicKey.toString()
 
 // in web based apps, you could use injected provider instead
-// e.g. use window.phantom.solana  intead of SolanaProvider 
+// e.g. use window.phantom.solana  intead of SolanaProvider
 class SolanaProvider {
   public publicKey?: PublicKey
   private keypair: Keypair
@@ -41,7 +44,8 @@ class SolanaProvider {
   }
 
   async signTransaction(transaction: VersionedTransaction | Transaction) {
-    if (transaction instanceof VersionedTransaction) transaction.sign([this.keypair])
+    if (transaction instanceof VersionedTransaction)
+      transaction.sign([this.keypair])
     else transaction.sign(this.keypair)
     return transaction
   }
@@ -65,15 +69,10 @@ const targetBlockchain = 'SOLANA'
 const targetTokenAddress = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 const amount = '10000'
 
-// find selected tokens in meta.tokens
-const sourceToken = findToken(meta.tokens, sourceBlockchain, sourceTokenAddress)
-const targetToken = findToken(meta.tokens, targetBlockchain, targetTokenAddress)
-logSelectedTokens(sourceToken, targetToken)
-
 // get quote
 const quoteRequest = {
-  from: sourceToken,
-  to: targetToken,
+  from: { blockchain: sourceBlockchain, address: sourceTokenAddress },
+  to: { blockchain: targetBlockchain, address: targetTokenAddress },
   amount,
   slippage: 1.0,
 }
