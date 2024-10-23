@@ -5,10 +5,8 @@ import {
   TransactionStatus,
   TransactionType,
 } from 'rango-sdk-basic'
-import { findToken } from '../shared/utils/meta.js'
 import {
   logMeta,
-  logSelectedTokens,
   logQuote,
   logWallet,
   logSwap,
@@ -45,15 +43,10 @@ const targetBlockchain = 'TRON'
 const targetTokenAddress = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
 const amount = '1000' // 0.001 TRX
 
-// find selected tokens in meta.tokens
-const sourceToken = findToken(meta.tokens, sourceBlockchain, sourceTokenAddress)
-const targetToken = findToken(meta.tokens, targetBlockchain, targetTokenAddress)
-logSelectedTokens(sourceToken, targetToken)
-
 // get quote
 const quoteRequest = {
-  from: sourceToken,
-  to: targetToken,
+  from: { blockchain: sourceBlockchain, address: sourceTokenAddress },
+  to: { blockchain: targetBlockchain, address: targetTokenAddress },
   amount,
   slippage: 1.0,
 }

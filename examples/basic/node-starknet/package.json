@@ -6,7 +6,7 @@
   },
   "type": "module",
   "dependencies": {
-    "rango-sdk-basic": "^0.1.56",
+    "rango-sdk-basic": "^0.1.57",
     "@rango-dev/signer-starknet": "^0.30.0",
     "starknet": "^6.11.0"
   },

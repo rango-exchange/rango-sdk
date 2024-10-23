@@ -1,20 +1,32 @@
 // run `node --import=tsx index.ts` in the terminal
 
-import { RangoClient, TransactionStatus, TransactionType } from "rango-sdk-basic";
-import { findToken } from '../shared/utils/meta.js'
-import { logMeta, logSelectedTokens, logQuote, logWallet, logSwap, logSwapStatus, logTransactionHash, logApprovalResponse } from "../shared/utils/logger.js";
-import { TransactionRequest, ethers } from "ethers";
+import {
+  RangoClient,
+  SwapRequest,
+  TransactionStatus,
+  TransactionType,
+} from 'rango-sdk-basic'
+import {
+  logMeta,
+  logQuote,
+  logWallet,
+  logSwap,
+  logSwapStatus,
+  logTransactionHash,
+  logApprovalResponse,
+} from '../shared/utils/logger.js'
+import { TransactionRequest, ethers } from 'ethers'
 import { setTimeout } from 'timers/promises'
-import { getRpcUrlForBlockchain } from "./rpc.js";
+import { getRpcUrlForBlockchain } from './rpc.js'
 
 // setup wallet
-const privateKey = 'YOUR_PRIVATE_KEY';
-const wallet = new ethers.Wallet(privateKey);
+const privateKey = 'YOUR_PRIVATE_KEY'
+const wallet = new ethers.Wallet(privateKey)
 
 logWallet(wallet.address)
 
 // initiate sdk using your api key
-const API_KEY = "c6381a79-2817-4602-83bf-6a641a409e32"
+const API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32'
 const rango = new RangoClient(API_KEY)
 
 // get blockchains and tokens meta data
@@ -22,28 +34,23 @@ const meta = await rango.meta()
 logMeta(meta)
 
 // some example tokens for test purpose
-const sourceBlockchain = "BSC"
-const sourceTokenAddress = "0x55d398326f99059ff775485246999027b3197955"
-const targetBlockchain = "BSC"
+const sourceBlockchain = 'BSC'
+const sourceTokenAddress = '0x55d398326f99059ff775485246999027b3197955'
+const targetBlockchain = 'BSC'
 const targetTokenAddress = null
-const amount = "10000000000000"
-
-// find selected tokens in meta.tokens
-const sourceToken = findToken(meta.tokens, sourceBlockchain, sourceTokenAddress)
-const targetToken = findToken(meta.tokens, targetBlockchain, targetTokenAddress)
-logSelectedTokens(sourceToken, targetToken)
+const amount = '10000000000000'
 
 // get quote
 const quoteRequest = {
-  from: sourceToken,
-  to: targetToken,
+  from: { blockchain: sourceBlockchain, address: sourceTokenAddress },
+  to: { blockchain: targetBlockchain, address: targetTokenAddress },
   amount,
   slippage: 1.0,
 }
 const quote = await rango.quote(quoteRequest)
 logQuote(quote)
 
-const swapRequest = {
+const swapRequest: SwapRequest = {
   ...quoteRequest,
   fromAddress: wallet.address,
   toAddress: wallet.address,
@@ -61,8 +68,10 @@ if (!tx) {
 
 if (tx.type === TransactionType.EVM) {
   // set rpc provider
-  const rpcProvider = new ethers.JsonRpcProvider(getRpcUrlForBlockchain(meta, tx.blockChain.name));
-  const walletWithProvider = wallet.connect(rpcProvider);
+  const rpcProvider = new ethers.JsonRpcProvider(
+    getRpcUrlForBlockchain(meta, tx.blockChain.name)
+  )
+  const walletWithProvider = wallet.connect(rpcProvider)
 
   if (tx.approveData && tx.approveTo) {
     // sign the approve transaction
@@ -74,20 +83,28 @@ if (tx.type === TransactionType.EVM) {
       maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
       gasPrice: tx.gasPrice,
     }
-    const { hash } = await walletWithProvider.sendTransaction(approveTransaction);
+    const { hash } = await walletWithProvider.sendTransaction(
+      approveTransaction
+    )
     logTransactionHash(hash, true)
 
     // wait for approval
     while (true) {
       await setTimeout(10_000)
-      const { isApproved, currentApprovedAmount, requiredApprovedAmount, txStatus } = await rango.isApproved(swap.requestId, hash)
+      const {
+        isApproved,
+        currentApprovedAmount,
+        requiredApprovedAmount,
+        txStatus,
+      } = await rango.isApproved(swap.requestId, hash)
       logApprovalResponse(isApproved)
-      if (isApproved)
-        break
+      if (isApproved) break
       else if (txStatus === TransactionStatus.FAILED)
         throw new Error('Approve transaction failed in blockchain')
       else if (txStatus === TransactionStatus.SUCCESS)
-        throw new Error(`Insufficient approve, current amount: ${currentApprovedAmount}, required amount: ${requiredApprovedAmount}`)
+        throw new Error(
+          `Insufficient approve, current amount: ${currentApprovedAmount}, required amount: ${requiredApprovedAmount}`
+        )
     }
   }
 
@@ -102,7 +119,7 @@ if (tx.type === TransactionType.EVM) {
     maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
     gasPrice: tx.gasPrice,
   }
-  const { hash } = await walletWithProvider.sendTransaction(transaction);
+  const { hash } = await walletWithProvider.sendTransaction(transaction)
   logTransactionHash(hash, false)
 
   // track swap status
@@ -110,12 +127,15 @@ if (tx.type === TransactionType.EVM) {
     await setTimeout(10_000)
     const state = await rango.status({
       requestId: swap.requestId,
-      txId: hash
+      txId: hash,
     })
     logSwapStatus(state)
 
     const status = state.status
-    if (status && [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(status)) {
+    if (
+      status &&
+      [TransactionStatus.FAILED, TransactionStatus.SUCCESS].includes(status)
+    ) {
       break
     }
   }
