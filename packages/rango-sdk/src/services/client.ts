@@ -25,6 +25,8 @@ import {
   TokenBalanceResponse,
   TokenBalanceRequest,
   SwapperMetaExtended,
+  MultipleTokenBalanceRequest,
+  MultipleTokenBalanceResponse,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
 
@@ -109,7 +111,9 @@ export class RangoClient {
     return axiosResponse.data
   }
 
-  public async getSwappers(options?: RequestOptions): Promise<SwapperMetaExtended[]> {
+  public async getSwappers(
+    options?: RequestOptions
+  ): Promise<SwapperMetaExtended[]> {
     const axiosResponse = await this.httpService.get<SwapperMetaExtended[]>(
       `/meta/swappers?apiKey=${this.apiKey}`,
       { ...options }
@@ -252,6 +256,18 @@ export class RangoClient {
       `/wallets/token-balance?apiKey=${this.apiKey}`,
       { params: tokenBalanceRequest, ...options }
     )
+    return axiosResponse.data
+  }
+
+  public async getMultipleTokenBalance(
+    multipleTokenBalanceRequest: MultipleTokenBalanceRequest,
+    options?: RequestOptions
+  ): Promise<MultipleTokenBalanceResponse> {
+    const axiosResponse =
+      await this.httpService.get<MultipleTokenBalanceResponse>(
+        `/wallets/multiple-token-balance?apiKey=${this.apiKey}`,
+        { params: multipleTokenBalanceRequest, ...options }
+      )
     return axiosResponse.data
   }
 }
