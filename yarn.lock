@@ -5771,10 +5771,10 @@ randombytes@^2.1.0:
   dependencies:
     safe-buffer "^5.1.0"
 
-rango-types@^0.1.75:
-  version "0.1.75"
-  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.75.tgz#24d2a3a30e113a7bf1088853e89b39b5722e9c04"
-  integrity sha512-Xb/lfV+fXEQdk6APY77C0oKl++mqdDdwlRyfVi10tV5tfw0Yvl5+p8Av16oPqBcM20WJGjBFCUpHEAKsEprXNQ==
+rango-types@^0.1.76:
+  version "0.1.76"
+  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.76.tgz#67fd6cd4dea3a3f50a965b2f864e5044d90fe7ae"
+  integrity sha512-zcdMAvH7aV8F9bTGG84mkS7Z6kV0U8FGL+fo7j7ugN4F1SUz0NlM5lK4Co/1aF1oqwcsRFIvVuQ8/V5ESgKjNw==
 
 react-is@^16.12.0, react-is@^16.13.1:
   version "16.13.1"
