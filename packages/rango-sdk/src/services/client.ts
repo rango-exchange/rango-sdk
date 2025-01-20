@@ -260,13 +260,14 @@ export class RangoClient {
   }
 
   public async getMultipleTokenBalance(
-    multipleTokenBalanceRequest: MultipleTokenBalanceRequest,
+    requestBody: MultipleTokenBalanceRequest,
     options?: RequestOptions
   ): Promise<MultipleTokenBalanceResponse> {
     const axiosResponse =
-      await this.httpService.get<MultipleTokenBalanceResponse>(
+      await this.httpService.post<MultipleTokenBalanceResponse>(
         `/wallets/multiple-token-balance?apiKey=${this.apiKey}`,
-        { params: multipleTokenBalanceRequest, ...options }
+        requestBody,
+        { ...options }
       )
     return axiosResponse.data
   }
