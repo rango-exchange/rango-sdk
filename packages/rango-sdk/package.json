@@ -1,6 +1,6 @@
 {
   "name": "rango-sdk",
-  "version": "0.1.60",
+  "version": "0.1.61",
   "description": "Rango Exchange SDK for dApps",
   "module": "lib/rango-sdk.esm.js",
   "main": "lib/index.js",
