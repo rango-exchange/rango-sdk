@@ -27,6 +27,8 @@ import {
   SwapperMetaExtended,
   MultipleTokenBalanceRequest,
   MultipleTokenBalanceResponse,
+  SearchCustomTokensRequest,
+  SearchCustomTokensResponse,
 } from '../types'
 import axios, { AxiosInstance } from 'axios'
 
@@ -129,6 +131,18 @@ export class RangoClient {
       `/meta/custom-token?apiKey=${this.apiKey}`,
       { params: customTokenRequest, ...options }
     )
+    return axiosResponse.data
+  }
+
+  public async searchCustomTokens(
+    searchCustomTokensRequest: SearchCustomTokensRequest,
+    options?: RequestOptions
+  ): Promise<SearchCustomTokensResponse> {
+    const axiosResponse =
+      await this.httpService.get<SearchCustomTokensResponse>(
+        `/meta/token/search?apiKey=${this.apiKey}`,
+        { params: searchCustomTokensRequest, ...options }
+      )
     return axiosResponse.data
   }
 
