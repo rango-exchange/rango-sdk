@@ -10,10 +10,11 @@
 
 ### How to run the code?
 
-Set up your wallet in index.ts, then run following codes:
+Set up your wallet in index.ts, then run following commands in the root:
 
 ```sh
+yarn 
+yarn build
 cd /path/to/example/
-yarn
 node --import=tsx index.ts
 ```

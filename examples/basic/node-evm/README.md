@@ -8,10 +8,11 @@
 
 ### How to run the code?
 
-Set up your wallet in index.ts, then run following codes:
+Set up your wallet in index.ts, then run following commands in the root:
 
 ```sh
-cd /path/to/example/
 yarn
+yarn build
+cd /path/to/example/
 node --import=tsx index.ts
 ```
