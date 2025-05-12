@@ -1,8 +1,11 @@
 {
-  "name": "node-psbt",
+  "name": "basic-psbt",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No need for a build. \"",
+    "clean": "echo \"No need for a clean. \""
   },
   "type": "module",
   "dependencies": {

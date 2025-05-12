@@ -2,7 +2,9 @@
   "private": true,
   "sideEffects": false,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/basic/*",
+    "examples/main/*"
   ],
   "scripts": {
     "prepare": "husky install",
