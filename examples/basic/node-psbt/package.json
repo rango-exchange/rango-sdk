@@ -1,0 +1,17 @@
+{
+  "name": "node-psbt",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "dependencies": {
+    "bitcoinjs-lib": "^6.1.7",
+    "ecpair": "^3.0.0",
+    "rango-sdk-basic": "^0.1.67",
+    "tiny-secp256k1": "^2.2.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
