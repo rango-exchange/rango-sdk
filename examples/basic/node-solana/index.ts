@@ -32,7 +32,7 @@ const keypair = Keypair.fromSecretKey(privateKey)
 const walletAddress = keypair.publicKey.toString()
 
 // in web based apps, you could use injected provider instead
-// e.g. use window.phantom.solana  intead of SolanaProvider
+// e.g. use window.phantom.solana  instead of SolanaProvider
 class SolanaProvider {
   public publicKey?: PublicKey
   private keypair: Keypair

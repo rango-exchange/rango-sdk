@@ -20,7 +20,7 @@ import { TronWeb } from 'tronweb'
 const privateKey = 'YOUR_PRIVATE_KEY' // Replace with your private key
 
 // in web based apps, you could use injected provider instead
-// e.g. use window.tronLink.tronWeb or ... intead
+// e.g. use window.tronLink.tronWeb or ... instead
 const TRON_API = 'https://api.trongrid.io'
 const tronWeb = new TronWeb(TRON_API, TRON_API, TRON_API, privateKey)
 const walletAddress = tronWeb.address.fromPrivateKey(privateKey) || ''

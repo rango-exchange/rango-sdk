@@ -21,7 +21,7 @@ const privateKey = 'YOUR_PRIVATE_KEY' // Replace with your private key
 const walletAddress = 'YOUR_WALLET_ADDRESS' // Replace with your wallet address
 
 // in web based apps, you could use injected provider instead
-// e.g. use window.starknet_braavos or window.starknet_argentX intead
+// e.g. use window.starknet_braavos or window.starknet_argentX instead
 // https://starknetjs.com/docs/guides/connect_network
 const provider = new RpcProvider({
   nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_7',
