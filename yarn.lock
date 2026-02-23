@@ -6535,10 +6535,10 @@ rango-types@^0.1.69:
   resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.88.tgz#077d73f20206aff287d8b6e7f30fc3477038cd85"
   integrity sha512-lumeWNFU/wxPvCkFayMDDsAXrL8foAlu4GXR/BfusZWOxbenIHFQVUtIpDFcs5nsZa3eO2WJML4zTRf//CbHsQ==
 
-rango-types@^0.1.93:
-  version "0.1.93"
-  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.93.tgz#556377d12eccc85c0ea3087e42040308aa3cde68"
-  integrity sha512-Sek7l5T7QWUMidSSaeSpPid3bK+ii93Vl1QDw4GSYRzoR1mc1EoqLI62OZw1whlogVKF5BtoUsoZ2k8SxWbT1g==
+rango-types@^0.1.94:
+  version "0.1.94"
+  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.94.tgz#5df00d6c7a208b3e75c06082f90febf96063c812"
+  integrity sha512-ljeB0XMO7HNPbS+ugPcgyEGWXE9qhUXMBWd8wqK0xg3sk9ofcEv56ggGe7u6wQG5f46EL1IunN9axlrrYORqIA==
 
 react-is@^16.12.0, react-is@^16.13.1:
   version "16.13.1"
