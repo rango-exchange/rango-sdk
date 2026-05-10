@@ -1,0 +1,51 @@
+{
+  "name": "rango-types",
+  "version": "0.1.98",
+  "description": "Rango Exchange Types",
+  "type": "module",
+  "main": "./lib/index.js",
+  "typings": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./mainApi": {
+      "types": "./lib/api/main/index.d.ts",
+      "default": "./lib/api/main/index.js"
+    },
+    "./basicApi": {
+      "types": "./lib/api/basic/index.d.ts",
+      "default": "./lib/api/basic/index.js"
+    }
+  },
+  "repository": "https://github.com/rango-exchange/rango-types",
+  "homepage": "https://github.com/rango-exchange/rango-types",
+  "bugs": {
+    "url": "https://github.com/rango-exchange/rango-types/issues"
+  },
+  "scripts": {
+    "clean": "rm -rf lib",
+    "build": "tsc",
+    "lint": "eslint */**/*.{js,ts} --quiet --fix -c ../../.eslintrc.json --ignore-path ../../.prettierignore",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' ../../.prettierrc.json --ignore-path ../../.prettierignore"
+  },
+  "keywords": [
+    "Rango Exchange",
+    "SDK",
+    "Cross-Chain",
+    "Multi-Chain"
+  ],
+  "files": [
+    "lib/**/*",
+    "src"
+  ],
+  "author": "rango.exchange",
+  "license": "GPL-3.0",
+  "publishConfig": {
+    "access": "public",
+    "branches": [
+      "main"
+    ]
+  }
+}

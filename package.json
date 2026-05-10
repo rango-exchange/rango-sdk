@@ -10,7 +10,6 @@
     "prepare": "husky install",
     "build": "turbo run build",
     "clean": "turbo run clean",
-    "dev": "turbo run watch",
     "format": "turbo run format",
     "lint": "turbo run lint"
   },
