@@ -11,3 +11,6 @@ yarn-error.log*
 .yalc
 yalc.lock
 .parcel-cache
+
+# Turborepo
+.turbo
