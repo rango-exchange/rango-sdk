@@ -1,5 +1,5 @@
 {
-  "name": "rango-types",
+  "name": "@arlert-dev/rango-types",
   "version": "0.1.99",
   "description": "Rango Exchange Types",
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "rango-sdk",
+  "name": "@arlert-dev/rango-sdk",
   "version": "0.1.79",
   "description": "Rango Exchange SDK for dApps",
   "module": "lib/rango-sdk.esm.js",
