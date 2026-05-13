@@ -1,0 +1,6 @@
+# 0.2.0 (2026-05-13)
+
+
+### Features
+
+* Added rango-types package to the monorepo ([71349f6](https://github.com/rango-exchange/rango-types/commit/71349f651560c4ec5f0cd548d5509dfc802c0cde))
