@@ -23,6 +23,8 @@ export type MetaInfoType =
  * e.g. "https://bscscan.com/address/{wallet}"
  * @property {string} transactionUrl - Explorer transaction base url for this blockchain,
  * e.g. "https://bscscan.com/tx/{txHash}"
+ * @property {string | null} tokenUrl - Explorer token base url for this blockchain,
+ * e.g. "https://suiscan.xyz/mainnet/coin/{address}"
  *
  */
 export type ChainInfoBase = {
@@ -30,6 +32,7 @@ export type ChainInfoBase = {
   blockExplorerUrls: string[]
   addressUrl: string
   transactionUrl: string
+  tokenUrl: string | null
 }
 
 /**
