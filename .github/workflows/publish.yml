@@ -32,3 +32,4 @@ jobs:
         env:
           PUBLISH_FLAG: ${{ steps.flag.outputs.flag }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
