@@ -1,77 +1,34 @@
-name: Publish Packages
+name: Publish
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
-      - master
+      - next
+
 
 jobs:
-  publish-packages:
-    if: |
-      !contains(github.event.head_commit.message , 'ci(release)')
-        && !contains(github.event.head_commit.message , 'example')
-
-    name: Publish Packages
+  publish:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+
+      - name: Checkout code
+        uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          ref: master
           token: ${{ secrets.PAT }}
+          fetch-depth: 0
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'yarn'
+      - name: Prepare
+        uses: ./.github/actions/prepare
 
-      - name: Set Git Config
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Auth
-        run: |
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> .npmrc
-          npm whoami
-
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Install dependencies
-        run: yarn install
-
-      - name: Pull latest changes
-        run: git pull origin master
-
-      - name: Build packages
-        run: yarn build
-
-      - name: Bump version of packages
-        run: |
-          # Get the list of packages in the packages folder
-          packages=$(ls packages)
-
-          # Loop through each package and bump the version
-          for package in $packages; do
-            cd packages/$package
-            npm version patch --no-git-tag-version
-            cd ../../
-          done
-
-      - name: Commit and push changes
-        run: |
-          git stash -- yarn.lock
-          git commit -am "ci(release): bump package versions"
-          git push origin master
+      - name: Detect publish flag
+        id: flag
+        uses: ./.github/actions/detect-publish-flag
 
       - name: Publish packages
-        run: |
-          cd packages/rango-types 
-          npm publish --access public
-          cd ../rango-sdk
-          npm publish --access public
-          cd ../rango-sdk-basic 
-          npm publish --access public
+        run: yarn run publish --since-start "$PUBLISH_FLAG"
+        env:
+          PUBLISH_FLAG: ${{ steps.flag.outputs.flag }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

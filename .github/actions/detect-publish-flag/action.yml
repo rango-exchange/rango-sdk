@@ -1,0 +1,22 @@
+name: Detect Publish Flag
+description: Detects the publish flag based on the branch
+
+outputs:
+  flag:
+    description: The publish flag
+    value: ${{ steps.flag.outputs.flag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect publish flag
+      id: flag
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "flag=--prod" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == "refs/heads/next" ]]; then
+          echo "flag=--next" >> $GITHUB_OUTPUT
+        else
+          echo "flag=--experimental" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
