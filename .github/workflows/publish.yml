@@ -28,7 +28,7 @@ jobs:
         uses: ./.github/actions/detect-publish-flag
 
       - name: Publish packages
-        run: yarn run publish --since-start "$PUBLISH_FLAG"
+        run: yarn run publish "$PUBLISH_FLAG"
         env:
           PUBLISH_FLAG: ${{ steps.flag.outputs.flag }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
