@@ -1,3 +1,4 @@
+# [0.3.0](https://github.com/rango-exchange/rango-sdk/compare/rango-sdk@0.2.0...rango-sdk@0.3.0) (2026-05-13)
 # 0.2.0 (2026-05-13)
 
 
