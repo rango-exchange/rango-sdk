@@ -14,11 +14,17 @@ Documents:
 
 ### Installation
 
-```shell
-  yarn add rango-sdk-basic
-  # or
-  npm install rango-sdk-basic --save
-```
+Pin the SDK version to avoid non-reproducible builds and breaking changes.
+
+npm install rango-sdk-basic@1.0.0 --save
+# or
+yarn add rango-sdk-basic@1.0.0
+
+Commit the lockfile:
+
+package-lock.json
+# or
+yarn.lock
 
 ## Main SDK (Multi Step Tx)
 
@@ -27,8 +33,16 @@ Documents:
 
 ### Installation
 
-```shell
-  yarn add rango-sdk
-  # or
-  npm install rango-sdk --save
-```
+Pin the SDK version to avoid non-reproducible builds and breaking changes.
+
+npm install rango-sdk@1.0.0 --save
+# or
+yarn add rango-sdk@1.0.0
+
+Commit the lockfile:
+
+package-lock.json
+# or
+yarn.lock
+
+Pinning SDK versions and committing the lockfile prevents production swaps from silently picking up a newer SDK version with changed route, transaction, or quote behavior.
