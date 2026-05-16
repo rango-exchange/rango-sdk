@@ -10,6 +10,7 @@ import {
   XrplTransaction,
   StellarTransaction,
 } from '../api/main/index.js'
+import { TransactionPrerequisiteResult } from '../api/shared/prerequisites/index.js'
 import {
   AmountRestrictionType,
   SwapExplorerUrl,
@@ -90,6 +91,7 @@ export type SwapStepStatus = {
   explorerUrl: SwapExplorerUrl[] | null
   diagnosisUrl: string | null
   outputAmount: string | null
+  prerequisiteResults: TransactionPrerequisiteResult[] | undefined
 }
 
 export type PendingSwapStep = SwapStepRoute &

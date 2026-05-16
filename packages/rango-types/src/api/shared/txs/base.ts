@@ -1,4 +1,5 @@
 import { TransactionType } from '../transactions.js'
+import { TransactionPrerequisite } from '../prerequisites/base.js'
 
 /**
  * Base transaction for all Rango supported transactions
@@ -7,12 +8,10 @@ import { TransactionType } from '../transactions.js'
  * @property {string} blockChain - The blockchain that this transaction will be executed in
  *
  */
-export interface BaseTransaction<
-  P extends BaseTransactionPrerequisite = never
-> {
+export interface BaseTransaction {
   type: TransactionType
   blockChain: string
-  prerequisites: P[]
+  prerequisites: TransactionPrerequisite[]
 }
 
 type TransactionPrerequisitesType =
