@@ -1,0 +1,20 @@
+{
+  "name": "main-stellar",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No need for a build. \"",
+    "clean": "echo \"No need for a clean. \""
+  },
+  "type": "module",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^15.1.0",
+    "bignumber.js": "^9.3.1",
+    "rango-sdk": "^0.3.0",
+    "rango-types": "^0.3.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
