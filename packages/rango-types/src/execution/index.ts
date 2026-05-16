@@ -17,6 +17,7 @@ import {
   TonTransaction,
 } from '../api/shared/index.js'
 import { HyperliquidTransaction } from '../api/shared/txs/hyperliquid.js'
+import { TransactionPrerequisiteResult } from './prerequisites.js'
 
 export type StepStatus =
   | 'created'
@@ -90,6 +91,7 @@ export type SwapStepStatus = {
   explorerUrl: SwapExplorerUrl[] | null
   diagnosisUrl: string | null
   outputAmount: string | null
+  prerequisiteResults: TransactionPrerequisiteResult[]
 }
 
 export type PendingSwapStep = SwapStepRoute &
@@ -140,3 +142,10 @@ export type PendingSwap = {
   validateBalanceOrFee: boolean
   hasAlreadyProceededToSign?: boolean | null
 }
+
+export {
+  isXrplChangeTrustLinePrerequisiteResult,
+  isStellarChangeTrustLinePrerequisiteResult,
+  XrplChangeTrustLinePrerequisiteResult,
+  StellarChangeTrustLinePrerequisiteResult,
+} from './prerequisites.js'
