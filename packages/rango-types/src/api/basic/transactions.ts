@@ -18,6 +18,7 @@ import {
   StellarTransaction,
   TronTransaction,
   TonTransaction,
+  XrplTransaction,
 } from '../shared/index.js'
 
 export {
@@ -193,5 +194,6 @@ export type SwapResponse = {
     | StellarTransaction
     | TronTransaction
     | TonTransaction
+    | XrplTransaction
     | null
 }
