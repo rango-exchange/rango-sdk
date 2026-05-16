@@ -17,6 +17,10 @@
     "./basicApi": {
       "types": "./lib/api/basic/index.d.ts",
       "default": "./lib/api/basic/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib/*.d.ts",
+      "default": "./lib/*.js"
     }
   },
   "repository": "https://github.com/rango-exchange/rango-types",
