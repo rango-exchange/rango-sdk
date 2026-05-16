@@ -17,6 +17,7 @@ import {
   RoutingResultType,
   TronTransaction,
   TonTransaction,
+  XrplTransaction,
 } from '../shared/index.js'
 
 export {
@@ -191,5 +192,6 @@ export type SwapResponse = {
     | StarknetTransaction
     | TronTransaction
     | TonTransaction
+    | XrplTransaction
     | null
 }
