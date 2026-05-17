@@ -15,8 +15,10 @@ import {
   TransactionStatus,
   CheckApprovalResponse,
   RoutingResultType,
+  StellarTransaction,
   TronTransaction,
   TonTransaction,
+  XrplTransaction,
 } from '../shared/index.js'
 
 export {
@@ -189,7 +191,9 @@ export type SwapResponse = {
     | SolanaTransaction
     | Transfer
     | StarknetTransaction
+    | StellarTransaction
     | TronTransaction
     | TonTransaction
+    | XrplTransaction
     | null
 }
