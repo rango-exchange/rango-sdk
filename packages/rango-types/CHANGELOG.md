@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/rango-exchange/rango-types/compare/rango-types@0.3.0...rango-types@0.4.0) (2026-05-17)
+
+
+### Features
+
+* add prerequisite result to swap step status and update stellar tx ([12a0a3b](https://github.com/rango-exchange/rango-types/commit/12a0a3b75df2877943fd4cde46bf9e6fcc619860))
+* add xrpl transaction to basic api ([01f99b0](https://github.com/rango-exchange/rango-types/commit/01f99b06d056b906d8492f07030aa69af7b22d71))
 # [0.3.0](https://github.com/rango-exchange/rango-types/compare/rango-types@0.2.0...rango-types@0.3.0) (2026-05-13)
 
 
