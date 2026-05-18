@@ -20,7 +20,7 @@ import {
 import BigNumber from 'bignumber.js'
 
 const HORIZON_URL = 'https://horizon.stellar.org'
-const NETWORK_PASSPHRASE = 'NETWORK_PASSPHRASE'
+const NETWORK_PASSPHRASE = 'NETWORK_PASSPHRASE' // eg. 'Public Global Stellar Network ; September 2015'
 
 const SECRET_KEY = 'YOUR_STELLAR_SECRET_KEY'
 const API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32'
@@ -36,7 +36,7 @@ const SOROBAN_OP_TYPES = [
 ]
 
 const SOURCE_CHAIN = 'STELLAR'
-const SOURCE_TOKEN_ADDR = null
+const SOURCE_TOKEN_ADDR = 'SOURCE_TOKEN_ADDR' // eg. 'USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
 const DESTINATION_CHAIN = 'DESTINATION_CHAIN' // eg. BSC
 const DESTINATION_TOKEN_ADDR = 'DESTINATION_TOKEN_ADDR' // eg. 0x55d398326f99059ff775485246999027b3197955
 const DESTINATION_ADDRESS = 'DESTINATION_ADDRESS' // eg. 0x8b5b3F18db50713709da94f88f9f5EEc339D1E4E
@@ -78,24 +78,23 @@ async function checkStellarChangeTrustLinePrerequisite(
   const server = new StellarSdk.Horizon.Server(HORIZON_URL)
   const account = await server.loadAccount(prerequisite.wallet)
 
-  const balanceLines = account.balances.filter(
+  const accountLines = account.balances.filter(
     (balance) =>
       balance.asset_type !== 'native' &&
       balance.asset_type !== 'liquidity_pool_shares'
   )
 
-  const targetBalanceLine = balanceLines.find(
-    (balanceLine) =>
-      balanceLine.asset_code === prerequisite.code &&
-      balanceLine.asset_issuer === prerequisite.issuer
+  const targetAccountLine = accountLines.find(
+    (accountLine) =>
+      accountLine.asset_code === prerequisite.code &&
+      accountLine.asset_issuer === prerequisite.issuer
   )
 
-  if (targetBalanceLine) {
-    const lineLimit = new BigNumber(targetBalanceLine.limit)
-    const lineBalance = new BigNumber(targetBalanceLine.balance)
-    const prerequisiteValue = new BigNumber(prerequisite.value)
+  if (targetAccountLine) {
+    const lineLimit = new BigNumber(targetAccountLine.limit)
+    const targetLimit = new BigNumber(TRUST_LINE_INFINITE_VALUE)
 
-    if (lineLimit.gte(lineBalance.plus(prerequisiteValue))) {
+    if (lineLimit.gte(targetLimit)) {
       console.log('Trust line already opened')
       return
     }
