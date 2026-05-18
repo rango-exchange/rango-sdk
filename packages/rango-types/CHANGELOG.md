@@ -1,3 +1,9 @@
+# [0.5.0](https://github.com/rango-exchange/rango-types/compare/rango-types@0.4.0...rango-types@0.5.0) (2026-05-18)
+
+
+### Features
+
+* add skipped status to transaction prerequisite result ([0ee502f](https://github.com/rango-exchange/rango-types/commit/0ee502fa1be76376c3f77fa68fa618e9552c7644))
 # [0.4.0](https://github.com/rango-exchange/rango-types/compare/rango-types@0.3.0...rango-types@0.4.0) (2026-05-17)
 
 
