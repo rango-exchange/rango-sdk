@@ -148,4 +148,5 @@ export {
   isStellarChangeTrustLinePrerequisiteResult,
   XrplChangeTrustLinePrerequisiteResult,
   StellarChangeTrustLinePrerequisiteResult,
+  TransactionPrerequisiteResult,
 } from './prerequisites.js'
