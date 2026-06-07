@@ -23,10 +23,12 @@
       "default": "./lib/*.js"
     }
   },
-  "repository": "https://github.com/rango-exchange/rango-types",
-  "homepage": "https://github.com/rango-exchange/rango-types",
+  "repository": {
+    "url": "https://github.com/rango-exchange/rango-sdk.git"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
   "bugs": {
-    "url": "https://github.com/rango-exchange/rango-types/issues"
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
     "clean": "rm -rf lib",
