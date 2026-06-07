@@ -1,6 +1,7 @@
 {
   "private": true,
   "sideEffects": false,
+  "name": "rango-sdk-monorepo",
   "workspaces": [
     "packages/*",
     "examples/basic/*",
@@ -29,9 +30,12 @@
     "husky": "^8.0.3",
     "prettier": "^2.8.3",
     "turbo": "^2.9.9",
-    "rangutopia": "^0.0.6",
+    "rangutopia": "0.2.1",
     "typescript": "^4.9.4"
   },
   "dependencies": {},
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "repository": {
+    "url": "https://github.com/rango-exchange/rango-sdk.git"
+  }
 }

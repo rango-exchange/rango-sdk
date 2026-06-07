@@ -2,6 +2,34 @@
 # yarn lockfile v1
 
 
+"@actions/core@^3.0.1":
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@actions/core/-/core-3.0.1.tgz#0f4d8b14527ee51e0db061eedc24a206c9f98c23"
+  integrity sha512-a6d/Nwahm9fliVGRhdhofo40HjHQasUPusmc7vBfyky+7Z+P2A1J68zyFVaNcEclc/Se+eO595oAr5nwEIoIUA==
+  dependencies:
+    "@actions/exec" "^3.0.0"
+    "@actions/http-client" "^4.0.0"
+
+"@actions/exec@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@actions/exec/-/exec-3.0.0.tgz#8c3464d20f0aa4068707757021d7e3c01a7ee203"
+  integrity sha512-6xH/puSoNBXb72VPlZVm7vQ+svQpFyA96qdDBvhB8eNZOE8LtPf9L4oAsfzK/crCL8YZ+19fKYVnM63Sl+Xzlw==
+  dependencies:
+    "@actions/io" "^3.0.2"
+
+"@actions/http-client@^4.0.0":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@actions/http-client/-/http-client-4.0.1.tgz#22a23a7625ba1326d9ba154012ca8301a27f88a3"
+  integrity sha512-+Nvd1ImaOZBSoPbsUtEhv+1z99H12xzncCkz0a3RuehINE81FZSe2QTj3uvAPTcJX/SCzUQHQ0D1GrPMbrPitg==
+  dependencies:
+    tunnel "^0.0.6"
+    undici "^6.23.0"
+
+"@actions/io@^3.0.2":
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/@actions/io/-/io-3.0.2.tgz#6f89b27a159d109836d983efa283997c23b92284"
+  integrity sha512-nRBchcMM+QK1pdjO7/idu86rbJI5YHUKCvKs0KxnSYbVe3F51UfGxuZX4Qy/fWlp6l7gWFwIkrOzN+oUK03kfw==
+
 "@adraffy/ens-normalize@1.10.1":
   version "1.10.1"
   resolved "https://registry.yarnpkg.com/@adraffy/ens-normalize/-/ens-normalize-1.10.1.tgz#63430d04bd8c5e74f8d7d049338f1cd9d4f02069"
@@ -786,6 +814,16 @@
   resolved "https://registry.yarnpkg.com/@ungap/structured-clone/-/structured-clone-1.2.0.tgz#756641adb587851b5ccb3e095daf27ae581c8406"
   integrity sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==
 
+"@vercel/routing-utils@^6.2.0":
+  version "6.2.0"
+  resolved "https://registry.yarnpkg.com/@vercel/routing-utils/-/routing-utils-6.2.0.tgz#406448eace9f66c52a013cea0243783d31d7c621"
+  integrity sha512-YI2cGYZmJKEyGSEgf5Fw5rVuW7X1bTOQ7/pnLRNTFMH3YB3qqP5erCLCJGv2kIvNo1iQAPINHQRJj6ykEdGoPg==
+  dependencies:
+    path-to-regexp "6.1.0"
+    path-to-regexp-updated "npm:path-to-regexp@6.3.0"
+  optionalDependencies:
+    ajv "^6.12.3"
+
 abi-wan-kanabi@^2.2.3:
   version "2.2.4"
   resolved "https://registry.yarnpkg.com/abi-wan-kanabi/-/abi-wan-kanabi-2.2.4.tgz#47ebbafbb7f8df81773efbdcca60cdda8008c821"
@@ -822,6 +860,16 @@ agentkeepalive@^4.5.0:
   integrity sha512-kja8j7PjmncONqaTsB8fQ+wE2mSU2DJ9D4XKoJ5PFWIdRMa6SLSN1ff4mOr4jCbfRSsxR4keIiySJU0N9T5hIQ==
   dependencies:
     humanize-ms "^1.2.1"
+
+ajv@^6.12.3:
+  version "6.15.0"
+  resolved "https://registry.yarnpkg.com/ajv/-/ajv-6.15.0.tgz#07e982c74626167aa7a2495c53817892d7139492"
+  integrity sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==
+  dependencies:
+    fast-deep-equal "^3.1.1"
+    fast-json-stable-stringify "^2.0.0"
+    json-schema-traverse "^0.4.1"
+    uri-js "^4.2.2"
 
 ajv@^6.12.4:
   version "6.12.6"
@@ -2991,6 +3039,16 @@ path-parse@^1.0.7:
   resolved "https://registry.yarnpkg.com/path-parse/-/path-parse-1.0.7.tgz#fbc114b60ca42b30d9daf5858e4bd68bbedb6735"
   integrity sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==
 
+"path-to-regexp-updated@npm:path-to-regexp@6.3.0":
+  version "6.3.0"
+  resolved "https://registry.yarnpkg.com/path-to-regexp/-/path-to-regexp-6.3.0.tgz#2b6a26a337737a8e1416f9272ed0766b1c0389f4"
+  integrity sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==
+
+path-to-regexp@6.1.0:
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/path-to-regexp/-/path-to-regexp-6.1.0.tgz#0b18f88b7a0ce0bfae6a25990c909ab86f512427"
+  integrity sha512-h9DqehX3zZZDCEm+xbfU0ZmwCGFCAAraPJWMXJ4+v32NjZJilVg3k1TcKsRgIb8IQ/izZSaydDc1OhJCZvs2Dw==
+
 path-type@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
@@ -3210,11 +3268,14 @@ rango-types@^0.4.0:
   resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.4.0.tgz#799b1dfc126fbd9ddf70cc9889d73b3ff53fb313"
   integrity sha512-I9h2KfrHxBrteaJiD+IFWjdGxgesr7XL/yuH82MIy/cSsbzIVrolt5pJVveESINkvkiKmQ6xVJmni0F0K9UewQ==
 
-rangutopia@^0.0.6:
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/rangutopia/-/rangutopia-0.0.6.tgz#c76cfc052ed6c6d40045cc16b495b4523a2cfa25"
-  integrity sha512-4j4VQSwxx6rZggTQAHfHMumQ6mybAKq1WmyFuziW4+akntdNJCSlDIP/dgOS75ivdk8Y+2evfSlUOL9H44L4Cg==
+rangutopia@0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/rangutopia/-/rangutopia-0.2.1.tgz#9ed43158a56b481467d3228a68ecdeb9ac1f75ef"
+  integrity sha512-i6+lnrDrhXKKXwB3uweK9eTZl6xwqSwUEF+RmjrkFrr+94mTVMPKiiu8/7r5KIZzAGY3Of9TYCoAee0mJs7XuA==
   dependencies:
+    "@actions/core" "^3.0.1"
+    "@conventional-changelog/git-client" "^2.6.0"
+    "@vercel/routing-utils" "^6.2.0"
     ci-info "^4.4.0"
     commander "^14.0.0"
     conventional-changelog "^7.2.0"
@@ -3225,6 +3286,7 @@ rangutopia@^0.0.6:
     ora "^8.2.0"
     pino "^10.3.1"
     pino-pretty "^13.1.3"
+    semver "^7.7.4"
     zod "^3.25.71"
 
 real-require@^0.2.0:
@@ -3394,6 +3456,11 @@ semver@^7.3.7:
   version "7.6.2"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.6.2.tgz#1e3b34759f896e8f14d6134732ce798aeb0c6e13"
   integrity sha512-FNAIBWCx9qcRhoHcgcJ0gvU7SN1lYU2ZXuSfl04bSC5OpvDHFyJCjdNHomPXxjQlCBU67YW64PzY7/VIEH7F2w==
+
+semver@^7.7.4:
+  version "7.8.1"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.8.1.tgz#bf4970b5e70fda0686363cc18bfe8805d5ed957e"
+  integrity sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==
 
 set-cookie-parser@^2.4.8:
   version "2.7.1"
@@ -3759,6 +3826,11 @@ tsx@^4.17.0:
   optionalDependencies:
     fsevents "~2.3.3"
 
+tunnel@^0.0.6:
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/tunnel/-/tunnel-0.0.6.tgz#72f1314b34a5b192db012324df2cc587ca47f92c"
+  integrity sha512-1h/Lnq9yajKY2PEbBadPXj3VxsDDu844OnaAo52UVmIzIvwwtBPIuNvkjuzBlTWpfJyUbG3ez0KSBibQkj4ojg==
+
 turbo@^2.9.9:
   version "2.9.9"
   resolved "https://registry.yarnpkg.com/turbo/-/turbo-2.9.9.tgz#cc7d66824dee1fe16accc1bc754356b5c7f0960c"
@@ -3885,6 +3957,11 @@ undici-types@~6.19.2:
   version "6.19.8"
   resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-6.19.8.tgz#35111c9d1437ab83a7cdc0abae2f26d88eda0a02"
   integrity sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==
+
+undici@^6.23.0:
+  version "6.26.0"
+  resolved "https://registry.yarnpkg.com/undici/-/undici-6.26.0.tgz#333a35b7f519c48d2dc6aeb38e4e91d9274e0652"
+  integrity sha512-4yqz8a3n5HmGTlsbADNtr/dJlhkh/55Rq798G6ibiULcXbDtaLpTl1pvdqcbFfeoj3iSi52lePFM7h9H21cw/A==
 
 unicorn-magic@^0.1.0:
   version "0.1.0"

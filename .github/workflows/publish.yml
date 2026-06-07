@@ -11,6 +11,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
 
     steps:
 
@@ -31,5 +33,4 @@ jobs:
         run: yarn run publish "$PUBLISH_FLAG"
         env:
           PUBLISH_FLAG: ${{ steps.flag.outputs.flag }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.PAT }}

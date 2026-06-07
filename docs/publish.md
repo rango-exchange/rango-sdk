@@ -64,7 +64,6 @@ To trigger an experimental publish, run the **`Publish`** workflow manually from
 
 | Secret      | Purpose |
 |-------------|---|
-| `NPM_TOKEN` | Authenticates `yarn publish` against the npm registry |
 | `PAT`       | Allows the workflow to push version bumps and tags back to the repo |
 
 ---
