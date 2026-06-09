@@ -1,20 +1,36 @@
 // run `node --import=tsx index.ts` in the terminal
 
-import { CreateTransactionRequest, MultiRouteRequest, RangoClient, TransactionStatus, TransactionType } from "rango-sdk";
+import {
+  CreateTransactionRequest,
+  MultiRouteRequest,
+  RangoClient,
+  TransactionStatus,
+  TransactionType,
+} from 'rango-sdk'
 import { findToken } from '../shared/utils/meta.js'
-import { logMeta, logSelectedTokens, logWallet, logTransactionHash, logApprovalResponse, logRoutes, logStepStatus, logConfirmedRoute, logRouteStep } from "../shared/utils/logger.js";
-import { TransactionRequest, ethers } from "ethers";
+import {
+  logMeta,
+  logSelectedTokens,
+  logWallet,
+  logTransactionHash,
+  logApprovalResponse,
+  logRoutes,
+  logStepStatus,
+  logConfirmedRoute,
+  logRouteStep,
+} from '../shared/utils/logger.js'
+import { TransactionRequest, ethers } from 'ethers'
 import { setTimeout } from 'timers/promises'
-import { getRpcUrlForBlockchain } from "./rpc.js";
+import { getRpcUrlForBlockchain } from './rpc.js'
 
 // setup wallet
-const privateKey = 'YOUR_PRIVATE_KEY';
-const wallet = new ethers.Wallet(privateKey);
+const privateKey = 'YOUR_PRIVATE_KEY'
+const wallet = new ethers.Wallet(privateKey)
 const waleltAddress = wallet.address
 logWallet(waleltAddress)
 
 // initiate sdk using your api key
-const API_KEY = "c6381a79-2817-4602-83bf-6a641a409e32"
+const API_KEY = 'c6381a79-2817-4602-83bf-6a641a409e32'
 const rango = new RangoClient(API_KEY)
 
 // get blockchains and tokens meta data
@@ -22,11 +38,11 @@ const meta = await rango.getAllMetadata()
 logMeta(meta)
 
 // some example tokens for test purpose
-const sourceBlockchain = "BSC"
-const sourceTokenAddress = "0x55d398326f99059ff775485246999027b3197955"
-const targetBlockchain = "AVAX_CCHAIN"
+const sourceBlockchain = 'BSC'
+const sourceTokenAddress = '0x55d398326f99059ff775485246999027b3197955'
+const targetBlockchain = 'AVAX_CCHAIN'
 const targetTokenAddress = null
-const amount = "0.001"
+const amount = '0.001'
 
 // find selected tokens in meta.tokens
 const sourceToken = findToken(meta.tokens, sourceBlockchain, sourceTokenAddress)
@@ -39,7 +55,7 @@ const routingRequest: MultiRouteRequest = {
   to: targetToken,
   amount,
   slippage: '1.0',
-  transactionTypes: [TransactionType.EVM]
+  transactionTypes: [TransactionType.EVM],
 }
 const routingResponse = await rango.getAllRoutes(routingRequest)
 
@@ -52,14 +68,13 @@ if (routingResponse.results.length === 0) {
 // confirm one of the routes
 const selectedRoute = routingResponse.results[0]
 
-
 const selectedWallets = selectedRoute.swaps
-  .flatMap(swap => [swap.from.blockchain, swap.to.blockchain])
+  .flatMap((swap) => [swap.from.blockchain, swap.to.blockchain])
   .filter((blockchain, index, self) => self.indexOf(blockchain) === index)
-  .map(blockchain => ({ [blockchain]: waleltAddress }))
+  .map((blockchain) => ({ [blockchain]: waleltAddress }))
   .reduce((acc, obj) => {
-    return { ...acc, ...obj };
-  }, {});
+    return { ...acc, ...obj }
+  }, {})
 
 const confirmResponse = await rango.confirmRoute({
   requestId: selectedRoute.requestId,
@@ -93,26 +108,30 @@ for (const swap of swapSteps) {
   logRouteStep(swap, step)
 
   // set rpc provider for this step
-  const rpcProvider = new ethers.JsonRpcProvider(getRpcUrlForBlockchain(meta, swap.from.blockchain));
-  const walletWithProvider = wallet.connect(rpcProvider);
+  const rpcProvider = new ethers.JsonRpcProvider(
+    getRpcUrlForBlockchain(meta, swap.from.blockchain),
+  )
+  const walletWithProvider = wallet.connect(rpcProvider)
 
   const request: CreateTransactionRequest = {
     requestId: confirmedRoute.requestId,
     step: step,
     userSettings: {
       slippage: '1.0',
-      infiniteApprove: false
+      infiniteApprove: false,
     },
     validations: {
       approve: true,
       balance: false,
       fee: false,
-    }
+    },
   }
   let createTransactionResponse = await rango.createTransaction(request)
   let tx = createTransactionResponse.transaction
   if (!tx) {
-    throw new Error(`Error creating the transaction ${createTransactionResponse.error}`)
+    throw new Error(
+      `Error creating the transaction ${createTransactionResponse.error}`,
+    )
   }
 
   if (tx.type === TransactionType.EVM) {
@@ -128,27 +147,36 @@ for (const swap of swapSteps) {
         gasPrice: tx.gasPrice,
         gasLimit: tx.gasLimit,
       }
-      const { hash } = await walletWithProvider.sendTransaction(approveTransaction);
+      const { hash } =
+        await walletWithProvider.sendTransaction(approveTransaction)
       logTransactionHash(hash, true)
 
       // wait for approval
       while (true) {
         await setTimeout(5_000)
-        const { isApproved, currentApprovedAmount, requiredApprovedAmount, txStatus } = await rango.checkApproval(confirmedRoute.requestId, hash)
+        const {
+          isApproved,
+          currentApprovedAmount,
+          requiredApprovedAmount,
+          txStatus,
+        } = await rango.checkApproval(confirmedRoute.requestId, hash)
         logApprovalResponse(isApproved)
-        if (isApproved)
-          break
+        if (isApproved) break
         else if (txStatus === TransactionStatus.FAILED)
           throw new Error('Approve transaction failed in blockchain')
         else if (txStatus === TransactionStatus.SUCCESS)
-          throw new Error(`Insufficient approve, current amount: ${currentApprovedAmount}, required amount: ${requiredApprovedAmount}`)
+          throw new Error(
+            `Insufficient approve, current amount: ${currentApprovedAmount}, required amount: ${requiredApprovedAmount}`,
+          )
       }
 
       // create the main transaction if previous one was approval transaction
       createTransactionResponse = await rango.createTransaction(request)
       tx = createTransactionResponse.transaction
       if (!tx || tx.type !== TransactionType.EVM) {
-        throw new Error(`Error creating the transaction ${createTransactionResponse.error}`)
+        throw new Error(
+          `Error creating the transaction ${createTransactionResponse.error}`,
+        )
       }
     }
 
@@ -163,7 +191,7 @@ for (const swap of swapSteps) {
       gasPrice: tx.gasPrice,
       gasLimit: tx.gasLimit,
     }
-    const { hash } = await walletWithProvider.sendTransaction(mainTransaction);
+    const { hash } = await walletWithProvider.sendTransaction(mainTransaction)
     logTransactionHash(hash, false)
 
     // track swap status
@@ -172,14 +200,14 @@ for (const swap of swapSteps) {
       const state = await rango.checkStatus({
         requestId: confirmedRoute.requestId,
         step,
-        txId: hash
+        txId: hash,
       })
       logStepStatus(state)
 
       const status = state.status
       if (status === TransactionStatus.SUCCESS) {
         // we could proceed with the next step of the route
-        step += 1;
+        step += 1
         break
       } else if (status === TransactionStatus.FAILED) {
         throw new Error(`Swap failed on step ${step}`)

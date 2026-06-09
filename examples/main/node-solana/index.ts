@@ -154,7 +154,7 @@ for (const swap of swapSteps) {
   let tx = createTransactionResponse.transaction
   if (!tx) {
     throw new Error(
-      `Error creating the transaction ${createTransactionResponse.error}`
+      `Error creating the transaction ${createTransactionResponse.error}`,
     )
   }
 

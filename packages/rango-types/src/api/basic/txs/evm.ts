@@ -1,11 +1,15 @@
 import { BlockchainMetaBase } from '../meta.js'
 import { TransactionType } from '../transactions.js'
 
-
-
 /** Blockchain info for basic API EVM transaction */
 export type EvmTransactionBlockchain = Pick<
-  BlockchainMetaBase, 'name' | 'defaultDecimals' | 'addressPatterns' | 'feeAssets' | 'type' | 'chainId'
+  BlockchainMetaBase,
+  | 'name'
+  | 'defaultDecimals'
+  | 'addressPatterns'
+  | 'feeAssets'
+  | 'type'
+  | 'chainId'
 >
 
 /** The transaction object for all EVM-based blockchains, including Ethereum, BSC, Polygon, Harmony, etc */

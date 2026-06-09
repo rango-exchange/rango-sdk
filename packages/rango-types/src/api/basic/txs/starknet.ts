@@ -1,7 +1,6 @@
 import { BaseTransaction, StarknetCallData } from '../../shared/index.js'
 import { TransactionType } from '../transactions.js'
 
-
 export { StarknetCallData }
 
 /** The transaction object for all Starknet transactions */
@@ -17,4 +16,5 @@ export interface StarknetTransaction extends BaseTransaction {
 
 export const isStarknetTransaction = (transaction: {
   type: TransactionType
-}): transaction is StarknetTransaction => transaction.type === TransactionType.STARKNET
+}): transaction is StarknetTransaction =>
+  transaction.type === TransactionType.STARKNET

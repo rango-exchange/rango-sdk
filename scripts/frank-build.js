@@ -16,7 +16,7 @@ async function includeFileInBuild(file) {
 async function createPackageFile() {
   const packageData = await fse.readFile(
     path.resolve(pckPath, './package.json'),
-    'utf8'
+    'utf8',
   )
   const { scripts, devDependencies, workspaces, files, ...packageDataOther } =
     JSON.parse(packageData)
@@ -38,7 +38,7 @@ async function createPackageFile() {
   await fse.writeFile(
     targetPath,
     JSON.stringify(newPackageData, null, 2),
-    'utf8'
+    'utf8',
   )
   console.log(`Created package.json in ${targetPath}.`)
 
@@ -50,8 +50,8 @@ async function run() {
     await createPackageFile()
     await Promise.all(
       ['../../README.md', '../../LICENSE'].map((file) =>
-        includeFileInBuild(file)
-      )
+        includeFileInBuild(file),
+      ),
     )
   } catch (err) {
     console.error(err)

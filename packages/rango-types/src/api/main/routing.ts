@@ -241,7 +241,14 @@ export type MultiRouteSimulationResult = {
 }
 
 /** The best route request body for multi-routing */
-export type MultiRouteRequest = Omit<BestRouteRequest, 'selectedWallets' | 'destination' | 'checkPrerequisites' | 'forceExecution' | 'maxLength'>
+export type MultiRouteRequest = Omit<
+  BestRouteRequest,
+  | 'selectedWallets'
+  | 'destination'
+  | 'checkPrerequisites'
+  | 'forceExecution'
+  | 'maxLength'
+>
 
 /** The best route response for multi-routing, if the results field is empty, it means that no route is found */
 export type MultiRouteResponse = {

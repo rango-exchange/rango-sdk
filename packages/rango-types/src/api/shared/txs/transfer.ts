@@ -2,7 +2,7 @@ import { AssetWithTicker } from '../common.js'
 import { TransactionType } from '../transactions.js'
 import { BaseTransaction } from './base.js'
 
-export type InputToSign = { address: string, signingIndexes: number[] }
+export type InputToSign = { address: string; signingIndexes: number[] }
 
 export type PSBT = {
   /** Base 64 representation of the Unsigned PSBT */
