@@ -1,3 +1,3 @@
-import rangoRules from 'eslint-config-rango';
+import rangoRules from 'eslint-config-rango'
 
-export default [...rangoRules];
+export default [...rangoRules]

@@ -60,7 +60,7 @@ export class SignerError extends Error {
     root?: any,
     rpcCode?: RPCErrorCode,
     cause?: any,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(m || getDefaultErrorMessage(code), { cause })
     Object.setPrototypeOf(this, SignerError.prototype)
@@ -118,20 +118,20 @@ export class SignerError extends Error {
   static UnsupportedError(operation: SignerOperationName): SignerError {
     return new SignerError(
       SignerErrorCode.OPERATION_UNSUPPORTED,
-      `'${operation}' is not supported by the signer`
+      `'${operation}' is not supported by the signer`,
     )
   }
   static UnimplementedError(operation: SignerOperationName): SignerError {
     return new SignerError(
       SignerErrorCode.NOT_IMPLEMENTED,
-      `'${operation}' is not implemented by the signer`
+      `'${operation}' is not implemented by the signer`,
     )
   }
 
   static AssertionFailed(m: string): SignerError {
     return new SignerError(
       SignerErrorCode.UNEXPECTED_BEHAVIOUR,
-      'Assertion failed: ' + m
+      'Assertion failed: ' + m,
     )
   }
 
@@ -163,11 +163,11 @@ export class SignerError extends Error {
         : JSON.stringify(this.root)
 
     const rootStr =
-        typeof this.root === 'string'
+      typeof this.root === 'string'
         ? this.root
         : this.root instanceof Error
-        ? this.root.message
-        : rawMessage
+          ? this.root.message
+          : rawMessage
 
     return {
       code: this.code,

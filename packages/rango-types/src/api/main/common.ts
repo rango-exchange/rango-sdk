@@ -27,13 +27,12 @@ export type RecommendedSlippage = {
 /** EVM Fee Info for the Swap Fee */
 export type EVMFeeMeta = {
   /** type of the fee meta  */
-  type: "EvmNetworkFeeMeta",
+  type: 'EvmNetworkFeeMeta'
   /** gas limit */
-  gasLimit: string,
+  gasLimit: string
   /** gas price */
   gasPrice: string
 }
-
 
 /** A fee unit, including the type of asset and the amount of fee */
 export type SwapFee = {

@@ -7,7 +7,6 @@ on:
     branches:
       - next
 
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -15,7 +14,6 @@ jobs:
       id-token: write
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v6
         with:

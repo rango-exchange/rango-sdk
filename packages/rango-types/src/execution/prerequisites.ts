@@ -10,13 +10,11 @@ interface BaseTransactionPrerequisiteResult {
   prerequisiteType: TransactionPrerequisiteType
 }
 
-interface BaseExecutedTransactionPrerequisiteResult
-  extends BaseTransactionPrerequisiteResult {
+interface BaseExecutedTransactionPrerequisiteResult extends BaseTransactionPrerequisiteResult {
   status: 'success' | 'failed' | 'pending'
 }
 
-interface BaseSkippedTransactionPrerequisiteResult
-  extends BaseTransactionPrerequisiteResult {
+interface BaseSkippedTransactionPrerequisiteResult extends BaseTransactionPrerequisiteResult {
   status: 'skipped'
   data: null
 }
@@ -27,14 +25,12 @@ export type StellarChangeTrustLinePrerequisiteResultData = {
   executedTransactionHash: string
 }
 
-export interface StellarExecutedChangeTrustLinePrerequisiteResult
-  extends BaseExecutedTransactionPrerequisiteResult {
+export interface StellarExecutedChangeTrustLinePrerequisiteResult extends BaseExecutedTransactionPrerequisiteResult {
   prerequisiteType: typeof STELLAR_CHANGE_TRUSTLINE_TYPE
   data: StellarChangeTrustLinePrerequisiteResultData
 }
 
-export interface StellarSkippedChangeTrustLinePrerequisiteResult
-  extends BaseSkippedTransactionPrerequisiteResult {
+export interface StellarSkippedChangeTrustLinePrerequisiteResult extends BaseSkippedTransactionPrerequisiteResult {
   prerequisiteType: typeof STELLAR_CHANGE_TRUSTLINE_TYPE
 }
 
@@ -43,7 +39,7 @@ export type StellarChangeTrustLinePrerequisiteResult =
   | StellarSkippedChangeTrustLinePrerequisiteResult
 
 export const isStellarChangeTrustLinePrerequisiteResult = (
-  prerequisiteResult: BaseTransactionPrerequisiteResult
+  prerequisiteResult: BaseTransactionPrerequisiteResult,
 ): prerequisiteResult is StellarChangeTrustLinePrerequisiteResult =>
   prerequisiteResult.prerequisiteType === STELLAR_CHANGE_TRUSTLINE_TYPE
 
@@ -52,13 +48,11 @@ export const isStellarChangeTrustLinePrerequisiteResult = (
 export type XrplChangeTrustLinePrerequisiteResultData = {
   executedTransactionHash: string
 }
-export interface XrplExecutedChangeTrustLinePrerequisiteResult
-  extends BaseExecutedTransactionPrerequisiteResult {
+export interface XrplExecutedChangeTrustLinePrerequisiteResult extends BaseExecutedTransactionPrerequisiteResult {
   prerequisiteType: typeof XRPL_CHANGE_TRUSTLINE_TYPE
   data: XrplChangeTrustLinePrerequisiteResultData
 }
-export interface XrplSkippedChangeTrustLinePrerequisiteResult
-  extends BaseSkippedTransactionPrerequisiteResult {
+export interface XrplSkippedChangeTrustLinePrerequisiteResult extends BaseSkippedTransactionPrerequisiteResult {
   prerequisiteType: typeof XRPL_CHANGE_TRUSTLINE_TYPE
 }
 
@@ -67,7 +61,7 @@ export type XrplChangeTrustLinePrerequisiteResult =
   | XrplSkippedChangeTrustLinePrerequisiteResult
 
 export const isXrplChangeTrustLinePrerequisiteResult = (
-  prerequisiteResult: BaseTransactionPrerequisiteResult
+  prerequisiteResult: BaseTransactionPrerequisiteResult,
 ): prerequisiteResult is XrplChangeTrustLinePrerequisiteResult =>
   prerequisiteResult.prerequisiteType === XRPL_CHANGE_TRUSTLINE_TYPE
 

@@ -11,7 +11,7 @@ export interface GenericSigner<Tx extends Transaction> {
   signMessage(
     msg: string,
     address: string,
-    chainId: string | null
+    chainId: string | null,
   ): Promise<string>
 
   /*
@@ -24,7 +24,7 @@ export interface GenericSigner<Tx extends Transaction> {
   signAndSendTx(
     tx: Tx,
     address: string,
-    chainId: string | null
+    chainId: string | null,
   ): Promise<{ hash: string; response?: any }>
 
   /*
@@ -37,7 +37,7 @@ export interface GenericSigner<Tx extends Transaction> {
   signTypedData?(
     typedData: any,
     address: string,
-    chainId: string | null
+    chainId: string | null,
   ): Promise<string>
 
   /*
@@ -51,14 +51,14 @@ export interface GenericSigner<Tx extends Transaction> {
     txHash: string,
     chainId?: string,
     txResponse?: any,
-    confirmations?: number
+    confirmations?: number,
   ): Promise<{ hash: string; response?: any }>
 }
 
 export interface SignerFactory {
   registerSigner<Tx extends Transaction>(
     txType: TransactionType,
-    signer: GenericSigner<Tx>
+    signer: GenericSigner<Tx>,
   ): void
   getSigner<Tx extends Transaction>(txType: TransactionType): GenericSigner<Tx>
 }
@@ -73,13 +73,13 @@ export class DefaultSignerFactory implements SignerFactory {
 
   registerSigner<Tx extends Transaction>(
     txType: TransactionType,
-    signer: GenericSigner<Tx>
+    signer: GenericSigner<Tx>,
   ): void {
     this.signers[txType] = signer
   }
 
   getSigner<Tx extends Transaction>(
-    txType: TransactionType
+    txType: TransactionType,
   ): GenericSigner<Tx> {
     if (this.signers && txType in this.signers) {
       const signer = this.signers[txType]

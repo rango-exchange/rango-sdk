@@ -5,8 +5,7 @@ import { XRPL_CHANGE_TRUSTLINE_TYPE } from './constants.js'
  *  Xrpl Prerequisite Type
  *
  */
-export interface XrplChangeTrustLinePrerequisite
-  extends BaseTransactionPrerequisite {
+export interface XrplChangeTrustLinePrerequisite extends BaseTransactionPrerequisite {
   /** equals to "XRPL_CHANGE_TRUSTLINE" **/
   type: typeof XRPL_CHANGE_TRUSTLINE_TYPE
   /** equals to "XRPL" **/
@@ -22,6 +21,6 @@ export interface XrplChangeTrustLinePrerequisite
 }
 
 export const isXrplChangeTrustLinePrerequisite = (
-  prerequisite: BaseTransactionPrerequisite
+  prerequisite: BaseTransactionPrerequisite,
 ): prerequisite is XrplChangeTrustLinePrerequisite =>
   prerequisite.type === XRPL_CHANGE_TRUSTLINE_TYPE

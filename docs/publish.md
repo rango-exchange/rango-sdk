@@ -1,4 +1,3 @@
-
 # **Publish Workflow**
 
 ## Overview
@@ -9,10 +8,10 @@ The `Publish` workflow publishes the library packages to npm. It runs automatica
 
 ## **Trigger Conditions**
 
-| Trigger | Branch | Publish Flag |
-|---|---|---|
-| Push | `next` | `--next` |
-| Manual (`workflow_dispatch`) | any | detected from branch |
+| Trigger                      | Branch | Publish Flag         |
+| ---------------------------- | ------ | -------------------- |
+| Push                         | `next` | `--next`             |
+| Manual (`workflow_dispatch`) | any    | detected from branch |
 
 ---
 
@@ -62,9 +61,9 @@ To trigger an experimental publish, run the **`Publish`** workflow manually from
 
 ## **Required Secrets / Tokens**
 
-| Secret      | Purpose |
-|-------------|---|
-| `PAT`       | Allows the workflow to push version bumps and tags back to the repo |
+| Secret | Purpose                                                             |
+| ------ | ------------------------------------------------------------------- |
+| `PAT`  | Allows the workflow to push version bumps and tags back to the repo |
 
 ---
 
