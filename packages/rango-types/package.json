@@ -33,7 +33,7 @@
   "scripts": {
     "clean": "rm -rf lib",
     "build": "tsc",
-    "lint": "eslint */**/*.{js,ts} --quiet --fix -c ../../.eslintrc.json --ignore-path ../../.prettierignore",
+    "lint": "eslint */**/*.{js,ts} --quiet --fix",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' ../../.prettierrc.json --ignore-path ../../.prettierignore"
   },
   "keywords": [

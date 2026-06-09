@@ -18,7 +18,7 @@
     "build": "yarn run rangutopia library build --external-all-except=rango-types && yarn post:build",
     "post:build": "yarn mv:file lib",
     "watch": "tsdx watch",
-    "lint": "eslint src -c ../../.eslintrc.json --fix --ignore-path ../../.prettierignore",
+    "lint": "eslint src --fix",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore",
     "mv:file": "sh ../../scripts/post-build.sh"
   },
