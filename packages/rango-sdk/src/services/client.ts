@@ -250,13 +250,16 @@ export class RangoClient {
     walletAddresses: WalletAddresses,
     options?: RequestOptions,
   ): Promise<WalletDetailsResponse> {
-    let walletAddressesQueryParams = ''
-    for (let i = 0; i < walletAddresses.length; i++) {
-      const walletAddress = walletAddresses[i]
-      walletAddressesQueryParams += `&address=${walletAddress.blockchain}.${walletAddress.address}`
-    }
+    const walletAddressesQueryParams = walletAddresses
+      .map(
+        (walletAddress) =>
+          `address=${encodeURIComponent(
+            `${walletAddress.blockchain}.${walletAddress.address}`,
+          )}`,
+      )
+      .join('&')
     const axiosResponse = await this.httpService.get<WalletDetailsResponse>(
-      `/wallets/details?apiKey=${this.apiKey}${walletAddressesQueryParams}`,
+      `/wallets/details?apiKey=${this.apiKey}&${walletAddressesQueryParams}`,
       { ...options },
     )
     return axiosResponse.data
