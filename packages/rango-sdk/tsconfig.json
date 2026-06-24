@@ -4,8 +4,9 @@
     "composite": true,
     "declaration": true,
     "noEmit": false,
-    "outDir": "lib",
-    "rootDir": "./src"
+    "outDir": "dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"
   },
   "include": ["src"],
   "exclude": ["node_modules", "**/__tests__/*"]

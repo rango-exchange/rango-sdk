@@ -1,6 +1,6 @@
 {
   "name": "rango-types",
-  "version": "0.1.99",
+  "version": "0.5.1-next.3",
   "description": "Rango Exchange Types",
   "type": "module",
   "main": "./lib/index.js",
@@ -17,17 +17,23 @@
     "./basicApi": {
       "types": "./lib/api/basic/index.d.ts",
       "default": "./lib/api/basic/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib/*.d.ts",
+      "default": "./lib/*.js"
     }
   },
-  "repository": "https://github.com/rango-exchange/rango-types",
-  "homepage": "https://github.com/rango-exchange/rango-types",
+  "repository": {
+    "url": "https://github.com/rango-exchange/rango-sdk.git"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
   "bugs": {
-    "url": "https://github.com/rango-exchange/rango-types/issues"
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
     "clean": "rm -rf lib",
     "build": "tsc",
-    "lint": "eslint */**/*.{js,ts} --quiet --fix -c ../../.eslintrc.json --ignore-path ../../.prettierignore",
+    "lint": "eslint */**/*.{js,ts} --quiet --fix",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' ../../.prettierrc.json --ignore-path ../../.prettierignore"
   },
   "keywords": [

@@ -10,23 +10,19 @@ interface HyperliquidAction {
   time: number
 }
 
-/**
- * This type of transaction is used for all Hyperliquid transactions
- *
- * @property {TransactionType} type - This fields equals to HYPERLIQUID for all HyperliquidTransactions
- * @property {HyperliquidAction} action - Hyperliquid transaction action
- * @property {string} message, message to be signed by wallet
- * @property {string} nonce, nonce of transaction
- * @property {string} prerequisites, This field is an empty array for Hyperliquid transactions
- * @property {string | null} expectedOutput, expected output of transaction
- *
- */
+/** This type of transaction is used for all Hyperliquid transactions */
 export interface HyperliquidTransaction extends BaseTransaction {
+  /** This fields equals to HYPERLIQUID for all HyperliquidTransactions */
   type: TransactionType.HYPERLIQUID
+  /** Hyperliquid transaction action */
   action: HyperliquidAction
+  /** message to be signed by wallet */
   message: string
+  /** nonce of transaction */
   nonce: number
+  /** This field is an empty array for Hyperliquid transactions */
   prerequisites: []
+  /** expected output of transaction */
   expectedOutput: string
 }
 

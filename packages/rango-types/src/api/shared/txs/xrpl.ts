@@ -1,25 +1,9 @@
 import {
   BaseTransaction as RangoBaseTransaction,
   TransactionType,
-  BaseTransactionPrerequisite,
 } from '../../shared/index.js'
 
-export interface XrplChangeTrustLinePrerequisite
-  extends BaseTransactionPrerequisite {
-  type: 'XRPL_CHANGE_TRUSTLINE'
-  blockChain: 'XRPL'
-  /** Xrpl Currency **/
-  currency: string
-  /** Xrpl Asset Issuer **/
-  issuer: string
-  /** Minimum expected value of trust **/
-  value: string
-  /** User's wallet address **/
-  wallet: string
-}
-
-export interface XrplTransaction
-  extends RangoBaseTransaction<XrplChangeTrustLinePrerequisite> {
+export interface XrplTransaction extends RangoBaseTransaction {
   type: TransactionType.XRPL
   data: Payment | TrustSet
 }

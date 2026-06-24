@@ -5,12 +5,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "echo \"No need for a build. \"",
-    "clean": "echo \"No need for a clean. \""    
+    "clean": "echo \"No need for a clean. \""
   },
   "type": "module",
   "dependencies": {
     "ethers": "^6.13.2",
-    "rango-sdk-basic": "^0.1.58"
+    "rango-sdk-basic": "^0.5.1-next.2"
   },
   "devDependencies": {
     "tsx": "^4.17.0"

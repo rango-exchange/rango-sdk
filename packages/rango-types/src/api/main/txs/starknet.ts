@@ -6,17 +6,13 @@ import {
 
 export { StarknetCallData }
 
-/**
- * StarknetTransaction
- *
- * @property {TransactionType} type - TransactionType.STARKNET
- * @property {boolean} isApprovalTx - If the transaction is an approval transaction, this will be true.
- * @property {StarknetCallData[]} calls - An array of StarknetCallData objects.
- *
- */
+/** StarknetTransaction */
 export interface StarknetTransaction extends BaseTransaction {
+  /** TransactionType.STARKNET */
   type: TransactionType.STARKNET
+  /** If the transaction is an approval transaction, this will be true. */
   isApprovalTx: boolean
+  /** An array of StarknetCallData objects. */
   calls: StarknetCallData[]
 }
 

@@ -4,7 +4,7 @@
 
 - rango-sdk-basic
 - bitcoinjs-lib
-- ecpair    
+- ecpair
 - tiny-secp256k1
 - Node.js >= 20
 

@@ -11,7 +11,7 @@
   "dependencies": {
     "bitcoinjs-lib": "^6.1.7",
     "ecpair": "^3.0.0",
-    "rango-sdk-basic": "^0.1.67",
+    "rango-sdk-basic": "^0.5.1-next.2",
     "tiny-secp256k1": "^2.2.3"
   },
   "devDependencies": {

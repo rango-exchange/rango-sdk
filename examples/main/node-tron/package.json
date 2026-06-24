@@ -9,7 +9,7 @@
   },
   "type": "module",
   "dependencies": {
-    "rango-sdk": "^0.1.56",
+    "rango-sdk": "^0.5.1-next.2",
     "@rango-dev/signer-tron": "^0.29.0",
     "tronweb": "^6.0.0-beta.4"
   },

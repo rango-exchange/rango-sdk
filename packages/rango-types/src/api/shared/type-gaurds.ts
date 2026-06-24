@@ -12,41 +12,41 @@ import {
 } from './meta.js'
 
 export const isEvmBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is EvmBlockchainMeta => blockchainMeta.type === 'EVM'
 
 export const isCosmosBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is CosmosBlockchainMeta => blockchainMeta.type === 'COSMOS'
 
 export const isSolanaBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is SolanaBlockchainMeta => blockchainMeta.type === 'SOLANA'
 
 export const isTronBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is TronBlockchainMeta => blockchainMeta.type === 'TRON'
 
 export const isTransferBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is TransferBlockchainMeta =>
   blockchainMeta.type === 'TRANSFER'
 
 export const isStarknetBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is StarkNetBlockchainMeta =>
   blockchainMeta.type === 'STARKNET'
 
 export const isTonBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is TonBlockchainMeta => blockchainMeta.type === 'TON'
 
 export const isXrplBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is XrplBlockchainMeta => blockchainMeta.type === 'XRPL'
 
 export const isHyperliquidBlockchain = (
-  blockchainMeta: BlockchainMeta
+  blockchainMeta: BlockchainMeta,
 ): blockchainMeta is HyperliquidBlockchainMeta =>
   blockchainMeta.type === 'HYPERLIQUID'
 
