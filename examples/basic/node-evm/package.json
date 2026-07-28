@@ -10,7 +10,7 @@
   "type": "module",
   "dependencies": {
     "ethers": "^6.13.2",
-    "rango-sdk-basic": "^0.5.1-next.2"
+    "rango-sdk-basic": "^0.5.1-next.3"
   },
   "devDependencies": {
     "tsx": "^4.17.0"

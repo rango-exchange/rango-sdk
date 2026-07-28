@@ -9,7 +9,7 @@
   },
   "type": "module",
   "dependencies": {
-    "rango-sdk-basic": "^0.5.1-next.2",
+    "rango-sdk-basic": "^0.5.1-next.3",
     "@rango-dev/signer-starknet": "^0.30.0",
     "starknet": "^6.11.0"
   },
