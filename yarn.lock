@@ -3944,56 +3944,15 @@ randombytes@^2.1.0:
   dependencies:
     safe-buffer "^5.1.0"
 
-rango-sdk-basic@^0.1.58, rango-sdk-basic@^0.1.67:
-  version "0.1.79"
-  resolved "https://registry.yarnpkg.com/rango-sdk-basic/-/rango-sdk-basic-0.1.79.tgz#2fce9b159ad0383ffe9148eab51b523895a4692f"
-  integrity sha512-okumFUTsCbzOVY+JxNvs3KeOGB/UWITTF0VamWRzRD3FxDDfDcrUegOzplUWrSUrrpbqPB0qKTpB9K1IKFgyQA==
-  dependencies:
-    axios "^1.7.4"
-    rango-types "^0.1.98"
-    uuid-random "^1.3.2"
-
-rango-sdk-basic@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/rango-sdk-basic/-/rango-sdk-basic-0.4.0.tgz#dfd52a4cb509dad62109f4e65648c5d382c69dfb"
-  integrity sha512-QduZC0m2oDfJfEyRXNRnBud/0y3Ajdct7tKMziNbw2XPW6Bvl8LevhodSOeJbw0bpa9aiNoVWF5g+RIU/5EMow==
-  dependencies:
-    axios "^1.7.4"
-    rango-types "^0.4.0"
-    uuid-random "^1.3.2"
-
-rango-sdk@^0.1.56, rango-sdk@^0.1.67:
-  version "0.1.79"
-  resolved "https://registry.yarnpkg.com/rango-sdk/-/rango-sdk-0.1.79.tgz#cb09bc41be983006fc596aec92610e585ea77648"
-  integrity sha512-nrp0QhZahViaxlbIkNtTgujU1GbQmTWZAF43VmQV/WUDms558UGmuTc7akzbmDelG1UC7PmtFBCtuaL2uVOvPQ==
-  dependencies:
-    axios "^1.7.4"
-    rango-types "^0.1.98"
-    uuid-random "^1.3.2"
-
-rango-sdk@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/rango-sdk/-/rango-sdk-0.4.0.tgz#4f134a35cabf057fa5431edafe97c4416b7eafcb"
-  integrity sha512-Yjyb9SIz0dtWjq8ze22NyZovS7dx2T3u3LJ9fb61OjUyD5w5rn0sH+GpWI1f3GjkoN21a1v7fGM4n7xV3mp/Qw==
-  dependencies:
-    axios "^1.7.4"
-    rango-types "^0.4.0"
-    uuid-random "^1.3.2"
-
-rango-types@^0.1.69, rango-types@^0.1.98:
+rango-types@^0.1.69:
   version "0.1.99"
   resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.1.99.tgz#e8122d5c6040b1a86a1321f2a5b2f4c43e41294f"
   integrity sha512-TAcJ0mgLXQb9VWSkzbBTjXzuo1jCG+YBQF7LZAA4jrPC+Gy9vel6JkrDcnlGP/g/8iRAGi6w6j2mFVELod7UNA==
 
-rango-types@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/rango-types/-/rango-types-0.4.0.tgz#799b1dfc126fbd9ddf70cc9889d73b3ff53fb313"
-  integrity sha512-I9h2KfrHxBrteaJiD+IFWjdGxgesr7XL/yuH82MIy/cSsbzIVrolt5pJVveESINkvkiKmQ6xVJmni0F0K9UewQ==
-
-rangutopia@0.2.1:
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/rangutopia/-/rangutopia-0.2.1.tgz#9ed43158a56b481467d3228a68ecdeb9ac1f75ef"
-  integrity sha512-i6+lnrDrhXKKXwB3uweK9eTZl6xwqSwUEF+RmjrkFrr+94mTVMPKiiu8/7r5KIZzAGY3Of9TYCoAee0mJs7XuA==
+rangutopia@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/rangutopia/-/rangutopia-0.3.0.tgz#5813f58354f497de194cb08ef856a5e6b5bb0d3b"
+  integrity sha512-WocHFpBM7xCRhTGur0w5ZpG6jr2mx+jjcUA9jbsnVW1RjYpi9XJEf3oHE3AhOwtdVtsMyOb3zrXEYUy/2zyDKg==
   dependencies:
     "@actions/core" "^3.0.1"
     "@conventional-changelog/git-client" "^2.6.0"

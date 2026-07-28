@@ -32,7 +32,7 @@
   },
   "scripts": {
     "clean": "rm -rf lib",
-    "build": "tsc",
+    "build": "yarn run rangutopia library build --tsc-only",
     "lint": "eslint */**/*.{js,ts} --quiet --fix",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' ../../.prettierrc.json --ignore-path ../../.prettierignore"
   },
