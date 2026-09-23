@@ -13,7 +13,7 @@
 Set up your wallet in index.ts, then run following commands in the root:
 
 ```sh
-yarn 
+yarn
 yarn build
 cd /path/to/example/
 node --import=tsx index.ts

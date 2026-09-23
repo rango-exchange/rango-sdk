@@ -22,7 +22,6 @@ import { setTimeout } from 'timers/promises'
 import { DefaultTronSigner } from '@rango-dev/signer-tron'
 import { TronWeb } from 'tronweb'
 
-
 // setup wallet and tron web
 const privateKey = 'YOUR_PRIVATE_KEY' // Replace with your private key
 
@@ -129,7 +128,7 @@ for (const swap of swapSteps) {
   let tx = createTransactionResponse.transaction
   if (!tx) {
     throw new Error(
-      `Error creating the transaction ${createTransactionResponse.error}`
+      `Error creating the transaction ${createTransactionResponse.error}`,
     )
   }
 

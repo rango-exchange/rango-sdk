@@ -1,44 +1,42 @@
 import { BlockchainMetaBase } from '../meta.js'
 import { TransactionType } from '../transactions.js'
 
-
-
-/**
- * Blockchain info for basic API EVM transaction
- */
+/** Blockchain info for basic API EVM transaction */
 export type EvmTransactionBlockchain = Pick<
-  BlockchainMetaBase, 'name' | 'defaultDecimals' | 'addressPatterns' | 'feeAssets' | 'type' | 'chainId'
+  BlockchainMetaBase,
+  | 'name'
+  | 'defaultDecimals'
+  | 'addressPatterns'
+  | 'feeAssets'
+  | 'type'
+  | 'chainId'
 >
 
-/**
- * The transaction object for all EVM-based blockchains, including Ethereum, BSC, Polygon, Harmony, etc
- *
- * @property {TransactionType} type - This fields equals to EVM for all EVMTransactions
- * @property {EvmTransactionBlockchain} blockChain - The blockchain info that this transaction is going to run in
- * @property {string | null} from - The source wallet address, it can be null
- * @property {string} approveTo - Address of source token erc20 contract for increasing approve amount
- * @property {string | null} approveData - The data of approve transaction
- * @property {string} txTo - Address of dex/bridge smart contract that is going to be called
- * @property {string | null} txData - The data of main transaction, it can be null in case of native token transfer
- * @property {string | null} value - The amount of transaction in case of native token transfer
- * @property {string | null} gasPrice - The suggested gas price for this transaction
- * @property {string | null} gasLimit - The suggested gas limit for this transaction
- * @property {string | null} maxPriorityFeePerGas - Suggested max priority fee per gas for this transaction
- * @property {string | null} maxFeePerGas - Suggested max fee per gas for this transaction
- *
- */
+/** The transaction object for all EVM-based blockchains, including Ethereum, BSC, Polygon, Harmony, etc */
 export interface EvmTransaction {
+  /** This fields equals to EVM for all EVMTransactions */
   type: TransactionType.EVM
+  /** The blockchain info that this transaction is going to run in */
   blockChain: EvmTransactionBlockchain
+  /** The source wallet address, it can be null */
   from: string | null
+  /** Address of source token erc20 contract for increasing approve amount */
   approveTo: string | null
+  /** The data of approve transaction */
   approveData: string | null
+  /** Address of dex/bridge smart contract that is going to be called */
   txTo: string
+  /** The data of main transaction, it can be null in case of native token transfer */
   txData: string | null
+  /** The amount of transaction in case of native token transfer */
   value: string | null
+  /** The suggested gas limit for this transaction */
   gasLimit: string | null
+  /** The suggested gas price for this transaction */
   gasPrice: string | null
+  /** Suggested max priority fee per gas for this transaction */
   maxPriorityFeePerGas: string | null
+  /** Suggested max fee per gas for this transaction */
   maxFeePerGas: string | null
 }
 

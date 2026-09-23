@@ -11,5 +11,5 @@ export {
   WalletDetail,
   WalletDetailsResponse,
   TokenBalanceRequest,
-  TokenBalanceResponse
+  TokenBalanceResponse,
 }

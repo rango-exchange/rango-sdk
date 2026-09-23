@@ -146,7 +146,15 @@ export type PendingSwap = {
 export {
   isXrplChangeTrustLinePrerequisiteResult,
   isStellarChangeTrustLinePrerequisiteResult,
+  isEvmApprovePrerequisiteResult,
+  isTronApprovePrerequisiteResult,
   XrplChangeTrustLinePrerequisiteResult,
   StellarChangeTrustLinePrerequisiteResult,
+  EvmApprovePrerequisiteResult,
+  EvmExecutedApprovePrerequisiteResult,
+  EvmSkippedApprovePrerequisiteResult,
+  TronApprovePrerequisiteResult,
+  TronExecutedApprovePrerequisiteResult,
+  TronSkippedApprovePrerequisiteResult,
   TransactionPrerequisiteResult,
 } from './prerequisites.js'

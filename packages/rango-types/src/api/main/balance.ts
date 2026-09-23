@@ -7,30 +7,23 @@ import {
   Asset,
 } from '../shared/index.js'
 
-/**
- * The request for multiple token balances
- *
- * @property {Asset[]} assets - Tokens requesting their balances
- * @property {string} walletAddress - Wallet address
- *
- */
+/** The request for multiple token balances */
 export type MultipleTokenBalanceRequest = {
+  /** Tokens requesting their balances */
   assets: Asset[]
+  /** Wallet address */
   walletAddress: string
 }
 
-/**
- * the response for multiple token balances
- *
- * @property {AssetAndAmount[] | null} balances - The balances of tokens
- * @property {string | null} error - Error message
- * @property {number | null} errorCode - Error code
- * @property {number | null} traceId - Trace Id, for debug purpose
- */
+/** the response for multiple token balances */
 export type MultipleTokenBalanceResponse = {
+  /** The balances of tokens */
   balances: AssetAndAmount[] | null
+  /** Error message */
   error: string | null
+  /** Error code */
   errorCode: number | null
+  /** Trace Id, for debug purpose */
   traceId: number | null
 }
 

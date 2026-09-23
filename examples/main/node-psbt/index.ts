@@ -62,12 +62,12 @@ async function processSwapRoutes() {
     const sourceToken = findToken(
       metadata.tokens,
       SOURCE_CHAIN,
-      SOURCE_TOKEN_ADDR
+      SOURCE_TOKEN_ADDR,
     )
     const targetToken = findToken(
       metadata.tokens,
       TARGET_CHAIN,
-      TARGET_TOKEN_ADDR
+      TARGET_TOKEN_ADDR,
     )
     logSelectedTokens(sourceToken, targetToken)
 
@@ -97,7 +97,7 @@ async function processSwapRoutes() {
           ...acc,
           [chain]: chain === SOURCE_CHAIN ? address : EVM_ADDRESS,
         }),
-        {} as Record<string, string>
+        {} as Record<string, string>,
       )
     const confirmResponse = await rango.confirmRoute({
       requestId: chosen.requestId,
@@ -118,7 +118,7 @@ async function processSwapRoutes() {
         for (const asset of wallet.requiredAssets) {
           if (!asset.ok) {
             throw new Error(
-              `Insufficient ${asset.reason}: need ${asset.requiredAmount.amount}, have ${asset.currentAmount.amount}`
+              `Insufficient ${asset.reason}: need ${asset.requiredAmount.amount}, have ${asset.currentAmount.amount}`,
             )
           }
         }
@@ -150,7 +150,7 @@ async function processSwapRoutes() {
       sign: (hash: Buffer) => Buffer.from(keyPair.sign(Uint8Array.from(hash))),
     }
     transaction.psbt.inputsToSign.forEach((input) =>
-      input.signingIndexes.forEach((i) => psbt.signInput(i, signer))
+      input.signingIndexes.forEach((i) => psbt.signInput(i, signer)),
     )
     psbt.finalizeAllInputs()
     const rawTx = psbt.extractTransaction().toHex()

@@ -53,7 +53,7 @@ const TRUST_LINE_INFINITE_VALUE = '922337203685.4775807' // https://stellar-sdk.
 const CHECK_STATUS_INTERVAL = 10_000
 
 async function createStellarChangeTrustLineXdrTransaction(
-  prerequisite: StellarChangeTrustLinePrerequisite
+  prerequisite: StellarChangeTrustLinePrerequisite,
 ) {
   const server = new StellarSdk.Horizon.Server(HORIZON_URL)
   const account = await server.loadAccount(prerequisite.wallet)
@@ -67,7 +67,7 @@ async function createStellarChangeTrustLineXdrTransaction(
       StellarSdk.Operation.changeTrust({
         asset: asset,
         limit: TRUST_LINE_INFINITE_VALUE,
-      })
+      }),
     )
     .setTimeout(TRUST_LINE_TIMEOUT)
     .build()
@@ -77,7 +77,7 @@ async function createStellarChangeTrustLineXdrTransaction(
 
 async function checkStellarChangeTrustLinePrerequisite(
   prerequisite: StellarChangeTrustLinePrerequisite,
-  keyPair: StellarSdk.Keypair
+  keyPair: StellarSdk.Keypair,
 ) {
   // 1. Check if the trust line is already opened
   const server = new StellarSdk.Horizon.Server(HORIZON_URL)
@@ -86,13 +86,13 @@ async function checkStellarChangeTrustLinePrerequisite(
   const accountLines = account.balances.filter(
     (balance) =>
       balance.asset_type !== 'native' &&
-      balance.asset_type !== 'liquidity_pool_shares'
+      balance.asset_type !== 'liquidity_pool_shares',
   )
 
   const targetAccountLine = accountLines.find(
     (accountLine) =>
       accountLine.asset_code === prerequisite.code &&
-      accountLine.asset_issuer === prerequisite.issuer
+      accountLine.asset_issuer === prerequisite.issuer,
   )
 
   if (targetAccountLine) {
@@ -111,7 +111,7 @@ async function checkStellarChangeTrustLinePrerequisite(
 
   const originalTx = new StellarSdk.Transaction(
     stellarChangeTrustLineXdrTransaction,
-    NETWORK_PASSPHRASE
+    NETWORK_PASSPHRASE,
   )
 
   // 3. Sign Transaction
@@ -125,13 +125,13 @@ async function checkStellarChangeTrustLinePrerequisite(
   }
 
   console.log(
-    `Trust line opened successfully for ${prerequisite.code} ${prerequisite.issuer}. Transaction hash: ${result.hash}`
+    `Trust line opened successfully for ${prerequisite.code} ${prerequisite.issuer}. Transaction hash: ${result.hash}`,
   )
 }
 
 async function buildXdrTransaction(
   tx: StellarTransaction,
-  address: string
+  address: string,
 ): Promise<string> {
   const server = new StellarSdk.Horizon.Server(HORIZON_URL)
   const account = await server.loadAccount(address)
@@ -151,7 +151,7 @@ async function buildXdrTransaction(
   if (tx.data.memoXdrBase64) {
     const memoXDRObject = StellarSdk.xdr.Memo.fromXDR(
       tx.data.memoXdrBase64,
-      'base64'
+      'base64',
     )
 
     builder.addMemo(StellarSdk.Memo.fromXDRObject(memoXDRObject))
@@ -160,7 +160,7 @@ async function buildXdrTransaction(
   for (const operationXdrBase64 of tx.data.operationsXdrBase64) {
     const operationXDRObject = StellarSdk.xdr.Operation.fromXDR(
       operationXdrBase64,
-      'base64'
+      'base64',
     )
     builder.addOperation(operationXDRObject)
   }
@@ -168,7 +168,7 @@ async function buildXdrTransaction(
   const transaction = builder.build()
 
   const isSorobanTransaction = transaction.operations.some((operation) =>
-    SOROBAN_OP_TYPES.includes(operation.type)
+    SOROBAN_OP_TYPES.includes(operation.type),
   )
 
   if (isSorobanTransaction) {
@@ -197,12 +197,12 @@ async function main() {
   const sourceToken = findToken(
     metadata.tokens,
     SOURCE_CHAIN,
-    SOURCE_TOKEN_ADDR
+    SOURCE_TOKEN_ADDR,
   )
   const targetToken = findToken(
     metadata.tokens,
     DESTINATION_CHAIN,
-    DESTINATION_TOKEN_ADDR
+    DESTINATION_TOKEN_ADDR,
   )
   logSelectedTokens(sourceToken, targetToken)
 
@@ -233,7 +233,7 @@ async function main() {
         ...acc,
         [chain]: chain === SOURCE_CHAIN ? publicKey : DESTINATION_ADDRESS,
       }),
-      {} as Record<string, string>
+      {} as Record<string, string>,
     )
   const confirmResponse = await rango.confirmRoute({
     requestId: chosen.requestId,
@@ -254,7 +254,7 @@ async function main() {
       for (const asset of wallet.requiredAssets) {
         if (!asset.ok) {
           throw new Error(
-            `Insufficient ${asset.reason}: need ${asset.requiredAmount.amount}, have ${asset.currentAmount.amount}`
+            `Insufficient ${asset.reason}: need ${asset.requiredAmount.amount}, have ${asset.currentAmount.amount}`,
           )
         }
       }
@@ -293,7 +293,7 @@ async function main() {
   const xdrTransaction = await buildXdrTransaction(transaction, publicKey)
   const originalTx = new StellarSdk.Transaction(
     xdrTransaction,
-    NETWORK_PASSPHRASE
+    NETWORK_PASSPHRASE,
   )
 
   originalTx.sign(keyPair)

@@ -1,2 +1,4 @@
 export const XRPL_CHANGE_TRUSTLINE_TYPE = 'XRPL_CHANGE_TRUSTLINE' as const
 export const STELLAR_CHANGE_TRUSTLINE_TYPE = 'STELLAR_CHANGE_TRUSTLINE' as const
+export const EVM_APPROVE_TYPE = 'EVM_APPROVE' as const
+export const TRON_APPROVE_TYPE = 'TRON_APPROVE' as const

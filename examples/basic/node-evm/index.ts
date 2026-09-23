@@ -69,7 +69,7 @@ if (!tx) {
 if (tx.type === TransactionType.EVM) {
   // set rpc provider
   const rpcProvider = new ethers.JsonRpcProvider(
-    getRpcUrlForBlockchain(meta, tx.blockChain.name)
+    getRpcUrlForBlockchain(meta, tx.blockChain.name),
   )
   const walletWithProvider = wallet.connect(rpcProvider)
 
@@ -83,9 +83,8 @@ if (tx.type === TransactionType.EVM) {
       maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
       gasPrice: tx.gasPrice,
     }
-    const { hash } = await walletWithProvider.sendTransaction(
-      approveTransaction
-    )
+    const { hash } =
+      await walletWithProvider.sendTransaction(approveTransaction)
     logTransactionHash(hash, true)
 
     // wait for approval
@@ -103,7 +102,7 @@ if (tx.type === TransactionType.EVM) {
         throw new Error('Approve transaction failed in blockchain')
       else if (txStatus === TransactionStatus.SUCCESS)
         throw new Error(
-          `Insufficient approve, current amount: ${currentApprovedAmount}, required amount: ${requiredApprovedAmount}`
+          `Insufficient approve, current amount: ${currentApprovedAmount}, required amount: ${requiredApprovedAmount}`,
         )
     }
   }

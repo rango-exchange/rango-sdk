@@ -6,33 +6,31 @@ export enum TonChainID {
   TESTNET = '-3',
 }
 
-/**
- * @property {string} address - Receiver's address
- * @property {string} amount - Amount to send in nanoTon
- * @property {string} [stateInit] - Contract specific data to add to the transaction
- * @property {string} [payload] - Contract specific data to add to the transaction
- */
+/** Ton transaction message */
 export interface TonMessage {
+  /** Receiver's address */
   address: string
+  /** Amount to send in nanoTon */
   amount: string
+  /** Contract specific data to add to the transaction */
   stateInit?: string
+  /** Contract specific data to add to the transaction */
   payload?: string
 }
 
-/**
- * This type of transaction is used for all Ton transactions
- *
- * @property {TransactionType} type - This field equals to TON for all Ton transactions
- * @property {number} validUntil - Sending transaction deadline in unix epoch seconds
- * @property {TonChainID} [network] - The network (mainnet or testnet) where DApp intends to send the transaction. If not set, the transaction is sent to the network currently set in the wallet, but this is not safe and DApp should always strive to set the network. If the network parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SEND this transaction
- * @property {string} [from] - The sender address in '<wc>:<hex>' format from which DApp intends to send the transaction. Current account.address by default
- * @property {TonMessage[]} messages - Messages to send: min is 1, max is 4
- */
+/** This type of transaction is used for all Ton transactions */
 export interface TonTransaction extends BaseTransaction {
+  /** This field equals to TON for all Ton transactions */
   type: TransactionType.TON
+  /** Sending transaction deadline in unix epoch seconds */
   validUntil: number
+  /**
+   * The network (mainnet or testnet) where DApp intends to send the transaction. If not set, the transaction is sent to the network currently set in the wallet, but this is not safe and DApp should always strive to set the network. If the network parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SEND this transaction
+   */
   network?: TonChainID
+  /** The sender address in '<wc>:<hex>' format from which DApp intends to send the transaction. Current account.address by default */
   from?: string
+  /** Messages to send: min is 1, max is 4 */
   messages: TonMessage[]
 }
 

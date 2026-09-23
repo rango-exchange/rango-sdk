@@ -19,23 +19,19 @@ export type TrxRawData = {
   timestamp: number
 }
 
-/**
- * TronTransaction
- *
- * @property {TransactionType} type - TransactionType.TRON
- * @property {boolean} isApprovalTx - Whether or not the transaction is an approval transaction.
- * @property {TrxRawData | null} raw_data - This is the raw data of the transaction.
- * @property {string | null} raw_data_hex - The raw hex data of the transaction.
- * @property {string} txID - The transaction ID.
- * @property {boolean} visible - boolean
- * @property {object} __payload__
- */
+/** TronTransaction */
 export interface TronTransaction extends BaseTransaction {
+  /** TransactionType.TRON */
   type: TransactionType.TRON
+  /** Whether or not the transaction is an approval transaction. */
   isApprovalTx: boolean
+  /** This is the raw data of the transaction. */
   raw_data: TrxRawData | null
+  /** The raw hex data of the transaction. */
   raw_data_hex: string | null
+  /** The transaction ID. */
   txID: string
+  /** boolean */
   visible: boolean
   __payload__: object
 }

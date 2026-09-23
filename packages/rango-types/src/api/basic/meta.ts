@@ -28,74 +28,62 @@ export {
   MessagingProtocolsResponse,
 }
 
-/**
- * All metadata info for a token, unique by (blockchain, symbol, address) tuple
- *
- * @property {string} blockchain - The blockchain which this token belongs to
- * @property {string | null} chainId - The chainId which this token belongs to, e.g. 1 for ETH, 56 for BSC and ...
- * @property {string | null} address - Smart contract address of token, null for native tokens
- * @property {string} symbol - The token symbol, e.g: ADA
- * @property {string | null} name - The token name, e.g: Binance Pegged ETH
- * @property {number} decimals - Decimals of token in blockchain, example: 18
- * @property {string} image - Url of its image, example: https://api.rango.exchange/tokens/ETH/ETH.png
- * @property {string} blockchainImage - Url of the blockchain image
- * @property {number | null} usdPrice - The token unit price
- * @property {boolean} isPopular - If true, means that the token is popular
- * @property {string[]} supportedSwappers - Supported Swappers for this token
- */
+/** All metadata info for a token, unique by (blockchain, symbol, address) tuple */
 export type Token = {
+  /** The blockchain which this token belongs to */
   blockchain: string
+  /** The chainId which this token belongs to, e.g. 1 for ETH, 56 for BSC and ... */
   chainId: string | null
+  /** Smart contract address of token, null for native tokens */
   address: string | null
+  /** The token symbol, e.g: ADA */
   symbol: string
+  /** The token name, e.g: Binance Pegged ETH */
   name: string | null
+  /** Decimals of token in blockchain, example: 18 */
   decimals: number
+  /** Url of its image, example: https://api.rango.exchange/tokens/ETH/ETH.png */
   image: string
+  /** Url of the blockchain image */
   blockchainImage: string
+  /** The token unit price */
   usdPrice: number | null
+  /** If true, means that the token is popular */
   isPopular: boolean
+  /** Supported Swappers for this token */
   supportedSwappers: string[]
 }
 
-/**
- * Metadata info for all blockchains and tokens supported
- *
- * @property {BlockchainMeta[]} blockchains - List of all supported blockchains
- * @property {Token[]} tokens - List of all tokens
- * @property {SwapperMeta[]} swappers - List of all DEXes & Bridges
- *
- */
+/** Metadata info for all blockchains and tokens supported */
 export type MetaResponse = {
+  /** List of all supported blockchains */
   blockchains: BlockchainMeta[]
+  /** List of all tokens */
   tokens: Token[]
+  /** List of all DEXes & Bridges */
   swappers: SwapperMeta[]
 }
 
-/**
- * Custom token request
- *
- * @property {string} blockchain - The blockchain that token belong to
- * @property {string} address - The contract address for the desired token
- *
- */
+/** Custom token request */
 export type CustomTokenRequest = {
+  /** The blockchain that token belong to */
   blockchain: string
+  /** The contract address for the desired token */
   address: string
 }
 
 /**
  * The custom token response which includes:
- * Token details for user desired token that is not available on Rango official list. 
+ * Token details for user desired token that is not available on Rango official list.
  * Currently supports Solana and EVM based blockchains.
- *
- * @property {Token} token - The destination asset
- * @property {string | null} error - Error message
- * @property {number | null} errorCode - Error code
- * @property {number | null} traceId - Trace Id, for debug purpose
  */
 export type CustomTokenResponse = {
+  /** The destination asset */
   token: Token
+  /** Error message */
   error: string | null
+  /** Error code */
   errorCode: number | null
+  /** Trace Id, for debug purpose */
   traceId: number | null
 }

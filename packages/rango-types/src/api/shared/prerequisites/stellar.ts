@@ -5,8 +5,7 @@ import { STELLAR_CHANGE_TRUSTLINE_TYPE } from './constants.js'
  *  Stellar Prerequisite Type
  *
  */
-export interface StellarChangeTrustLinePrerequisite
-  extends BaseTransactionPrerequisite {
+export interface StellarChangeTrustLinePrerequisite extends BaseTransactionPrerequisite {
   /** Stellar change trustline type. */
   type: typeof STELLAR_CHANGE_TRUSTLINE_TYPE
   /** BlockChain equals to STELLAR. */
@@ -22,6 +21,6 @@ export interface StellarChangeTrustLinePrerequisite
 }
 
 export const isStellarChangeTrustLinePrerequisite = (
-  prerequisite: BaseTransactionPrerequisite
+  prerequisite: BaseTransactionPrerequisite,
 ): prerequisite is StellarChangeTrustLinePrerequisite =>
   prerequisite.type === STELLAR_CHANGE_TRUSTLINE_TYPE

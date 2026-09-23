@@ -70,7 +70,7 @@ export class RangoClient {
 
   public async meta(
     metaRequest?: MetaRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<MetaResponse> {
     const params = {
       ...metaRequest,
@@ -84,7 +84,7 @@ export class RangoClient {
       {
         params,
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }
@@ -92,45 +92,46 @@ export class RangoClient {
   public async chains(options?: RequestOptions): Promise<BlockchainMeta[]> {
     const axiosResponse = await this.httpService.get<BlockchainMeta[]>(
       `/basic/meta/blockchains?apiKey=${this.apiKey}`,
-      { ...options }
+      { ...options },
     )
     return axiosResponse.data
   }
 
-  public async swappers(options?: RequestOptions): Promise<SwapperMetaExtended[]> {
+  public async swappers(
+    options?: RequestOptions,
+  ): Promise<SwapperMetaExtended[]> {
     const axiosResponse = await this.httpService.get<SwapperMetaExtended[]>(
       `/basic/meta/swappers?apiKey=${this.apiKey}`,
-      { ...options }
+      { ...options },
     )
     return axiosResponse.data
   }
 
   public async messagingProtocols(
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<MessagingProtocolsResponse> {
     const axiosResponse =
       await this.httpService.get<MessagingProtocolsResponse>(
         `/basic/meta/messaging-protocols?apiKey=${this.apiKey}`,
-        { ...options }
+        { ...options },
       )
     return axiosResponse.data
   }
 
-
   public async token(
     customTokenRequest?: CustomTokenRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<CustomTokenResponse> {
     const axiosResponse = await this.httpService.get<CustomTokenResponse>(
       `/basic/meta/custom-token?apiKey=${this.apiKey}`,
-      { params: customTokenRequest, ...options }
+      { params: customTokenRequest, ...options },
     )
     return axiosResponse.data
   }
 
   public async quote(
     quoteRequest: QuoteRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<QuoteResponse> {
     const body = {
       ...quoteRequest,
@@ -146,7 +147,7 @@ export class RangoClient {
           : undefined,
       messagingProtocols:
         !!quoteRequest.messagingProtocols &&
-          quoteRequest.messagingProtocols.length > 0
+        quoteRequest.messagingProtocols.length > 0
           ? quoteRequest.messagingProtocols.join(',')
           : undefined,
     }
@@ -156,7 +157,7 @@ export class RangoClient {
         params: body,
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }
@@ -164,7 +165,7 @@ export class RangoClient {
   public async isApproved(
     requestId: string,
     txId?: string,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<CheckApprovalResponse> {
     const axiosResponse = await this.httpService.get<CheckApprovalResponse>(
       `/basic/is-approved?apiKey=${this.apiKey}`,
@@ -172,14 +173,14 @@ export class RangoClient {
         params: { requestId, txId },
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }
 
   public async status(
     statusRequest: StatusRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<StatusResponse> {
     const axiosResponse = await this.httpService.get<StatusResponse>(
       `/basic/status?apiKey=${this.apiKey}`,
@@ -187,14 +188,14 @@ export class RangoClient {
         params: statusRequest,
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }
 
   public async swap(
     swapRequest: SwapRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<SwapResponse> {
     const body = {
       ...swapRequest,
@@ -213,7 +214,7 @@ export class RangoClient {
           : undefined,
       messagingProtocols:
         !!swapRequest.messagingProtocols &&
-          swapRequest.messagingProtocols.length > 0
+        swapRequest.messagingProtocols.length > 0
           ? swapRequest.messagingProtocols.join(',')
           : undefined,
     }
@@ -223,14 +224,14 @@ export class RangoClient {
         params: body,
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }
 
   public async reportFailure(
     requestBody: ReportTransactionRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<void> {
     await this.httpService.post(
       `/basic/report-tx?apiKey=${this.apiKey}`,
@@ -238,13 +239,13 @@ export class RangoClient {
       {
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
   }
 
   public async balance(
     walletAddress: WalletAddress,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<WalletDetailsResponse> {
     const axiosResponse = await this.httpService.get<WalletDetailsResponse>(
       `/basic/balance?apiKey=${this.apiKey}`,
@@ -252,25 +253,25 @@ export class RangoClient {
         params: walletAddress,
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }
 
   public async tokenBalance(
     tokenBalanceRequest: TokenBalanceRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<TokenBalanceResponse> {
     const axiosResponse = await this.httpService.get<TokenBalanceResponse>(
       `/basic/token-balance?apiKey=${this.apiKey}`,
-      { params: tokenBalanceRequest, ...options }
+      { params: tokenBalanceRequest, ...options },
     )
     return axiosResponse.data
   }
 
   public async connectedAssets(
     connectedAssetsRequest: ConnectedAssetsRequest,
-    options?: RequestOptions
+    options?: RequestOptions,
   ): Promise<ConnectedAssetsResponse> {
     const body = {
       from: assetToString(connectedAssetsRequest.from),
@@ -282,7 +283,7 @@ export class RangoClient {
         params: body,
         headers: { 'X-Rango-Id': this.deviceId },
         ...options,
-      }
+      },
     )
     return axiosResponse.data
   }

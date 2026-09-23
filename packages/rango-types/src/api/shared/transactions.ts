@@ -1,6 +1,4 @@
-/**
- * The type of transaction
- */
+/** The type of transaction */
 export enum TransactionType {
   EVM = 'EVM',
   TRANSFER = 'TRANSFER',
@@ -26,16 +24,11 @@ export enum GenericTransactionType {
   SOLANA = 'SOLANA',
 }
 
-/**
- * A transaction's url that can be displayed to advanced user to track the progress
- *
- * @property {string} url - Url of the transaction in blockchain explorer. example: https://etherscan.io/tx/0xa1a3...
- * @property {string | null} description - A custom display name to help user distinguish the transactions from each
- * other. Example: Inbound, Outbound, Bridge, or null
- *
- */
+/** A transaction's url that can be displayed to advanced user to track the progress */
 export type SwapExplorerUrl = {
+  /** A custom display name to help user distinguish the transactions from each other. Example: Inbound, Outbound, Bridge, or null */
   description: string | null
+  /** Url of the transaction in blockchain explorer. example: https://etherscan.io/tx/0xa1a3... */
   url: string
 }
 
@@ -43,7 +36,6 @@ export type SwapExplorerUrl = {
  * APIErrorCode
  *
  * Error code of a swap failure
- *
  */
 export type APIErrorCode =
   | 'TX_FAIL'
@@ -87,27 +79,23 @@ export function isAPIErrorCode(value: string): value is APIErrorCode {
  *
  * It should be used when an error happened in client and we want to inform server that transaction failed,
  * E.g. user rejected the transaction dialog or and an RPC error raised during signing tx by user.
- *
- * @property {string} requestId - The requestId from best route endpoint
- * @property {APIErrorCode} eventType - Type of the event that happened, example: USER_REJECT
- * @property {number} [step] - Step number in which failure happened
- * @property {string} [reason] - Reason or message for the error
- * @property {[key: string]: string} [data] - @deprecated A list of key-value for extra details
- * @property {wallet?: string, errorCode? string} [tags] - A list of key-value for pre-defined tags
- *
  */
 export type ReportTransactionRequest = {
+  /** The requestId from best route endpoint */
   requestId: string
+  /** Type of the event that happened, example: USER_REJECT */
   eventType: APIErrorCode
+  /** Step number in which failure happened */
   step?: number
+  /** Reason or message for the error */
   reason?: string
+  /** @deprecated A list of key-value for extra details */
   data?: { [key: string]: string }
+  /** A list of key-value for pre-defined tags */
   tags?: { wallet?: string; errorCode?: string }
 }
 
-/**
- * The status of transaction in tracking
- */
+/** The status of transaction in tracking */
 export enum TransactionStatus {
   FAILED = 'failed',
   RUNNING = 'running',
@@ -124,17 +112,17 @@ export enum TransactionStatus {
  *  3- approval transaction succeeded but currentApprovedAmount is still less than requiredApprovedAmount
  *  (e.g. user changed transaction data and enter another approve amount in MetaMask)
  *  => isApproved = false && txStatus == 'success'
- *
- * @property {boolean} isApproved - A flag which indicates that the approve tx is done or not
- * @property {TransactionStatus | null} txStatus - Status of approve transaction in blockchain,
- * if isArppoved is false and txStatus is failed, it seems that approve transaction failed in blockchain
- * @property {string | null} requiredApprovedAmount - required amount to be approved by user
- * @property {string | null} currentApprovedAmount - current approved amount by user
- *
  */
 export type CheckApprovalResponse = {
+  /** A flag which indicates that the approve tx is done or not */
   isApproved: boolean
+  /**
+   * Status of approve transaction in blockchain,
+   * if isArppoved is false and txStatus is failed, it seems that approve transaction failed in blockchain
+   */
   txStatus: TransactionStatus | null
+  /** required amount to be approved by user */
   requiredApprovedAmount: string | null
+  /** current approved amount by user */
   currentApprovedAmount: string | null
 }

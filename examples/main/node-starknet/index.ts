@@ -20,18 +20,19 @@ import {
 } from '../shared/utils/logger.js'
 import { setTimeout } from 'timers/promises'
 import { DefaultStarknetSigner } from '@rango-dev/signer-starknet'
-import { Account, RpcProvider } from 'starknet';
+import { Account, RpcProvider } from 'starknet'
 
-
-// setup wallet 
+// setup wallet
 const privateKey = 'YOUR_PRIVATE_KEY' // Replace with your private key
 const walletAddress = 'YOUR_WALLET_ADDRESS' // Replace with your wallet address
 
 // in web based apps, you could use injected provider instead
 // e.g. use window.starknet_braavos or window.starknet_argentX instead
 // https://starknetjs.com/docs/guides/connect_network
-const provider = new RpcProvider({ nodeUrl: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7" });
-const account = new Account(provider, walletAddress, privateKey);
+const provider = new RpcProvider({
+  nodeUrl: 'https://starknet-mainnet.public.blastapi.io/rpc/v0_7',
+})
+const account = new Account(provider, walletAddress, privateKey)
 
 logWallet(account.address)
 
@@ -45,9 +46,11 @@ logMeta(meta)
 
 // some example tokens for test purpose
 const sourceBlockchain = 'STARKNET'
-const sourceTokenAddress = '0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7'
+const sourceTokenAddress =
+  '0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7'
 const targetBlockchain = 'STARKNET'
-const targetTokenAddress = '0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d'
+const targetTokenAddress =
+  '0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d'
 const amount = '0.001'
 
 // find selected tokens in meta.tokens
@@ -130,12 +133,15 @@ for (const swap of swapSteps) {
   let tx = createTransactionResponse.transaction
   if (!tx) {
     throw new Error(
-      `Error creating the transaction ${createTransactionResponse.error}`
+      `Error creating the transaction ${createTransactionResponse.error}`,
     )
   }
 
   if (tx.type === TransactionType.STARKNET) {
-    const defaultSigner = new DefaultStarknetSigner({ account, enable: () => { } })
+    const defaultSigner = new DefaultStarknetSigner({
+      account,
+      enable: () => {},
+    })
 
     const { hash } = await defaultSigner.signAndSendTx(tx)
     logTransactionHash(hash, false)

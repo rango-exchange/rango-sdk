@@ -11,7 +11,7 @@ import {
 export function logMeta(meta: MetaResponse) {
   const { tokens, blockchains } = meta
   console.log(
-    `- fetched ${tokens.length} tokens and ${blockchains.length} blockchains`
+    `- fetched ${tokens.length} tokens and ${blockchains.length} blockchains`,
   )
 }
 
@@ -21,7 +21,7 @@ export function logQuote(quote: QuoteResponse) {
     console.log(`- found a quote via ${route.swapper.title}`)
     console.log(`   - result type: ${quote.resultType}`)
     console.log(
-      `   - output: ${route.outputAmount} ${route.to.symbol} equals to $${route.outputAmountUsd}`
+      `   - output: ${route.outputAmount} ${route.to.symbol} equals to $${route.outputAmountUsd}`,
     )
     console.log(`   - fee: $${route.feeUsd}`)
     console.log(`   - estimated time: ${route.estimatedTimeInSeconds}s`)
@@ -66,7 +66,7 @@ export function logSwapStatus(state: StatusResponse) {
     [TransactionStatus.SUCCESS, TransactionStatus.FAILED].includes(status)
   ) {
     console.log(
-      `   - Output token: ${state.output?.receivedToken.blockchain}.${state.output?.receivedToken.symbol}`
+      `   - Output token: ${state.output?.receivedToken.blockchain}.${state.output?.receivedToken.symbol}`,
     )
     console.log(`   - Output token type: ${state.output?.type}`)
     console.log(`   - Output token amount: ${state.output?.amount}`)

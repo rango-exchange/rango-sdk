@@ -7,13 +7,13 @@ on:
     branches:
       - next
 
-
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -31,5 +31,4 @@ jobs:
         run: yarn run publish "$PUBLISH_FLAG"
         env:
           PUBLISH_FLAG: ${{ steps.flag.outputs.flag }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.PAT }}
