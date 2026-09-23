@@ -1,3 +1,9 @@
+# [0.6.0](https://github.com/rango-exchange/rango-sdk/compare/rango-types@0.5.0...rango-types@0.6.0) (2026-09-23)
+
+
+### Features
+
+* **types:** add EVM_APPROVE and TRON_APPROVE prerequisite types ([27c4a06](https://github.com/rango-exchange/rango-sdk/commit/27c4a067e8e83e5a0f053b319c2c6620f35545d9))
 # [0.5.0](https://github.com/rango-exchange/rango-types/compare/rango-types@0.4.0...rango-types@0.5.0) (2026-05-18)
 
 
