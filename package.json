@@ -5,7 +5,8 @@
   "workspaces": [
     "packages/*",
     "examples/basic/*",
-    "examples/main/*"
+    "examples/main/*",
+    "examples/sdk/*"
   ],
   "scripts": {
     "prepare": "husky install",
