@@ -13,6 +13,7 @@
     "clean": "turbo run clean",
     "format": "turbo run format",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "publish": "yarn run rangutopia library publish",
     "postinstall": "husky",
     "commitlint": "commitlint --edit"

@@ -32,3 +32,7 @@ Documents:
   # or
   npm install rango-sdk --save
 ```
+
+## New SDK (`@rango-dev/sdk`)
+
+The new SDK lives in [`packages/sdk`](https://github.com/rango-exchange/rango-sdk/tree/master/packages/sdk). It is under development and exports nothing yet.

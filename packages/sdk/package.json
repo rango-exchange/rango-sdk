@@ -1,0 +1,50 @@
+{
+  "name": "@rango-dev/sdk",
+  "version": "0.0.0",
+  "description": "Rango Exchange SDK",
+  "license": "GPL-3.0",
+  "author": "rango.exchange",
+  "type": "module",
+  "main": "./dist/mod.js",
+  "types": "./dist/mod.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/mod.d.ts",
+      "default": "./dist/mod.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rango-exchange/rango-sdk.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "bugs": {
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
+  },
+  "scripts": {
+    "build": "yarn run rangutopia library build",
+    "clean": "rm -rf ./dist",
+    "test": "vitest run",
+    "lint": "eslint src --fix",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
