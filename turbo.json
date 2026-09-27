@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["lib/**"]
+      "outputs": ["lib/**", "dist/**"]
     },
     "format": {
       "cache": false
@@ -13,6 +13,10 @@
     },
     "lint": {
       "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
     },
     "watch": {
       "cache": false,
