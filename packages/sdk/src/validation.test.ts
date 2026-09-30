@@ -3,7 +3,12 @@ import type { SimulationResult, SwapResult } from 'rango-sdk'
 import { RoutingResultType } from 'rango-sdk'
 import { describe, expect, test } from 'vitest'
 
-import { validateRoute, validateSwaps } from './validation.js'
+import {
+  validateDestination,
+  validateRequest,
+  validateRoute,
+  validateSwaps,
+} from './validation.js'
 
 function swap(overrides: Partial<SwapResult> = {}): SwapResult {
   const asset = {
@@ -210,5 +215,174 @@ describe('validateSwaps: slippage', () => {
     ]
 
     expect(validateSwaps(swaps)?.type).toBe('AMOUNT_OUT_OF_RANGE')
+  })
+})
+
+const ETH = { blockchain: 'ETH', symbol: 'ETH', address: null }
+const USDC = {
+  blockchain: 'ETH',
+  symbol: 'USDC',
+  address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+}
+const MAX_SLIPPAGE = 30
+const HIGHER_MAX_SLIPPAGE = 50
+
+function invalid(field: string, reason: string) {
+  return { type: 'INVALID_INPUT', metadata: { field, reason } }
+}
+
+describe('validateRequest', () => {
+  const request = { from: ETH, to: USDC, amount: '1', slippage: '1.5' }
+
+  test('returns null for valid input', () => {
+    expect(validateRequest(request, MAX_SLIPPAGE)).toBeNull()
+  })
+
+  test('returns MISSING for a missing from, before a missing to', () => {
+    expect(
+      validateRequest({ ...request, from: null, to: null }, MAX_SLIPPAGE),
+    ).toEqual(invalid('from', 'MISSING'))
+  })
+
+  test('returns MISSING for a missing to', () => {
+    expect(
+      validateRequest({ ...request, to: undefined }, MAX_SLIPPAGE),
+    ).toEqual(invalid('to', 'MISSING'))
+  })
+
+  test('returns SAME_ASSET on to when both assets match by blockchain, symbol and address', () => {
+    expect(
+      validateRequest(
+        { ...request, to: { ...USDC }, from: USDC },
+        MAX_SLIPPAGE,
+      ),
+    ).toEqual(invalid('to', 'SAME_ASSET'))
+    expect(
+      validateRequest({ ...request, to: { ...ETH } }, MAX_SLIPPAGE),
+    ).toEqual(invalid('to', 'SAME_ASSET'))
+  })
+
+  test('accepts assets that differ only by blockchain, symbol or address', () => {
+    for (const to of [
+      { ...ETH, blockchain: 'ARBITRUM' },
+      { ...ETH, symbol: 'WETH' },
+      { ...ETH, address: '0x1' },
+    ]) {
+      expect(validateRequest({ ...request, to }, MAX_SLIPPAGE)).toBeNull()
+    }
+  })
+
+  test('checks the assets before the amount', () => {
+    expect(
+      validateRequest({ ...request, to: ETH, amount: 'x' }, MAX_SLIPPAGE),
+    ).toEqual(invalid('to', 'SAME_ASSET'))
+  })
+
+  test.each(['', ' ', 'abc', '1,5', '0x10', 'NaN', 'Infinity', undefined])(
+    'returns NOT_A_NUMBER for the amount %j',
+    (amount) => {
+      expect(validateRequest({ ...request, amount }, MAX_SLIPPAGE)).toEqual(
+        invalid('amount', 'NOT_A_NUMBER'),
+      )
+    },
+  )
+
+  test.each(['0', '0.0', '-1'])(
+    'returns NOT_POSITIVE for the amount %j',
+    (amount) => {
+      expect(validateRequest({ ...request, amount }, MAX_SLIPPAGE)).toEqual(
+        invalid('amount', 'NOT_POSITIVE'),
+      )
+    },
+  )
+
+  test.each(['0.000001', '.5', '1e3', '12345.678'])(
+    'accepts the amount %j',
+    (amount) => {
+      expect(validateRequest({ ...request, amount }, MAX_SLIPPAGE)).toBeNull()
+    },
+  )
+
+  test('checks the amount before the slippage', () => {
+    expect(
+      validateRequest({ ...request, amount: '0', slippage: '0' }, MAX_SLIPPAGE),
+    ).toEqual(invalid('amount', 'NOT_POSITIVE'))
+  })
+
+  test('skips the slippage check when no slippage is given', () => {
+    expect(
+      validateRequest({ ...request, slippage: undefined }, MAX_SLIPPAGE),
+    ).toBeNull()
+  })
+
+  test.each(['', 'abc', 'NaN'])(
+    'returns NOT_A_NUMBER for the slippage %j',
+    (slippage) => {
+      expect(validateRequest({ ...request, slippage }, MAX_SLIPPAGE)).toEqual(
+        invalid('slippage', 'NOT_A_NUMBER'),
+      )
+    },
+  )
+
+  test.each(['0', '-1', '30.01', '100'])(
+    'returns OUT_OF_RANGE for the slippage %j',
+    (slippage) => {
+      expect(validateRequest({ ...request, slippage }, MAX_SLIPPAGE)).toEqual(
+        invalid('slippage', 'OUT_OF_RANGE'),
+      )
+    },
+  )
+
+  test('accepts a slippage of exactly the maximum', () => {
+    expect(
+      validateRequest({ ...request, slippage: '30' }, MAX_SLIPPAGE),
+    ).toBeNull()
+    expect(
+      validateRequest({ ...request, slippage: '50' }, HIGHER_MAX_SLIPPAGE),
+    ).toBeNull()
+  })
+})
+
+describe('validateDestination', () => {
+  const blockchains = [
+    { name: 'ETH', addressPatterns: ['^(0x)[0-9A-Fa-f]{40}$'] },
+    {
+      name: 'SOLANA',
+      addressPatterns: ['^[1-9A-HJ-NP-Za-km-z]{32,44}$', '^invalid($'],
+    },
+    { name: 'NO_PATTERNS', addressPatterns: [] },
+  ]
+  const EVM_ADDRESS = '0x0000000000000000000000000000000000000001'
+
+  test('returns null for a destination that matches a pattern of the blockchain', () => {
+    expect(validateDestination(EVM_ADDRESS, 'ETH', blockchains)).toBeNull()
+    expect(
+      validateDestination(
+        'So11111111111111111111111111111111111111112',
+        'SOLANA',
+        blockchains,
+      ),
+    ).toBeNull()
+  })
+
+  test("returns PATTERN_MISMATCH for a destination that matches none of the blockchain's patterns", () => {
+    expect(validateDestination('0x123', 'ETH', blockchains)).toEqual(
+      invalid('destination', 'PATTERN_MISMATCH'),
+    )
+    expect(validateDestination(EVM_ADDRESS, 'SOLANA', blockchains)).toEqual(
+      invalid('destination', 'PATTERN_MISMATCH'),
+    )
+  })
+
+  test('returns NO_ADDRESS_PATTERNS when the blockchain is missing or has no patterns', () => {
+    expect(validateDestination(EVM_ADDRESS, 'BSC', blockchains)).toEqual(
+      invalid('destination', 'NO_ADDRESS_PATTERNS'),
+    )
+    expect(
+      validateDestination(EVM_ADDRESS, 'NO_PATTERNS', blockchains),
+    ).toEqual(invalid('destination', 'NO_ADDRESS_PATTERNS'))
+    expect(validateDestination(EVM_ADDRESS, 'ETH', undefined)).toEqual(
+      invalid('destination', 'NO_ADDRESS_PATTERNS'),
+    )
   })
 })

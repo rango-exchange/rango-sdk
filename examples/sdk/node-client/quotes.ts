@@ -2,6 +2,7 @@ import type { Quote, QuotesRequest } from '@rango-dev/sdk'
 
 import { getClient, QuotesError } from '@rango-dev/sdk'
 
+import { describeInvalidInput } from './invalid-input.js'
 import { printWarnings } from './warnings.js'
 
 const TIMEOUT_MS = 30_000
@@ -40,6 +41,11 @@ export async function printQuotes(): Promise<Quote[]> {
       throw error
     }
     switch (error.type) {
+      case 'INVALID_INPUT':
+        console.log(
+          `Invalid ${error.metadata.field}: ${describeInvalidInput(error.metadata)}`,
+        )
+        break
       case 'CANCELED':
         console.log('The quotes request timed out.')
         break

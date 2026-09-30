@@ -12,13 +12,14 @@ import type {
 } from 'rango-sdk'
 
 import {
+  invalidInputMessage,
   quoteErrorFromValidation,
   QuotesError,
   VALIDATION_ERROR_MESSAGES,
 } from './errors.js'
 import { routeRequestError } from './route.js'
 import { withAffiliate } from './transport.js'
-import { validateRoute } from './validation.js'
+import { validateRequest, validateRoute } from './validation.js'
 import { quoteWarnings } from './warnings.js'
 
 export type QuotesRequest = Omit<
@@ -57,6 +58,14 @@ export async function fetchQuotes(
   request: QuotesRequest,
   opts: RequestOptions = {},
 ): Promise<Quote[]> {
+  const invalidInput = validateRequest(request, thresholds.slippage.max)
+  if (invalidInput) {
+    throw new QuotesError(
+      invalidInputMessage(invalidInput.metadata),
+      invalidInput,
+    )
+  }
+
   const body = withAffiliate<MultiRouteRequest>({ ...request }, affiliate)
 
   let response: MultiRouteResponse

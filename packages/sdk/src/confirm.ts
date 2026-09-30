@@ -5,6 +5,7 @@ import type { ValidationThresholds } from './thresholds.js'
 import type { RequestOptions } from './transport.js'
 import type { ConfirmWarning } from './warnings.js'
 import type {
+  BlockchainMeta,
   ConfirmRouteRequest,
   ConfirmRouteResponse,
   RangoClient as LegacyRangoClient,
@@ -13,15 +14,28 @@ import type {
 import {
   ConfirmError,
   confirmErrorFromQuoteError,
+  invalidInputMessage,
   VALIDATION_ERROR_MESSAGES,
 } from './errors.js'
 import { routeRequestError, routeResult } from './route.js'
+import { validateDestination } from './validation.js'
 import { outputChangeWarnings } from './warnings.js'
 
-export type ConfirmRequest = Pick<
-  ConfirmRouteRequest,
-  'selectedWallets' | 'destination'
->
+type SelectedWallets = ConfirmRouteRequest['selectedWallets']
+
+// `blockchains` is required whenever a destination is set, so it can be checked.
+export type ConfirmRequest =
+  | {
+      selectedWallets: SelectedWallets
+      destination: string
+      blockchains: readonly BlockchainMeta[]
+    }
+  | {
+      selectedWallets: SelectedWallets
+      // An empty destination is the same as none.
+      destination?: '' | undefined
+      blockchains?: readonly BlockchainMeta[]
+    }
 
 export type ConfirmResult = {
   route: Route
@@ -39,12 +53,27 @@ export async function confirmQuote(
     throw confirmErrorFromQuoteError(quote.error)
   }
 
+  const destination = request.destination || undefined
+  if (destination !== undefined) {
+    const invalidInput = validateDestination(
+      destination,
+      quote.to.blockchain,
+      request.blockchains,
+    )
+    if (invalidInput) {
+      throw new ConfirmError(
+        invalidInputMessage(invalidInput.metadata),
+        invalidInput,
+      )
+    }
+  }
+
   const body: ConfirmRouteRequest = {
     requestId: quote.requestId,
     selectedWallets: request.selectedWallets,
   }
-  if (request.destination !== undefined) {
-    body.destination = request.destination
+  if (destination !== undefined) {
+    body.destination = destination
   }
 
   let response: ConfirmRouteResponse
@@ -81,7 +110,7 @@ export async function confirmQuote(
       to: quote.to,
       amount: quote.requestAmount,
       selectedWallets: request.selectedWallets,
-      destination: request.destination,
+      destination,
       slippage: quote.slippage,
     },
     thresholds,

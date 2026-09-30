@@ -7,6 +7,9 @@ export type {
   ConfirmErrorMetadata,
   ConfirmErrorOptions,
   ConfirmErrorType,
+  InvalidInputField,
+  InvalidInputMetadata,
+  InvalidInputReason,
   NoRouteMetadata,
   QuoteErrorMetadata,
   QuoteErrorOptions,
@@ -43,6 +46,7 @@ export type {
   Amount,
   AmountRestrictionType,
   Asset,
+  BlockchainMeta,
   BlockchainValidationStatus,
   SwapResult,
 } from 'rango-sdk'

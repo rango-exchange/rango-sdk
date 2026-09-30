@@ -8,6 +8,8 @@ export type ValidationThresholds = {
   highValueLoss: ThresholdCriterion[]
   excessiveOutputChange: ThresholdCriterion[]
   highSlippage: number
+  // The lower bound, greater than 0, is fixed.
+  slippage: { max: number }
 }
 
 export type ValidationConfig = Partial<ValidationThresholds>
@@ -23,6 +25,7 @@ export const DEFAULT_VALIDATION_THRESHOLDS: ValidationThresholds = {
     { threshold: -2, minInput: 500 },
   ],
   highSlippage: 5,
+  slippage: { max: 30 },
 }
 
 // Later configs win per top-level key. A key set to undefined keeps the earlier value.

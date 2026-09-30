@@ -379,6 +379,67 @@ describe('quotes', () => {
     expect(quotes[1]?.error).toBeNull()
   })
 
+  test.each<[string, Record<string, unknown>, string, string]>([
+    ['from is missing', { from: null }, 'from', 'MISSING'],
+    ['to is missing', { to: undefined }, 'to', 'MISSING'],
+    ['to is the same asset as from', { to: { ...ETH } }, 'to', 'SAME_ASSET'],
+    ['the amount is not a number', { amount: '' }, 'amount', 'NOT_A_NUMBER'],
+    ['the amount is negative', { amount: '-1' }, 'amount', 'NOT_POSITIVE'],
+    [
+      'the slippage is not a number',
+      { slippage: 'abc' },
+      'slippage',
+      'NOT_A_NUMBER',
+    ],
+    ['the slippage is 0', { slippage: '0' }, 'slippage', 'OUT_OF_RANGE'],
+    [
+      'the slippage is above the maximum',
+      { slippage: '31' },
+      'slippage',
+      'OUT_OF_RANGE',
+    ],
+  ])(
+    'throws INVALID_INPUT without sending a request when %s',
+    async (_, overrides, field, reason) => {
+      const { RangoClient, QuotesError } = await loadSdk()
+      const client = new RangoClient({ apiKey: 'test-key' })
+
+      // Untyped callers can send anything; the checks still run.
+      const error = await client
+        .quotes({ ...request, ...overrides })
+        .catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(QuotesError)
+      expect(error).toMatchObject({
+        type: 'INVALID_INPUT',
+        metadata: { field, reason },
+      })
+      expect(legacy.getAllRoutes).not.toHaveBeenCalled()
+    },
+  )
+
+  test('checks the slippage against the client maximum, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { slippage: { max: 10 } },
+    })
+
+    const error = await client
+      .quotes({ ...request, slippage: '20' })
+      .catch((e: unknown) => e)
+    await client.quotes(
+      { ...request, slippage: '20' },
+      { validation: { slippage: { max: 20 } } },
+    )
+
+    expect(error).toMatchObject({
+      type: 'INVALID_INPUT',
+      metadata: { field: 'slippage', reason: 'OUT_OF_RANGE' },
+    })
+    expect(legacy.getAllRoutes).toHaveBeenCalledOnce()
+  })
+
   test('throws NO_ROUTE with the body error message for an HTTP 400', async () => {
     const { RangoClient, QuotesError } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })
@@ -542,6 +603,8 @@ describe('quotes', () => {
         metadata = error.metadata
       } else if (error.type === 'NO_ROUTE') {
         expectTypeOf(error.metadata).toEqualTypeOf<Sdk.NoRouteMetadata>()
+      } else if (error.type === 'INVALID_INPUT') {
+        expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
       } else {
         expectTypeOf(error.type).toEqualTypeOf<'CANCELED'>()
         expectTypeOf(error.metadata).toEqualTypeOf<undefined>()

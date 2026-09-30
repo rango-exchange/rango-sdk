@@ -2,6 +2,7 @@ import type { Quote } from '@rango-dev/sdk'
 
 import { ConfirmError, getClient } from '@rango-dev/sdk'
 
+import { describeInvalidInput } from './invalid-input.js'
 import { selectedWallets } from './quote.js'
 import { printWarnings } from './warnings.js'
 
@@ -31,6 +32,11 @@ export async function confirmFirstQuote(quotes: Quote[]) {
       throw error
     }
     switch (error.type) {
+      case 'INVALID_INPUT':
+        console.log(
+          `Invalid ${error.metadata.field}: ${describeInvalidInput(error.metadata)}`,
+        )
+        break
       case 'CANCELED':
         console.log('The confirm request timed out.')
         break

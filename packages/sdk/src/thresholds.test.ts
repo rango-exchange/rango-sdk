@@ -20,6 +20,7 @@ describe('resolveThresholds', () => {
         { threshold: -2, minInput: 500 },
       ],
       highSlippage: 5,
+      slippage: { max: 30 },
     } satisfies ValidationThresholds)
   })
 
@@ -47,6 +48,16 @@ describe('resolveThresholds', () => {
       ...DEFAULT_VALIDATION_THRESHOLDS,
       highValueLoss,
     })
+  })
+
+  test('replaces the default slippage object whole', () => {
+    expect(resolveThresholds({ slippage: { max: 50 } }, undefined)).toEqual({
+      ...DEFAULT_VALIDATION_THRESHOLDS,
+      slippage: { max: 50 },
+    })
+    expect(
+      resolveThresholds({ slippage: { max: 50 } }, { slippage: { max: 10 } }),
+    ).toEqual({ ...DEFAULT_VALIDATION_THRESHOLDS, slippage: { max: 10 } })
   })
 
   test('keeps the earlier value for a key set to undefined', () => {

@@ -79,9 +79,41 @@ function quote(overrides: Partial<Sdk.Quote> = {}): Sdk.Quote {
   }
 }
 
+const DESTINATION = '0x000000000000000000000000000000000000dead'
+
+function chain(name: string, addressPatterns: string[]): Sdk.BlockchainMeta {
+  return {
+    type: LegacySdk.TransactionType.TRANSFER,
+    name,
+    shortName: name,
+    displayName: name,
+    defaultDecimals: 18,
+    feeAssets: [],
+    addressPatterns,
+    logo: '',
+    color: '',
+    sort: 0,
+    enabled: true,
+    chainId: null,
+    info: {
+      infoType: 'TransferMetaInfo',
+      blockExplorerUrls: [],
+      addressUrl: '',
+      transactionUrl: '',
+      tokenUrl: null,
+    },
+  }
+}
+
+const blockchains = [
+  chain('ETH', ['^(0x)[0-9A-Fa-f]{40}$']),
+  chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
+]
+
 const wallets: Sdk.ConfirmRequest = {
   selectedWallets: { ETH: '0xfrom', BSC: '0xto' },
-  destination: '0xdestination',
+  destination: DESTINATION,
+  blockchains,
 }
 
 const validationStatus: Sdk.BlockchainValidationStatus[] = [
@@ -170,7 +202,7 @@ describe('confirm', () => {
       {
         requestId: 'request-1',
         selectedWallets: { ETH: '0xfrom', BSC: '0xto' },
-        destination: '0xdestination',
+        destination: DESTINATION,
       },
       { signal: controller.signal },
     ])
@@ -186,6 +218,86 @@ describe('confirm', () => {
       requestId: 'request-1',
       selectedWallets: { ETH: '0xfrom' },
     })
+  })
+
+  test('sends an empty destination as none, without needing blockchains', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+
+    const { route } = await client.confirm(quote(), {
+      selectedWallets: { ETH: '0xfrom' },
+      destination: '',
+    })
+
+    expect(legacy.confirmRoute.mock.lastCall?.[0]).toEqual({
+      requestId: 'request-1',
+      selectedWallets: { ETH: '0xfrom' },
+    })
+    expect(route.destination).toBeUndefined()
+  })
+
+  test.each([
+    [
+      "doesn't match the destination blockchain's patterns",
+      '0x123',
+      blockchains,
+      'PATTERN_MISMATCH',
+    ],
+    [
+      'only matches the patterns of another blockchain',
+      DESTINATION,
+      [chain('ETH', ['^(0x)[0-9A-Fa-f]{40}$']), chain('BSC', ['^bnb1'])],
+      'PATTERN_MISMATCH',
+    ],
+    [
+      'has a blockchain missing from blockchains',
+      DESTINATION,
+      [chain('ETH', ['^(0x)[0-9A-Fa-f]{40}$'])],
+      'NO_ADDRESS_PATTERNS',
+    ],
+    [
+      'has a blockchain with no address patterns',
+      DESTINATION,
+      [chain('BSC', [])],
+      'NO_ADDRESS_PATTERNS',
+    ],
+  ])(
+    'throws INVALID_INPUT without sending a request when the destination %s',
+    async (_, destination, chains, reason) => {
+      const { RangoClient } = await loadSdk()
+      const client = new RangoClient({ apiKey: 'test-key' })
+
+      const error = await confirmError(
+        client.confirm(quote(), {
+          selectedWallets: { ETH: '0xfrom' },
+          destination,
+          blockchains: chains,
+        }),
+      )
+
+      expect(error).toMatchObject({
+        type: 'INVALID_INPUT',
+        metadata: { field: 'destination', reason },
+      })
+      expect(legacy.confirmRoute).not.toHaveBeenCalled()
+    },
+  )
+
+  test('requires blockchains whenever a destination is set', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const selectedWallets = { ETH: '0xfrom' }
+    const destination: string = DESTINATION
+
+    // @ts-expect-error: a destination needs blockchains to be checked against
+    const pending = client.confirm(quote(), { selectedWallets, destination })
+
+    const error = await confirmError(pending)
+    expect(error).toMatchObject({
+      type: 'INVALID_INPUT',
+      metadata: { field: 'destination', reason: 'NO_ADDRESS_PATTERNS' },
+    })
+    expect(legacy.confirmRoute).not.toHaveBeenCalled()
   })
 
   test('resolves to the Route with its request context and no warnings', async () => {
@@ -205,7 +317,7 @@ describe('confirm', () => {
         swaps: [swap()],
         validationStatus,
         selectedWallets: { ETH: '0xfrom', BSC: '0xto' },
-        destination: '0xdestination',
+        destination: DESTINATION,
         slippage: '1.5',
       },
       warnings: [],
@@ -234,6 +346,26 @@ describe('confirm', () => {
       metadata,
       cause: quoteError,
     })
+    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+  })
+
+  test('throws the Quote error before checking the destination', async () => {
+    const { RangoClient, QuoteError } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const quoteError = new QuoteError('No route', {
+      type: 'NO_ROUTE',
+      metadata: {},
+    })
+
+    const error = await confirmError(
+      client.confirm(quote({ error: quoteError }), {
+        selectedWallets: { ETH: '0xfrom' },
+        destination: 'not an address',
+        blockchains: [],
+      }),
+    )
+
+    expect(error).toMatchObject({ type: 'NO_ROUTE', cause: quoteError })
     expect(legacy.confirmRoute).not.toHaveBeenCalled()
   })
 
@@ -522,6 +654,9 @@ describe('confirm', () => {
       }
       type = error.type
       switch (error.type) {
+        case 'INVALID_INPUT':
+          expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
+          break
         case 'NO_ROUTE':
           expectTypeOf(error.metadata).toEqualTypeOf<Sdk.NoRouteMetadata>()
           break

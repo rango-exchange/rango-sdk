@@ -6,7 +6,29 @@ export type RequestFailedMetadata = {
   traceId: number | null
 }
 
+export type InvalidInputField =
+  | 'from'
+  | 'to'
+  | 'amount'
+  | 'slippage'
+  | 'destination'
+
+export type InvalidInputReason =
+  | 'MISSING'
+  | 'SAME_ASSET'
+  | 'NOT_A_NUMBER'
+  | 'NOT_POSITIVE'
+  | 'OUT_OF_RANGE'
+  | 'PATTERN_MISMATCH'
+  | 'NO_ADDRESS_PATTERNS'
+
+export type InvalidInputMetadata = {
+  field: InvalidInputField
+  reason: InvalidInputReason
+}
+
 export type QuotesErrorMetadata = {
+  INVALID_INPUT: InvalidInputMetadata
   NO_ROUTE: NoRouteMetadata
   REQUEST_FAILED: RequestFailedMetadata
   CANCELED: undefined
@@ -78,6 +100,7 @@ export type SlippageTooLowMetadata = {
 }
 
 export type QuoteErrorMetadata = {
+  INVALID_INPUT: InvalidInputMetadata
   NO_ROUTE: NoRouteMetadata
   AMOUNT_OUT_OF_RANGE: AmountOutOfRangeMetadata
   SLIPPAGE_TOO_LOW: SlippageTooLowMetadata
@@ -126,6 +149,25 @@ export const VALIDATION_ERROR_MESSAGES: {
   NO_ROUTE: 'No route was found for this swap.',
   AMOUNT_OUT_OF_RANGE: "The amount is outside a swap's limits.",
   SLIPPAGE_TOO_LOW: 'The slippage is too low for a swap in this route.',
+}
+
+const INVALID_INPUT_MESSAGES: { [K in InvalidInputReason]: string } = {
+  MISSING: 'is missing',
+  SAME_ASSET: 'is the same asset as `from`',
+  NOT_A_NUMBER: 'is not a number',
+  NOT_POSITIVE: 'is not greater than 0',
+  OUT_OF_RANGE: 'is out of range',
+  PATTERN_MISMATCH:
+    "doesn't match the address patterns of the destination blockchain",
+  NO_ADDRESS_PATTERNS:
+    "can't be checked: the destination blockchain has no address patterns in `blockchains`",
+}
+
+export function invalidInputMessage({
+  field,
+  reason,
+}: InvalidInputMetadata): string {
+  return `\`${field}\` ${INVALID_INPUT_MESSAGES[reason]}.`
 }
 
 export function quoteErrorFromValidation(

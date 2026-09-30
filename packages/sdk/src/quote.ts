@@ -10,9 +10,10 @@ import type {
   SimulationResult,
 } from 'rango-sdk'
 
-import { QuoteError } from './errors.js'
+import { invalidInputMessage, QuoteError } from './errors.js'
 import { routeRequestError, routeResult } from './route.js'
 import { withAffiliate } from './transport.js'
+import { validateRequest } from './validation.js'
 
 export type QuoteRequest = Omit<
   BestRouteRequest,
@@ -44,6 +45,14 @@ export async function fetchQuote(
   request: QuoteRequest,
   opts: RequestOptions = {},
 ): Promise<QuoteResult> {
+  const invalidInput = validateRequest(request, thresholds.slippage.max)
+  if (invalidInput) {
+    throw new QuoteError(
+      invalidInputMessage(invalidInput.metadata),
+      invalidInput,
+    )
+  }
+
   const body = withAffiliate<BestRouteRequest>(
     { ...request, checkPrerequisites: true },
     affiliate,

@@ -268,6 +268,78 @@ describe('quote', () => {
     ])
   })
 
+  test.each<[string, Record<string, unknown>, string, string]>([
+    ['from is missing', { from: null }, 'from', 'MISSING'],
+    ['to is missing', { to: undefined }, 'to', 'MISSING'],
+    ['to is the same asset as from', { to: { ...ETH } }, 'to', 'SAME_ASSET'],
+    ['the amount is not a number', { amount: 'abc' }, 'amount', 'NOT_A_NUMBER'],
+    ['the amount is 0', { amount: '0' }, 'amount', 'NOT_POSITIVE'],
+    [
+      'the slippage is not a number',
+      { slippage: 'abc' },
+      'slippage',
+      'NOT_A_NUMBER',
+    ],
+    ['the slippage is 0', { slippage: '0' }, 'slippage', 'OUT_OF_RANGE'],
+    [
+      'the slippage is negative',
+      { slippage: '-1' },
+      'slippage',
+      'OUT_OF_RANGE',
+    ],
+    [
+      'the slippage is above the maximum',
+      { slippage: '30.5' },
+      'slippage',
+      'OUT_OF_RANGE',
+    ],
+  ])(
+    'throws INVALID_INPUT without sending a request when %s',
+    async (_, overrides, field, reason) => {
+      const { RangoClient } = await loadSdk()
+      const client = new RangoClient({ apiKey: 'test-key' })
+      // Untyped callers can send anything; the checks still run.
+      const error = await quoteError(client.quote({ ...request, ...overrides }))
+
+      expect(error).toMatchObject({
+        type: 'INVALID_INPUT',
+        metadata: { field, reason },
+      })
+      expect(legacy.getBestRoute).not.toHaveBeenCalled()
+    },
+  )
+
+  test('accepts a slippage of exactly the maximum', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+
+    await client.quote({ ...request, slippage: '30' })
+
+    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+  })
+
+  test('uses the client slippage maximum, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { slippage: { max: 50 } },
+    })
+
+    await client.quote({ ...request, slippage: '40' })
+    const error = await quoteError(
+      client.quote(
+        { ...request, slippage: '40' },
+        { validation: { slippage: { max: 35 } } },
+      ),
+    )
+
+    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+    expect(error).toMatchObject({
+      type: 'INVALID_INPUT',
+      metadata: { field: 'slippage', reason: 'OUT_OF_RANGE' },
+    })
+  })
+
   test('throws CANCELED when the signal aborts the request, even for an HTTP 400', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })
@@ -467,6 +539,9 @@ describe('quote', () => {
       }
       type = error.type
       switch (error.type) {
+        case 'INVALID_INPUT':
+          expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
+          break
         case 'NO_ROUTE':
           expectTypeOf(error.metadata).toEqualTypeOf<Sdk.NoRouteMetadata>()
           break
