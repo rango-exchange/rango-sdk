@@ -1,3 +1,6 @@
+import type { RouteValidationError } from './validation.js'
+import type { AmountRestrictionType, SwapResult } from 'rango-sdk'
+
 export type RequestFailedMetadata = {
   errorCode: number | null
   traceId: number | null
@@ -10,14 +13,13 @@ export type QuotesErrorMetadata = {
 
 export type QuotesErrorType = keyof QuotesErrorMetadata
 
-type MetadataOption<T extends QuotesErrorType> =
-  undefined extends QuotesErrorMetadata[T]
-    ? { metadata?: QuotesErrorMetadata[T] }
-    : { metadata: QuotesErrorMetadata[T] }
+type MetadataOption<M, T extends keyof M> = undefined extends M[T]
+  ? { metadata?: M[T] }
+  : { metadata: M[T] }
 
 export type QuotesErrorOptions<T extends QuotesErrorType = QuotesErrorType> =
   T extends QuotesErrorType
-    ? { type: T } & MetadataOption<T> & ErrorOptions
+    ? { type: T } & MetadataOption<QuotesErrorMetadata, T> & ErrorOptions
     : never
 
 type AnyQuotesError = {
@@ -50,4 +52,87 @@ export class QuotesError<
     this.type = type
     this.metadata = metadata
   }
+}
+
+export type NoRouteMetadata = {
+  diagnosisMessage?: string
+}
+
+export type AmountOutOfRangeMetadata = {
+  swapIndex: number
+  swap: SwapResult
+  min: string | null
+  max: string | null
+  restrictionType: AmountRestrictionType
+}
+
+export type RecommendedSlippage = {
+  swapIndex: number
+  slippage: string
+}
+
+export type SlippageTooLowMetadata = {
+  recommendedSlippages: RecommendedSlippage[]
+  minRequiredSlippage: string
+}
+
+export type QuoteErrorMetadata = {
+  NO_ROUTE: NoRouteMetadata
+  AMOUNT_OUT_OF_RANGE: AmountOutOfRangeMetadata
+  SLIPPAGE_TOO_LOW: SlippageTooLowMetadata
+  REQUEST_FAILED: RequestFailedMetadata
+  CANCELED: undefined
+}
+
+export type QuoteErrorType = keyof QuoteErrorMetadata
+
+export type QuoteErrorOptions<T extends QuoteErrorType = QuoteErrorType> =
+  T extends QuoteErrorType
+    ? { type: T } & MetadataOption<QuoteErrorMetadata, T> & ErrorOptions
+    : never
+
+type AnyQuoteError = {
+  [K in QuoteErrorType]: QuoteError<K>
+}[QuoteErrorType]
+
+export class QuoteError<
+  T extends QuoteErrorType = QuoteErrorType,
+> extends Error {
+  // Type-only, as on QuotesError.
+  declare static readonly [Symbol.hasInstance]: (
+    value: unknown,
+  ) => value is AnyQuoteError
+
+  readonly type: T
+  readonly metadata: QuoteErrorMetadata[T]
+
+  constructor(message: string, options: QuoteErrorOptions<T>)
+  constructor(
+    message: string,
+    details: { type: T; metadata: QuoteErrorMetadata[T] } & ErrorOptions,
+  ) {
+    const { type, metadata, ...options } = details
+    super(message, options)
+    this.name = 'QuoteError'
+    this.type = type
+    this.metadata = metadata
+  }
+}
+
+export const VALIDATION_ERROR_MESSAGES: {
+  [K in RouteValidationError['type']]: string
+} = {
+  NO_ROUTE: 'No route was found for this swap.',
+  AMOUNT_OUT_OF_RANGE: "The amount is outside a swap's limits.",
+  SLIPPAGE_TOO_LOW: 'The slippage is too low for a swap in this route.',
+}
+
+export function quoteErrorFromValidation(
+  error: RouteValidationError,
+  options?: ErrorOptions,
+): QuoteError {
+  return new QuoteError(VALIDATION_ERROR_MESSAGES[error.type], {
+    ...error,
+    ...options,
+  })
 }

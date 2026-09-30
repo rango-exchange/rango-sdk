@@ -165,6 +165,65 @@ describe('quotes', () => {
     ])
   })
 
+  test('attaches a QuoteError to each unusable Quote and still returns the others', async () => {
+    const { RangoClient, QuoteError } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const baseSwap = {
+      fromAmount: '1',
+      fromAmountMinValue: '0.1',
+      fromAmountMaxValue: '10',
+      fromAmountRestrictionType: 'INCLUSIVE',
+      recommendedSlippage: { error: false, slippage: '1' },
+    } as LegacySdk.SwapResult
+    const tooSmall = { ...baseSwap, fromAmountMinValue: '2' }
+    legacy.getAllRoutes.mockResolvedValue(
+      response({
+        results: [
+          { ...result, requestId: 'ok', swaps: [baseSwap] },
+          { ...result, requestId: 'amount', swaps: [baseSwap, tooSmall] },
+          {
+            ...result,
+            requestId: 'slippage',
+            swaps: [
+              {
+                ...baseSwap,
+                recommendedSlippage: { error: true, slippage: '4' },
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    const quotes = await client.quotes(request)
+
+    expect(quotes.map((quote) => quote.requestId)).toEqual([
+      'ok',
+      'amount',
+      'slippage',
+    ])
+    expect(quotes[0]?.error).toBeNull()
+    expect(quotes[1]?.error).toBeInstanceOf(QuoteError)
+    expect(quotes[1]?.error).toMatchObject({
+      type: 'AMOUNT_OUT_OF_RANGE',
+      metadata: {
+        swapIndex: 1,
+        swap: tooSmall,
+        min: '2',
+        max: '10',
+        restrictionType: 'INCLUSIVE',
+      },
+    })
+    expect(quotes[2]?.error).toBeInstanceOf(QuoteError)
+    expect(quotes[2]?.error).toMatchObject({
+      type: 'SLIPPAGE_TOO_LOW',
+      metadata: {
+        recommendedSlippages: [{ swapIndex: 0, slippage: '4' }],
+        minRequiredSlippage: '4',
+      },
+    })
+  })
+
   test('resolves to an empty list when no route exists', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })

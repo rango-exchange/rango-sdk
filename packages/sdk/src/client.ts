@@ -1,7 +1,10 @@
-import type { Quote, QuotesRequest, RequestOptions } from './quotes.js'
+import type { QuoteRequest, QuoteResult } from './quote.js'
+import type { Quote, QuotesRequest } from './quotes.js'
+import type { RequestOptions } from './transport.js'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
+import { fetchQuote } from './quote.js'
 import { fetchQuotes } from './quotes.js'
 
 const DEFAULT_BASE_URL = 'https://api.rango.exchange'
@@ -42,6 +45,13 @@ export class RangoClient {
 
   setAffiliate(affiliate: Affiliate): void {
     this.#config.affiliate = structuredClone(affiliate)
+  }
+
+  async quote(
+    request: QuoteRequest,
+    opts?: RequestOptions,
+  ): Promise<QuoteResult> {
+    return fetchQuote(this.#legacy, this.#config.affiliate, request, opts)
   }
 
   async quotes(

@@ -1,6 +1,6 @@
 ## Node.js Example for configuring the `@rango-dev/sdk` client
 
-This example creates the default client once in `rango.ts` with `createClient`. `consumer.ts` reaches the same client with `getClient()`, without importing `rango.ts`. The entry, `index.ts`, checks that both modules get the same instance. Then `quotes.ts` fetches **Quotes** for a swap and prints them, handling `QuotesError` by `type`.
+This example creates the default client once in `rango.ts` with `createClient`. `consumer.ts` reaches the same client with `getClient()`, without importing `rango.ts`. The entry, `index.ts`, checks that both modules get the same instance. Then `quotes.ts` fetches **Quotes** for a swap and prints them, handling `QuotesError` by `type`. Finally `quote.ts` fetches the single best **Route** for the wallets in `selectedWallets`, handling `QuoteError` by `type`.
 
 ### Requirements:
 
@@ -9,7 +9,7 @@ This example creates the default client once in `rango.ts` with `createClient`. 
 
 ### How to run the code?
 
-Set your API key in `rango.ts`, then run following commands in the root:
+Set your API key in `rango.ts` and your wallet addresses in `quote.ts`, then run following commands in the root:
 
 ```sh
 yarn
