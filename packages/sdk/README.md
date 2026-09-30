@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/@rango-dev%2Fsdk.svg)](https://badge.fury.io/js/@rango-dev%2Fsdk)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/rango-exchange/rango-sdk/blob/master/packages/sdk/LICENSE)
 
-> This package is under development. It provides the client configuration, `quotes()` and `quote()`; more API methods come later.
+> This package is under development. It provides the client configuration, `quotes()`, `confirm()` and `quote()`; more API methods come later.
 
 ## Installation
 
@@ -119,7 +119,7 @@ Each **Quote** has:
 - `requestId`, `outputAmount`, `resultType`, `swaps`, `scores`, `tags` and `missingBlockchains`, from the routing result.
 - `from`, `to`, `requestAmount`, `slippage` and `routingOptions`: the request the **Quote** came from. `routingOptions` holds the other routing options you sent.
 - `warnings`: the [warnings](#warnings) that apply to this **Quote**: `HIGH_VALUE_LOSS`, `UNKNOWN_PRICE`, `INSUFFICIENT_SLIPPAGE` and `HIGH_SLIPPAGE`. Use them to badge risky options before the user picks one.
-- `error`: `null` when the **Quote** is usable, or a `QuoteError` (not thrown) when it isn't. The type is `AMOUNT_OUT_OF_RANGE` or `SLIPPAGE_TOO_LOW`, with the same `metadata` that [`quote()`](#quote) would throw. Disable or hide a **Quote** that has an error. One bad **Quote** never makes `quotes()` fail.
+- `error`: `null` when the **Quote** is usable, or a `QuoteError` (not thrown) when it isn't. The type is `AMOUNT_OUT_OF_RANGE` or `SLIPPAGE_TOO_LOW`, with the same `metadata` that [`quote()`](#quote) would throw. Disable or hide a **Quote** that has an error: [`confirm()`](#confirm) refuses it. One bad **Quote** never makes `quotes()` fail.
 
 ### Errors
 
@@ -139,6 +139,65 @@ if (error instanceof QuotesError) {
 ```
 
 The `Asset`, `QuotesRequest`, `Quote`, `SwapResult` and `BlockchainValidationStatus` types are all exported from `@rango-dev/sdk`.
+
+## Confirm
+
+`confirm()` turns the **Quote** the user chose into a **Route** for their wallets. This is the second step of the quotes → confirm flow: call `quotes()` without wallets to show the options, let the user choose one, then confirm it once their wallets are connected. The server checks the **Route** against the wallets' balances.
+
+```ts
+import { ConfirmError, getClient } from '@rango-dev/sdk'
+
+const client = getClient()
+const quotes = await client.quotes(request)
+// Let the user choose. A Quote with an error can't be confirmed.
+const chosen = quotes.find((quote) => !quote.error)
+
+if (chosen) {
+  try {
+    const { route, warnings } = await client.confirm(
+      chosen,
+      {
+        // Map of blockchain to the user's selected address
+        selectedWallets: { ETH: '0x...', BSC: '0x...' },
+        // Optional: send the output to another address
+        destination: '0x...',
+      },
+      { signal: controller.signal },
+    )
+  } catch (error) {
+    if (error instanceof ConfirmError && error.type === 'NO_ROUTE') {
+      // The route is no longer available. Fetch the quotes again.
+    }
+  }
+}
+```
+
+The confirm request carries the **Quote**'s request ID, `selectedWallets` and the optional `destination`. It has no affiliate fields: `quotes()` already applied the affiliate settings. The **Route**'s `slippage` comes from the **Quote**.
+
+`confirm()` resolves to `{ route, warnings }`, the same shape as [`quote()`](#quote). `warnings` lists every [warning](#warnings) that `quote()` would return, including `INSUFFICIENT_BALANCE`, plus `EXCESSIVE_OUTPUT_CHANGE` when the confirmed output is worth much less than the **Quote** you passed in.
+
+### Errors
+
+`confirm()` throws a `ConfirmError`. It has the same `type` values, `metadata` types and mapping order as the `QuoteError` thrown by [`quote()`](#quote), with one addition: a confirm response with `ok: false` is also `REQUEST_FAILED`. Its `metadata.errorCode` is a number, or `null` when the API gives no numeric code.
+
+If the **Quote** you pass already has an `error`, `confirm()` throws right away and sends no request. The `ConfirmError` has the same `type` and `metadata` as the **Quote**'s error, and keeps it as `cause`. This matches the Rango widget, which disables its swap button for such a **Quote**. If you think the **Quote** is stale, fetch the quotes again.
+
+`ConfirmError` is its own class, so `instanceof` tells you which step failed. As with `QuoteError`, `metadata` narrows on `type` (TypeScript 5.3 or later), and `cause` holds the underlying error or the API response.
+
+```ts
+if (error instanceof ConfirmError) {
+  switch (error.type) {
+    case 'CANCELED':
+      // A newer request replaced this one. Ignore it.
+      break
+    case 'REQUEST_FAILED':
+      console.error(error.metadata.errorCode, error.metadata.traceId)
+      break
+  }
+}
+```
+
+The `ConfirmRequest`, `ConfirmResult` and `ConfirmError` types, and `ConfirmErrorType` and `ConfirmErrorMetadata`, are exported from `@rango-dev/sdk`.
 
 ## Quote
 
@@ -224,7 +283,7 @@ The `QuoteRequest`, `Route` and `QuoteError` types, and the metadata type for ea
 
 ## Warnings
 
-A warning means the result is usable but risky. Warnings are returned, never thrown: each **Quote** from `quotes()` has a `warnings` list, and `quote()` resolves to `{ route, warnings }`. Every warning that applies is returned, not just the most important one, so you choose which to show. Warnings carry numbers, not display text, so you word and translate them yourself.
+A warning means the result is usable but risky. Warnings are returned, never thrown: each **Quote** from `quotes()` has a `warnings` list, and `quote()` and `confirm()` resolve to `{ route, warnings }`. Every warning that applies is returned, not just the most important one, so you choose which to show. Warnings carry numbers, not display text, so you word and translate them yourself.
 
 Each warning is an object discriminated by `kind`:
 
@@ -232,7 +291,8 @@ Each warning is an object discriminated by `kind`:
 - `UNKNOWN_PRICE`: the USD value of the input or the output can't be computed, or the input is worth 0 USD, so no value loss can be checked.
 - `INSUFFICIENT_SLIPPAGE`: the requested slippage is below what a swap recommends, but no swap reported a slippage error. `recommendedSlippages` lists `{ swapIndex, slippage }` for each swap that recommends a slippage above the requested one, and `minRequired` is the highest slippage recommended by any swap.
 - `HIGH_SLIPPAGE`: the requested `slippage` is above the `highSlippage` threshold and higher than the minimum required.
-- `INSUFFICIENT_BALANCE`: a wallet doesn't hold enough of an asset. There is one warning per asset that is short, with `blockchain`, `address`, `asset`, `required`, `current` and `reason` (`FEE`, `INPUT_ASSET` or `FEE_AND_INPUT_ASSET`). `required` and `current` are machine-readable amounts, `{ amount, decimals }`. It comes from the server's balance check, so only `quote()` returns it, not `quotes()`.
+- `INSUFFICIENT_BALANCE`: a wallet doesn't hold enough of an asset. There is one warning per asset that is short, with `blockchain`, `address`, `asset`, `required`, `current` and `reason` (`FEE`, `INPUT_ASSET` or `FEE_AND_INPUT_ASSET`). `required` and `current` are machine-readable amounts, `{ amount, decimals }`. It comes from the server's balance check, so only `quote()` and `confirm()` return it, not `quotes()`.
+- `EXCESSIVE_OUTPUT_CHANGE`: the confirmed output is worth much less than the **Quote** passed to `confirm()`. It has `usdValueChange` (the confirmed output's USD value minus the **Quote**'s) and `percentageChange` (that change as a percentage of the **Quote**'s output value, such as `-2.5`). It's raised when an entry of the `excessiveOutputChange` thresholds matches: the percentage change is at or below its `threshold` and the input value is at least its `minInput`. It's skipped when a USD value can't be computed. Only `confirm()` returns it.
 
 Both slippage warnings are skipped when the request has no `slippage`.
 
@@ -251,7 +311,7 @@ function describe(warning: RouteWarning): string {
 }
 ```
 
-`QuoteWarning` is the union of the warnings a **Quote** can have, and `RouteWarning` adds `INSUFFICIENT_BALANCE`. Each warning type is exported on its own too, such as `HighValueLossWarning`.
+`QuoteWarning` is the union of the warnings a **Quote** can have, `RouteWarning` adds `INSUFFICIENT_BALANCE`, and `ConfirmWarning` adds `EXCESSIVE_OUTPUT_CHANGE`. Each warning type is exported on its own too, such as `HighValueLossWarning`.
 
 ### Warning thresholds
 
@@ -261,7 +321,7 @@ The thresholds default to the Rango widget's values:
 | --- | --- | --- |
 | `priceImpact` | `{ low: -3, high: -10 }` | The `level` of `HIGH_VALUE_LOSS`: `high` at or below `high`, `low` otherwise |
 | `highValueLoss` | `[{ threshold: -10, minInput: 400 }, { threshold: -5, minInput: 1000 }]` | `HIGH_VALUE_LOSS`. `threshold` is a price impact in percent, `minInput` an input value in USD |
-| `excessiveOutputChange` | `[{ threshold: -1, minInput: 1000 }, { threshold: -2, minInput: 500 }]` | Reserved for the upcoming `confirm()` |
+| `excessiveOutputChange` | `[{ threshold: -1, minInput: 1000 }, { threshold: -2, minInput: 500 }]` | `EXCESSIVE_OUTPUT_CHANGE`. `threshold` is an output change in percent, `minInput` an input value in USD |
 | `highSlippage` | `5` | `HIGH_SLIPPAGE`, in percent |
 
 Set your own on the client with `validation`, and override them for a single call with `opts.validation`. The call's values override the client's, and the client's override the defaults. Merging is per top-level key: a key you leave out keeps its value, and a key you set replaces it whole. An array you supply replaces the default array, it isn't merged with it.

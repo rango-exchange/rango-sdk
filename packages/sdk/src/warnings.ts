@@ -47,6 +47,12 @@ export type InsufficientBalanceWarning = {
   reason: InsufficientBalanceReason
 }
 
+export type ExcessiveOutputChangeWarning = {
+  kind: 'EXCESSIVE_OUTPUT_CHANGE'
+  usdValueChange: number
+  percentageChange: number
+}
+
 export type QuoteWarning =
   | HighValueLossWarning
   | UnknownPriceWarning
@@ -54,6 +60,8 @@ export type QuoteWarning =
   | HighSlippageWarning
 
 export type RouteWarning = QuoteWarning | InsufficientBalanceWarning
+
+export type ConfirmWarning = RouteWarning | ExcessiveOutputChangeWarning
 
 export type PricedRoute = Pick<SimulationResult, 'outputAmount' | 'swaps'> & {
   requestAmount: string
@@ -91,6 +99,40 @@ export function balanceWarnings(
 }
 
 const PERCENT = 100
+
+// Compares the confirmed Route's USD output with the Quote's. The input value is the Route's.
+export function outputChangeWarnings(
+  quote: PricedRoute,
+  route: PricedRoute,
+  thresholds: ValidationThresholds,
+): ExcessiveOutputChangeWarning[] {
+  const usdIn = usdValue(route.requestAmount, route.swaps[0]?.from.usdPrice)
+  const quotedUsdOut = usdValue(
+    quote.outputAmount,
+    quote.swaps.at(-1)?.to.usdPrice,
+  )
+  const confirmedUsdOut = usdValue(
+    route.outputAmount,
+    route.swaps.at(-1)?.to.usdPrice,
+  )
+  if (
+    usdIn === null ||
+    quotedUsdOut === null ||
+    confirmedUsdOut === null ||
+    quotedUsdOut <= 0
+  ) {
+    return []
+  }
+  const usdValueChange = confirmedUsdOut - quotedUsdOut
+  const percentageChange = (usdValueChange * PERCENT) / quotedUsdOut
+  const excessive = thresholds.excessiveOutputChange.some(
+    ({ threshold, minInput }) =>
+      percentageChange <= threshold && usdIn >= minInput,
+  )
+  return excessive
+    ? [{ kind: 'EXCESSIVE_OUTPUT_CHANGE', usdValueChange, percentageChange }]
+    : []
+}
 
 function priceWarnings(
   route: PricedRoute,

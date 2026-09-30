@@ -1,3 +1,4 @@
+import type { ConfirmRequest, ConfirmResult } from './confirm.js'
 import type { QuoteRequest, QuoteResult } from './quote.js'
 import type { Quote, QuotesRequest } from './quotes.js'
 import type { ValidationConfig } from './thresholds.js'
@@ -5,6 +6,7 @@ import type { RequestOptions } from './transport.js'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
+import { confirmQuote } from './confirm.js'
 import { fetchQuote } from './quote.js'
 import { fetchQuotes } from './quotes.js'
 import { resolveThresholds } from './thresholds.js'
@@ -73,6 +75,20 @@ export class RangoClient {
       this.#legacy,
       this.#config.affiliate,
       resolveThresholds(this.#config.validation, opts?.validation),
+      request,
+      opts,
+    )
+  }
+
+  async confirm(
+    quote: Quote,
+    request: ConfirmRequest,
+    opts?: RequestOptions,
+  ): Promise<ConfirmResult> {
+    return confirmQuote(
+      this.#legacy,
+      resolveThresholds(this.#config.validation, opts?.validation),
+      quote,
       request,
       opts,
     )

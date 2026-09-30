@@ -1,4 +1,4 @@
-import type { QuotesRequest } from '@rango-dev/sdk'
+import type { Quote, QuotesRequest } from '@rango-dev/sdk'
 
 import { getClient, QuotesError } from '@rango-dev/sdk'
 
@@ -17,7 +17,7 @@ const request: QuotesRequest = {
   slippage: '1.0',
 }
 
-export async function printQuotes() {
+export async function printQuotes(): Promise<Quote[]> {
   try {
     const quotes = await getClient().quotes(request, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -25,7 +25,7 @@ export async function printQuotes() {
 
     if (quotes.length === 0) {
       console.log('No route exists for this swap.')
-      return
+      return []
     }
 
     for (const quote of quotes) {
@@ -35,7 +35,11 @@ export async function printQuotes() {
         `${quote.requestAmount} ${quote.from.symbol} -> ${quote.outputAmount} ${quote.to.symbol} via ${swappers}${tags ? ` [${tags}]` : ''}`,
       )
       printWarnings(quote.warnings)
+      if (quote.error) {
+        console.log(`  Can't be confirmed: ${quote.error.type}`)
+      }
     }
+    return quotes
   } catch (error) {
     if (!(error instanceof QuotesError)) {
       throw error
@@ -47,5 +51,6 @@ export async function printQuotes() {
         `The quotes request failed: ${error.message} (error code: ${error.metadata.errorCode}, trace ID: ${error.metadata.traceId})`,
       )
     }
+    return []
   }
 }

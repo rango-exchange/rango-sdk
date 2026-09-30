@@ -7,6 +7,11 @@ import { printWarnings } from './warnings.js'
 const TIMEOUT_MS = 30_000
 
 // Set these to wallets you own; the server checks their balances.
+export const selectedWallets = {
+  BSC: '0x0000000000000000000000000000000000000001',
+  AVAX_CCHAIN: '0x0000000000000000000000000000000000000001',
+}
+
 const request: QuoteRequest = {
   from: { blockchain: 'BSC', symbol: 'BNB', address: null },
   to: {
@@ -15,10 +20,7 @@ const request: QuoteRequest = {
     address: '0xc7198437980c041c805a1edcba50c1ce5db95118',
   },
   amount: '0.1',
-  selectedWallets: {
-    BSC: '0x0000000000000000000000000000000000000001',
-    AVAX_CCHAIN: '0x0000000000000000000000000000000000000001',
-  },
+  selectedWallets,
   slippage: '1.0',
 }
 

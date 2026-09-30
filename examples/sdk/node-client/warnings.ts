@@ -1,6 +1,6 @@
-import type { RouteWarning } from '@rango-dev/sdk'
+import type { ConfirmWarning } from '@rango-dev/sdk'
 
-export function describeWarning(warning: RouteWarning): string {
+export function describeWarning(warning: ConfirmWarning): string {
   switch (warning.kind) {
     case 'HIGH_VALUE_LOSS':
       return `High value loss (${warning.level}): $${warning.usdIn.toFixed(2)} in, $${warning.usdOut.toFixed(2)} out, price impact ${warning.priceImpact.toFixed(2)}%, fees $${warning.totalFee.toFixed(2)}`
@@ -8,6 +8,8 @@ export function describeWarning(warning: RouteWarning): string {
       return 'The USD value of the input or output is unknown.'
     case 'INSUFFICIENT_SLIPPAGE':
       return `Slippage is below what a swap recommends. Use at least ${warning.minRequired}%.`
+    case 'EXCESSIVE_OUTPUT_CHANGE':
+      return `The output changed by ${warning.percentageChange.toFixed(2)}% ($${warning.usdValueChange.toFixed(2)}) since the quote.`
     case 'HIGH_SLIPPAGE':
       return `Slippage of ${warning.slippage}% is higher than needed.`
     case 'INSUFFICIENT_BALANCE': {
@@ -17,7 +19,7 @@ export function describeWarning(warning: RouteWarning): string {
   }
 }
 
-export function printWarnings(warnings: RouteWarning[], indent = '  ') {
+export function printWarnings(warnings: ConfirmWarning[], indent = '  ') {
   for (const warning of warnings) {
     console.log(`${indent}Warning: ${describeWarning(warning)}`)
   }

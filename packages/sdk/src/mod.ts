@@ -1,8 +1,12 @@
 export { RangoClient, createClient, getClient } from './client.js'
 export type { Affiliate, RangoClientConfig } from './client.js'
-export { QuoteError, QuotesError } from './errors.js'
+export type { ConfirmRequest, ConfirmResult } from './confirm.js'
+export { ConfirmError, QuoteError, QuotesError } from './errors.js'
 export type {
   AmountOutOfRangeMetadata,
+  ConfirmErrorMetadata,
+  ConfirmErrorOptions,
+  ConfirmErrorType,
   NoRouteMetadata,
   QuoteErrorMetadata,
   QuoteErrorOptions,
@@ -23,6 +27,8 @@ export type {
 } from './thresholds.js'
 export type { RequestOptions } from './transport.js'
 export type {
+  ConfirmWarning,
+  ExcessiveOutputChangeWarning,
   HighSlippageWarning,
   HighValueLossLevel,
   HighValueLossWarning,

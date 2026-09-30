@@ -3,7 +3,11 @@ import type { BlockchainValidationStatus, SwapFee, SwapResult } from 'rango-sdk'
 import { describe, expect, test } from 'vitest'
 
 import { resolveThresholds } from './thresholds.js'
-import { balanceWarnings, quoteWarnings } from './warnings.js'
+import {
+  balanceWarnings,
+  outputChangeWarnings,
+  quoteWarnings,
+} from './warnings.js'
 
 function swap(overrides: Partial<SwapResult> = {}): SwapResult {
   const asset = {
@@ -503,5 +507,121 @@ describe('balanceWarnings', () => {
   test('returns no warnings without a validation status', () => {
     expect(balanceWarnings(null)).toEqual([])
     expect(balanceWarnings([])).toEqual([])
+  })
+})
+
+describe('outputChangeWarnings', () => {
+  test('warns when the output drops by at least 1% on an input of at least 1000 USD', () => {
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: 3000, usdOut: 3000 }),
+        pricedRoute({ usdIn: 3000, usdOut: 2940 }),
+        defaults,
+      ),
+    ).toEqual([
+      {
+        kind: 'EXCESSIVE_OUTPUT_CHANGE',
+        usdValueChange: -60,
+        percentageChange: -2,
+      },
+    ])
+  })
+
+  test('warns at exactly the threshold and the minimum input', () => {
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: 1000, usdOut: 1000 }),
+        pricedRoute({ usdIn: 1000, usdOut: 990 }),
+        defaults,
+      ),
+    ).toEqual([
+      {
+        kind: 'EXCESSIVE_OUTPUT_CHANGE',
+        usdValueChange: -10,
+        percentageChange: -1,
+      },
+    ])
+  })
+
+  test('uses the -2% entry for inputs between 500 and 1000 USD', () => {
+    const quote = pricedRoute({ usdIn: 600, usdOut: 600 })
+
+    expect(
+      outputChangeWarnings(
+        quote,
+        pricedRoute({ usdIn: 600, usdOut: 591 }),
+        defaults,
+      ),
+    ).toEqual([])
+    expect(
+      outputChangeWarnings(
+        quote,
+        pricedRoute({ usdIn: 600, usdOut: 585 }),
+        defaults,
+      ),
+    ).toEqual([
+      {
+        kind: 'EXCESSIVE_OUTPUT_CHANGE',
+        usdValueChange: -15,
+        percentageChange: -2.5,
+      },
+    ])
+  })
+
+  test('does not warn below every minimum input', () => {
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: 400, usdOut: 400 }),
+        pricedRoute({ usdIn: 400, usdOut: 200 }),
+        defaults,
+      ),
+    ).toEqual([])
+  })
+
+  test('does not warn when the output grows', () => {
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: 3000, usdOut: 3000 }),
+        pricedRoute({ usdIn: 3000, usdOut: 3100 }),
+        defaults,
+      ),
+    ).toEqual([])
+  })
+
+  test('does not warn when a USD value is unknown', () => {
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: null, usdOut: 3000 }),
+        pricedRoute({ usdIn: null, usdOut: 2000 }),
+        defaults,
+      ),
+    ).toEqual([])
+  })
+
+  test('uses the excessiveOutputChange thresholds it is given', () => {
+    const thresholds = resolveThresholds({
+      excessiveOutputChange: [{ threshold: -10, minInput: 100 }],
+    })
+
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: 3000, usdOut: 3000 }),
+        pricedRoute({ usdIn: 3000, usdOut: 2850 }),
+        thresholds,
+      ),
+    ).toEqual([])
+    expect(
+      outputChangeWarnings(
+        pricedRoute({ usdIn: 300, usdOut: 300 }),
+        pricedRoute({ usdIn: 300, usdOut: 240 }),
+        thresholds,
+      ),
+    ).toEqual([
+      {
+        kind: 'EXCESSIVE_OUTPUT_CHANGE',
+        usdValueChange: -60,
+        percentageChange: -20,
+      },
+    ])
   })
 })

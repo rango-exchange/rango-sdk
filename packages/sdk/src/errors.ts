@@ -136,3 +136,48 @@ export function quoteErrorFromValidation(
     ...options,
   })
 }
+
+export type ConfirmErrorMetadata = QuoteErrorMetadata
+
+export type ConfirmErrorType = QuoteErrorType
+
+export type ConfirmErrorOptions<T extends ConfirmErrorType = ConfirmErrorType> =
+  QuoteErrorOptions<T>
+
+type AnyConfirmError = {
+  [K in ConfirmErrorType]: ConfirmError<K>
+}[ConfirmErrorType]
+
+export class ConfirmError<
+  T extends ConfirmErrorType = ConfirmErrorType,
+> extends Error {
+  // Type-only, as on QuotesError.
+  declare static readonly [Symbol.hasInstance]: (
+    value: unknown,
+  ) => value is AnyConfirmError
+
+  readonly type: T
+  readonly metadata: ConfirmErrorMetadata[T]
+
+  constructor(message: string, options: ConfirmErrorOptions<T>)
+  constructor(
+    message: string,
+    details: { type: T; metadata: ConfirmErrorMetadata[T] } & ErrorOptions,
+  ) {
+    const { type, metadata, ...options } = details
+    super(message, options)
+    this.name = 'ConfirmError'
+    this.type = type
+    this.metadata = metadata
+  }
+}
+
+// Carries a Quote's error over to confirm(), keeping it as the cause.
+export function confirmErrorFromQuoteError(error: QuoteError): ConfirmError {
+  // `type` and `metadata` of one QuoteError always match, which TypeScript can't see here.
+  return new ConfirmError(error.message, {
+    type: error.type,
+    metadata: error.metadata,
+    cause: error,
+  } as ConfirmErrorOptions)
+}
