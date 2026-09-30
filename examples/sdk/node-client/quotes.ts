@@ -23,11 +23,6 @@ export async function printQuotes(): Promise<Quote[]> {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
 
-    if (quotes.length === 0) {
-      console.log('No route exists for this swap.')
-      return []
-    }
-
     for (const quote of quotes) {
       const swappers = quote.swaps.map((swap) => swap.swapperId).join(' -> ')
       const tags = quote.tags.map((tag) => tag.label).join(', ')
@@ -44,12 +39,20 @@ export async function printQuotes(): Promise<Quote[]> {
     if (!(error instanceof QuotesError)) {
       throw error
     }
-    if (error.type === 'CANCELED') {
-      console.log('The quotes request timed out.')
-    } else {
-      console.error(
-        `The quotes request failed: ${error.message} (error code: ${error.metadata.errorCode}, trace ID: ${error.metadata.traceId})`,
-      )
+    switch (error.type) {
+      case 'CANCELED':
+        console.log('The quotes request timed out.')
+        break
+      case 'NO_ROUTE':
+        console.log(
+          `No route exists for this swap${error.metadata.diagnosisMessage ? `: ${error.metadata.diagnosisMessage}` : '.'}`,
+        )
+        break
+      case 'REQUEST_FAILED':
+        console.error(
+          `The quotes request failed: ${error.message} (error code: ${error.metadata.errorCode}, trace ID: ${error.metadata.traceId})`,
+        )
+        break
     }
     return []
   }

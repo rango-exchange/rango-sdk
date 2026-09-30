@@ -11,9 +11,14 @@ import type {
   MultiRouteSimulationResult,
 } from 'rango-sdk'
 
-import { quoteErrorFromValidation, QuotesError } from './errors.js'
-import { requestFailedMetadata, withAffiliate } from './transport.js'
-import { validateSwaps } from './validation.js'
+import {
+  quoteErrorFromValidation,
+  QuotesError,
+  VALIDATION_ERROR_MESSAGES,
+} from './errors.js'
+import { routeRequestError } from './route.js'
+import { withAffiliate } from './transport.js'
+import { validateRoute } from './validation.js'
 import { quoteWarnings } from './warnings.js'
 
 export type QuotesRequest = Omit<
@@ -58,17 +63,12 @@ export async function fetchQuotes(
   try {
     response = await legacy.getAllRoutes(body, { signal: opts.signal })
   } catch (cause) {
-    if (opts.signal?.aborted) {
-      throw new QuotesError('The quotes request was canceled.', {
-        type: 'CANCELED',
-        cause,
-      })
-    }
-    throw new QuotesError('The quotes request failed.', {
-      type: 'REQUEST_FAILED',
-      metadata: requestFailedMetadata(cause),
+    throw routeRequestError(
       cause,
-    })
+      opts.signal,
+      'quotes',
+      (message, options) => new QuotesError(message, options),
+    )
   }
 
   if (response.error) {
@@ -82,10 +82,20 @@ export async function fetchQuotes(
     })
   }
 
+  if (!response.results?.length) {
+    const diagnosisMessage = response.diagnosisMessages?.[0]
+    throw new QuotesError(VALIDATION_ERROR_MESSAGES.NO_ROUTE, {
+      type: 'NO_ROUTE',
+      metadata: diagnosisMessage === undefined ? {} : { diagnosisMessage },
+      cause: response,
+    })
+  }
+
   const { from, to, amount, slippage, ...routingOptions } = request
   const requestAmount = response.requestAmount ?? amount
-  return (response.results ?? []).map((result) => {
-    const validationError = validateSwaps(result.swaps)
+  return response.results.map((result) => {
+    // The response's diagnosis messages are about the whole request, so a Quote with no swaps gets none.
+    const validationError = validateRoute(result, undefined)
     return {
       requestId: result.requestId,
       outputAmount: result.outputAmount,

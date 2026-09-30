@@ -99,6 +99,17 @@ function response(overrides: Partial<LegacySdk.MultiRouteResponse> = {}) {
   } satisfies LegacySdk.MultiRouteResponse
 }
 
+const BAD_REQUEST = 400
+const UNAUTHORIZED = 401
+const TOO_MANY_REQUESTS = 429
+const SERVER_ERROR = 500
+
+function httpError(status: number, data: unknown) {
+  return Object.assign(new Error(`Request failed with ${status}`), {
+    response: { status, data },
+  })
+}
+
 function sentBody() {
   return legacy.getAllRoutes.mock.lastCall?.[0]
 }
@@ -346,21 +357,102 @@ describe('quotes', () => {
     expect(quotes[0]?.warnings).toEqual([])
   })
 
-  test('resolves to an empty list when no route exists', async () => {
-    const { RangoClient } = await loadSdk()
+  test('attaches NO_ROUTE without a diagnosis message to a Quote with no swaps', async () => {
+    const { RangoClient, QuoteError } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })
     legacy.getAllRoutes.mockResolvedValue(
-      response({ results: [], diagnosisMessages: ['No route'] }),
+      response({
+        results: [
+          { ...result, requestId: 'empty', swaps: [] },
+          { ...result, requestId: 'ok' },
+        ],
+        diagnosisMessages: ['Some swappers are down'],
+      }),
     )
 
-    await expect(client.quotes(request)).resolves.toEqual([])
+    const quotes = await client.quotes(request)
+
+    expect(quotes.map((quote) => quote.requestId)).toEqual(['empty', 'ok'])
+    expect(quotes[0]?.error).toBeInstanceOf(QuoteError)
+    expect(quotes[0]?.error).toMatchObject({ type: 'NO_ROUTE', metadata: {} })
+    expect(quotes[0]?.error?.metadata).not.toHaveProperty('diagnosisMessage')
+    expect(quotes[1]?.error).toBeNull()
   })
 
-  test('throws CANCELED when the signal aborts the request', async () => {
+  test('throws NO_ROUTE with the body error message for an HTTP 400', async () => {
+    const { RangoClient, QuotesError } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const badRequest = httpError(BAD_REQUEST, {
+      error: 'Amount is too small',
+      errorCode: 1,
+      traceId: 2,
+    })
+    legacy.getAllRoutes.mockRejectedValue(badRequest)
+
+    const error = await client.quotes(request).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(QuotesError)
+    expect(error).toMatchObject({
+      type: 'NO_ROUTE',
+      metadata: { diagnosisMessage: 'Amount is too small' },
+      cause: badRequest,
+    })
+  })
+
+  test.each([
+    ['an empty', []],
+    ['a null', null],
+  ])(
+    'throws NO_ROUTE with the first diagnosis message for %s result list',
+    async (_, results) => {
+      const { RangoClient, QuotesError } = await loadSdk()
+      const client = new RangoClient({ apiKey: 'test-key' })
+      const noResults = response({
+        results: results as LegacySdk.MultiRouteSimulationResult[],
+        diagnosisMessages: ['No route', 'Try another amount'],
+      })
+      legacy.getAllRoutes.mockResolvedValue(noResults)
+
+      const error = await client.quotes(request).catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(QuotesError)
+      expect(error).toMatchObject({
+        type: 'NO_ROUTE',
+        metadata: { diagnosisMessage: 'No route' },
+        cause: noResults,
+      })
+    },
+  )
+
+  test.each([
+    ['an empty', []],
+    ['a null', null],
+  ])(
+    'throws NO_ROUTE without a diagnosis message for %s result list with no diagnosis',
+    async (_, results) => {
+      const { RangoClient } = await loadSdk()
+      const client = new RangoClient({ apiKey: 'test-key' })
+      legacy.getAllRoutes.mockResolvedValue(
+        response({
+          results: results as LegacySdk.MultiRouteSimulationResult[],
+          diagnosisMessages: [],
+        }),
+      )
+
+      const error = await client.quotes(request).catch((e: unknown) => e)
+
+      expect(error).toMatchObject({ type: 'NO_ROUTE', metadata: {} })
+      expect((error as Sdk.QuotesError).metadata).not.toHaveProperty(
+        'diagnosisMessage',
+      )
+    },
+  )
+
+  test('throws CANCELED when the signal aborts the request, even for an HTTP 400', async () => {
     const { RangoClient, QuotesError } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })
     const controller = new AbortController()
-    const canceled = new Error('canceled')
+    const canceled = httpError(BAD_REQUEST, { error: 'canceled' })
     legacy.getAllRoutes.mockImplementation(async () => {
       controller.abort()
       throw canceled
@@ -374,24 +466,29 @@ describe('quotes', () => {
     expect(error).toMatchObject({ type: 'CANCELED', cause: canceled })
   })
 
-  test('throws REQUEST_FAILED for a transport failure, keeping the cause', async () => {
-    const { RangoClient, QuotesError } = await loadSdk()
-    const client = new RangoClient({ apiKey: 'test-key' })
-    const httpError = Object.assign(new Error('Request failed with 500'), {
-      response: { status: 500, data: { errorCode: 42, traceId: 7 } },
-    })
-    legacy.getAllRoutes.mockRejectedValue(httpError)
+  test.each([UNAUTHORIZED, TOO_MANY_REQUESTS, SERVER_ERROR])(
+    'throws REQUEST_FAILED for an HTTP %i, keeping the cause',
+    async (status) => {
+      const { RangoClient, QuotesError } = await loadSdk()
+      const client = new RangoClient({ apiKey: 'test-key' })
+      const failure = httpError(status, {
+        error: 'Failed',
+        errorCode: 42,
+        traceId: 7,
+      })
+      legacy.getAllRoutes.mockRejectedValue(failure)
 
-    const error = await client.quotes(request).catch((e: unknown) => e)
+      const error = await client.quotes(request).catch((e: unknown) => e)
 
-    expect(error).toBeInstanceOf(QuotesError)
-    expect(error).toBeInstanceOf(Error)
-    expect(error).toMatchObject({
-      type: 'REQUEST_FAILED',
-      metadata: { errorCode: 42, traceId: 7 },
-      cause: httpError,
-    })
-  })
+      expect(error).toBeInstanceOf(QuotesError)
+      expect(error).toBeInstanceOf(Error)
+      expect(error).toMatchObject({
+        type: 'REQUEST_FAILED',
+        metadata: { errorCode: 42, traceId: 7 },
+        cause: failure,
+      })
+    },
+  )
 
   test('throws REQUEST_FAILED with null metadata for a network failure', async () => {
     const { RangoClient } = await loadSdk()
@@ -443,6 +540,8 @@ describe('quotes', () => {
       if (error.type === 'REQUEST_FAILED') {
         expectTypeOf(error.metadata).toEqualTypeOf<Sdk.RequestFailedMetadata>()
         metadata = error.metadata
+      } else if (error.type === 'NO_ROUTE') {
+        expectTypeOf(error.metadata).toEqualTypeOf<Sdk.NoRouteMetadata>()
       } else {
         expectTypeOf(error.type).toEqualTypeOf<'CANCELED'>()
         expectTypeOf(error.metadata).toEqualTypeOf<undefined>()

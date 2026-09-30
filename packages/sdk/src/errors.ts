@@ -7,6 +7,7 @@ export type RequestFailedMetadata = {
 }
 
 export type QuotesErrorMetadata = {
+  NO_ROUTE: NoRouteMetadata
   REQUEST_FAILED: RequestFailedMetadata
   CANCELED: undefined
 }

@@ -97,11 +97,10 @@ try {
     },
     { signal: controller.signal },
   )
-
-  if (quotes.length === 0) {
-    console.log('No route exists for this swap.')
-  }
 } catch (error) {
+  if (error instanceof QuotesError && error.type === 'NO_ROUTE') {
+    console.log('No route exists for this swap.', error.metadata.diagnosisMessage)
+  }
   if (error instanceof QuotesError && error.type === 'REQUEST_FAILED') {
     console.error(error.metadata.errorCode, error.metadata.traceId)
   }
@@ -110,7 +109,7 @@ try {
 
 The request is a `QuotesRequest`: the source and destination assets, the amount, and optional routing options such as `slippage`, `swappers` or `blockchains`. It has no affiliate fields. The client adds them from its current affiliate settings on every call, so a `setAffiliate()` applies to the next call.
 
-When no route exists, `quotes()` resolves to an empty list. It doesn't throw.
+When no route exists, `quotes()` throws a `QuotesError` of type `NO_ROUTE`, the same way [`quote()`](#quote) does. It never resolves to an empty list.
 
 ### The Quote shape
 
@@ -119,14 +118,15 @@ Each **Quote** has:
 - `requestId`, `outputAmount`, `resultType`, `swaps`, `scores`, `tags` and `missingBlockchains`, from the routing result.
 - `from`, `to`, `requestAmount`, `slippage` and `routingOptions`: the request the **Quote** came from. `routingOptions` holds the other routing options you sent.
 - `warnings`: the [warnings](#warnings) that apply to this **Quote**: `HIGH_VALUE_LOSS`, `UNKNOWN_PRICE`, `INSUFFICIENT_SLIPPAGE` and `HIGH_SLIPPAGE`. Use them to badge risky options before the user picks one.
-- `error`: `null` when the **Quote** is usable, or a `QuoteError` (not thrown) when it isn't. The type is `AMOUNT_OUT_OF_RANGE` or `SLIPPAGE_TOO_LOW`, with the same `metadata` that [`quote()`](#quote) would throw. Disable or hide a **Quote** that has an error: [`confirm()`](#confirm) refuses it. One bad **Quote** never makes `quotes()` fail.
+- `error`: `null` when the **Quote** is usable, or a `QuoteError` (not thrown) when it isn't. The type is `NO_ROUTE` for a **Quote** with no swaps (without a `diagnosisMessage`), or `AMOUNT_OUT_OF_RANGE` or `SLIPPAGE_TOO_LOW`, with the same `metadata` that [`quote()`](#quote) would throw. Disable or hide a **Quote** that has an error: [`confirm()`](#confirm) refuses it. One bad **Quote** never makes `quotes()` fail.
 
 ### Errors
 
-`quotes()` throws a `QuotesError` when the request itself fails. Its `type` is one of:
+`quotes()` throws a `QuotesError` when no route exists or the request itself fails. Its `type` is one of:
 
 - `CANCELED`: the `signal` you passed aborted the request.
-- `REQUEST_FAILED`: an HTTP or network failure, or the API answered with an error. `metadata` holds `errorCode` and `traceId`. Share the trace ID with Rango support when you report a problem.
+- `NO_ROUTE`: no route exists. The server answered HTTP 400, or returned no results. `metadata.diagnosisMessage` holds the server's reason when it gives one: the HTTP 400 body's error message, or the response's first diagnosis message.
+- `REQUEST_FAILED`: any other HTTP or network failure, or the API answered with an error. The HTTP status stays on `cause`. `metadata` holds `errorCode` and `traceId`. Share the trace ID with Rango support when you report a problem.
 
 `metadata` narrows on `type`. This narrowing needs TypeScript 5.3 or later. On older versions, `instanceof QuotesError` doesn't narrow `metadata`, and it stays typed as `any`. `cause` holds the underlying error, or the API response when the API answered with an error.
 

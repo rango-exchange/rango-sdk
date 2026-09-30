@@ -20,14 +20,19 @@ export type RouteErrorFactory<E extends Error> = (
   options: QuoteErrorOptions,
 ) => E
 
-export type RouteRequestName = 'quote' | 'confirm'
+export type RouteRequestName = 'quote' | 'quotes' | 'confirm'
+
+export type RequestErrorFactory<E extends Error> = (
+  message: string,
+  options: QuoteErrorOptions<'CANCELED' | 'NO_ROUTE' | 'REQUEST_FAILED'>,
+) => E
 
 // Maps a transport failure to CANCELED, NO_ROUTE (HTTP 400) or REQUEST_FAILED.
 export function routeRequestError<E extends Error>(
   cause: unknown,
   signal: AbortSignal | undefined,
   requestName: RouteRequestName,
-  createError: RouteErrorFactory<E>,
+  createError: RequestErrorFactory<E>,
 ): E {
   if (signal?.aborted) {
     return createError(`The ${requestName} request was canceled.`, {
