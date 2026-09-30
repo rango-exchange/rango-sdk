@@ -1,6 +1,8 @@
 import type { Affiliate } from './client.js'
 import type { QuoteError } from './errors.js'
+import type { ValidationThresholds } from './thresholds.js'
 import type { RequestOptions } from './transport.js'
+import type { QuoteWarning } from './warnings.js'
 import type {
   Asset,
   RangoClient as LegacyRangoClient,
@@ -12,6 +14,7 @@ import type {
 import { quoteErrorFromValidation, QuotesError } from './errors.js'
 import { requestFailedMetadata, withAffiliate } from './transport.js'
 import { validateSwaps } from './validation.js'
+import { quoteWarnings } from './warnings.js'
 
 export type QuotesRequest = Omit<
   MultiRouteRequest,
@@ -38,13 +41,14 @@ export type Quote = Pick<
   requestAmount: string
   slippage: string | undefined
   routingOptions: QuoteRoutingOptions
-  warnings: never[]
+  warnings: QuoteWarning[]
   error: QuoteError | null
 }
 
 export async function fetchQuotes(
   legacy: LegacyRangoClient,
   affiliate: Affiliate | undefined,
+  thresholds: ValidationThresholds,
   request: QuotesRequest,
   opts: RequestOptions = {},
 ): Promise<Quote[]> {
@@ -79,6 +83,7 @@ export async function fetchQuotes(
   }
 
   const { from, to, amount, slippage, ...routingOptions } = request
+  const requestAmount = response.requestAmount ?? amount
   return (response.results ?? []).map((result) => {
     const validationError = validateSwaps(result.swaps)
     return {
@@ -91,10 +96,18 @@ export async function fetchQuotes(
       missingBlockchains: result.missingBlockchains,
       from: response.from ?? from,
       to: response.to ?? to,
-      requestAmount: response.requestAmount ?? amount,
+      requestAmount,
       slippage,
       routingOptions,
-      warnings: [],
+      warnings: quoteWarnings(
+        {
+          requestAmount,
+          outputAmount: result.outputAmount,
+          swaps: result.swaps,
+        },
+        slippage,
+        thresholds,
+      ),
       error: validationError && quoteErrorFromValidation(validationError),
     }
   })

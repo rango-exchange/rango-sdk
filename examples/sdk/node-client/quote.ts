@@ -2,6 +2,8 @@ import type { QuoteRequest } from '@rango-dev/sdk'
 
 import { getClient, QuoteError } from '@rango-dev/sdk'
 
+import { printWarnings } from './warnings.js'
+
 const TIMEOUT_MS = 30_000
 
 // Set these to wallets you own; the server checks their balances.
@@ -22,7 +24,7 @@ const request: QuoteRequest = {
 
 export async function printRoute() {
   try {
-    const { route } = await getClient().quote(request, {
+    const { route, warnings } = await getClient().quote(request, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
 
@@ -30,6 +32,7 @@ export async function printRoute() {
     console.log(
       `Best route: ${route.requestAmount} ${route.from.symbol} -> ${route.outputAmount} ${route.to.symbol} via ${swappers}`,
     )
+    printWarnings(warnings)
   } catch (error) {
     if (!(error instanceof QuoteError)) {
       throw error

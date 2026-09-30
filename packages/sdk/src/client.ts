@@ -1,11 +1,13 @@
 import type { QuoteRequest, QuoteResult } from './quote.js'
 import type { Quote, QuotesRequest } from './quotes.js'
+import type { ValidationConfig } from './thresholds.js'
 import type { RequestOptions } from './transport.js'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
 import { fetchQuote } from './quote.js'
 import { fetchQuotes } from './quotes.js'
+import { resolveThresholds } from './thresholds.js'
 
 const DEFAULT_BASE_URL = 'https://api.rango.exchange'
 
@@ -19,12 +21,14 @@ export type RangoClientConfig = {
   apiKey: string
   baseUrl?: string
   affiliate?: Affiliate
+  validation?: ValidationConfig
 }
 
 type ResolvedConfig = {
   readonly apiKey: string
   readonly baseUrl: string
   affiliate?: Affiliate
+  readonly validation?: ValidationConfig
 }
 
 export class RangoClient {
@@ -36,6 +40,7 @@ export class RangoClient {
       apiKey: config.apiKey,
       baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
       affiliate: config.affiliate && structuredClone(config.affiliate),
+      validation: config.validation && structuredClone(config.validation),
     }
     this.#legacy = new LegacyRangoClient(
       this.#config.apiKey,
@@ -51,14 +56,26 @@ export class RangoClient {
     request: QuoteRequest,
     opts?: RequestOptions,
   ): Promise<QuoteResult> {
-    return fetchQuote(this.#legacy, this.#config.affiliate, request, opts)
+    return fetchQuote(
+      this.#legacy,
+      this.#config.affiliate,
+      resolveThresholds(this.#config.validation, opts?.validation),
+      request,
+      opts,
+    )
   }
 
   async quotes(
     request: QuotesRequest,
     opts?: RequestOptions,
   ): Promise<Quote[]> {
-    return fetchQuotes(this.#legacy, this.#config.affiliate, request, opts)
+    return fetchQuotes(
+      this.#legacy,
+      this.#config.affiliate,
+      resolveThresholds(this.#config.validation, opts?.validation),
+      request,
+      opts,
+    )
   }
 }
 

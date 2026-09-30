@@ -191,6 +191,83 @@ describe('quote', () => {
     })
   })
 
+  test('resolves with every warning that applies, including INSUFFICIENT_BALANCE', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const shortOnFee = {
+      asset: ETH,
+      requiredAmount: { amount: '2000000000000000000', decimals: 18 },
+      currentAmount: { amount: '1000000000000000000', decimals: 18 },
+      ok: false,
+      reason: 'FEE_AND_INPUT_ASSET' as const,
+    }
+    legacy.getBestRoute.mockResolvedValue(
+      response({
+        result: {
+          outputAmount: '2400',
+          resultType: LegacySdk.RoutingResultType.OK,
+          swaps: [swap({ toAmount: '2400' })],
+        },
+        validationStatus: [
+          {
+            blockchain: 'ETH',
+            wallets: [
+              {
+                address: '0xfrom',
+                addressIsValid: true,
+                requiredAssets: [shortOnFee],
+                validResult: true,
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    const { warnings } = await client.quote({ ...request, slippage: '6' })
+
+    expect(warnings).toEqual([
+      {
+        kind: 'HIGH_VALUE_LOSS',
+        usdIn: 3000,
+        usdOut: 2400,
+        priceImpact: -20,
+        totalFee: 0,
+        level: 'high',
+      },
+      { kind: 'HIGH_SLIPPAGE', slippage: '6' },
+      {
+        kind: 'INSUFFICIENT_BALANCE',
+        blockchain: 'ETH',
+        address: '0xfrom',
+        asset: ETH,
+        required: shortOnFee.requiredAmount,
+        current: shortOnFee.currentAmount,
+        reason: 'FEE_AND_INPUT_ASSET',
+      },
+    ])
+    expectTypeOf(warnings).toEqualTypeOf<Sdk.RouteWarning[]>()
+  })
+
+  test('uses the client validation thresholds, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { highSlippage: 10 },
+    })
+
+    const withClientConfig = await client.quote({ ...request, slippage: '6' })
+    const withOverride = await client.quote(
+      { ...request, slippage: '6' },
+      { validation: { highSlippage: 2 } },
+    )
+
+    expect(withClientConfig.warnings).toEqual([])
+    expect(withOverride.warnings).toEqual([
+      { kind: 'HIGH_SLIPPAGE', slippage: '6' },
+    ])
+  })
+
   test('throws CANCELED when the signal aborts the request, even for an HTTP 400', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })

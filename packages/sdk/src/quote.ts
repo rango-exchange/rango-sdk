@@ -1,5 +1,7 @@
 import type { Affiliate } from './client.js'
+import type { ValidationThresholds } from './thresholds.js'
 import type { RequestOptions } from './transport.js'
+import type { RouteWarning } from './warnings.js'
 import type {
   BestRouteRequest,
   BestRouteResponse,
@@ -19,6 +21,7 @@ import {
   withAffiliate,
 } from './transport.js'
 import { validateRoute } from './validation.js'
+import { balanceWarnings, quoteWarnings } from './warnings.js'
 
 const HTTP_BAD_REQUEST = 400
 
@@ -42,12 +45,13 @@ export type Route = Pick<
 
 export type QuoteResult = {
   route: Route
-  warnings: never[]
+  warnings: RouteWarning[]
 }
 
 export async function fetchQuote(
   legacy: LegacyRangoClient,
   affiliate: Affiliate | undefined,
+  thresholds: ValidationThresholds,
   request: QuoteRequest,
   opts: RequestOptions = {},
 ): Promise<QuoteResult> {
@@ -104,12 +108,13 @@ export async function fetchQuote(
   }
 
   const { result } = response
+  const requestAmount = response.requestAmount ?? request.amount
   return {
     route: {
       requestId: response.requestId,
       from: response.from ?? request.from,
       to: response.to ?? request.to,
-      requestAmount: response.requestAmount ?? request.amount,
+      requestAmount,
       outputAmount: result.outputAmount,
       resultType: result.resultType,
       swaps: result.swaps,
@@ -118,6 +123,17 @@ export async function fetchQuote(
       destination: request.destination,
       slippage: request.slippage,
     },
-    warnings: [],
+    warnings: [
+      ...quoteWarnings(
+        {
+          requestAmount,
+          outputAmount: result.outputAmount,
+          swaps: result.swaps,
+        },
+        request.slippage,
+        thresholds,
+      ),
+      ...balanceWarnings(response.validationStatus),
+    ],
   }
 }

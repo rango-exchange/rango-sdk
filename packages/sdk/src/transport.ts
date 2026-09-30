@@ -1,8 +1,10 @@
 import type { Affiliate } from './client.js'
 import type { RequestFailedMetadata } from './errors.js'
+import type { ValidationConfig } from './thresholds.js'
 
 export type RequestOptions = {
   signal?: AbortSignal
+  validation?: ValidationConfig
 }
 
 type AffiliateFields = {

@@ -16,8 +16,25 @@ export type {
 } from './errors.js'
 export type { QuoteRequest, QuoteResult, Route } from './quote.js'
 export type { Quote, QuoteRoutingOptions, QuotesRequest } from './quotes.js'
+export type {
+  ThresholdCriterion,
+  ValidationConfig,
+  ValidationThresholds,
+} from './thresholds.js'
 export type { RequestOptions } from './transport.js'
 export type {
+  HighSlippageWarning,
+  HighValueLossLevel,
+  HighValueLossWarning,
+  InsufficientBalanceReason,
+  InsufficientBalanceWarning,
+  InsufficientSlippageWarning,
+  QuoteWarning,
+  RouteWarning,
+  UnknownPriceWarning,
+} from './warnings.js'
+export type {
+  Amount,
   AmountRestrictionType,
   Asset,
   BlockchainValidationStatus,

@@ -37,11 +37,47 @@ const request: Sdk.QuotesRequest = {
   swappers: ['Across'],
 }
 
+function swap(overrides: Partial<Sdk.SwapResult> = {}): Sdk.SwapResult {
+  const asset = {
+    blockchain: 'ETH',
+    address: null,
+    symbol: 'ETH',
+    logo: '',
+    blockchainLogo: '',
+    decimals: 18,
+    usdPrice: 3000,
+  }
+  return {
+    swapperId: 'Across',
+    swapperLogo: '',
+    swapperType: 'BRIDGE',
+    swapChainType: 'INTER_CHAIN',
+    from: asset,
+    to: { ...asset, blockchain: 'BSC', symbol: 'USDC', usdPrice: 1 },
+    toAmount: '3000',
+    fromAmount: '1',
+    fromAmountMaxValue: '10',
+    fromAmountMinValue: '0.1',
+    fromAmountPrecision: null,
+    fromAmountRestrictionType: 'INCLUSIVE',
+    routes: null,
+    internalSwaps: null,
+    fee: [],
+    estimatedTimeInSeconds: 60,
+    timeStat: null,
+    includesDestinationTx: false,
+    maxRequiredSign: 1,
+    recommendedSlippage: { error: false, slippage: '1' },
+    warnings: [],
+    ...overrides,
+  }
+}
+
 const result: LegacySdk.MultiRouteSimulationResult = {
   requestId: 'request-1',
   outputAmount: '3000',
   resultType: LegacySdk.RoutingResultType.OK,
-  swaps: [],
+  swaps: [swap()],
   scores: [{ preferenceType: 'FEE', score: 90 }],
   tags: [{ label: 'Recommended', value: 'RECOMMENDED' }],
   missingBlockchains: [],
@@ -150,7 +186,7 @@ describe('quotes', () => {
         requestId: 'request-1',
         outputAmount: '3000',
         resultType: 'OK',
-        swaps: [],
+        swaps: [swap()],
         scores: [{ preferenceType: 'FEE', score: 90 }],
         tags: [{ label: 'Recommended', value: 'RECOMMENDED' }],
         missingBlockchains: [],
@@ -168,14 +204,8 @@ describe('quotes', () => {
   test('attaches a QuoteError to each unusable Quote and still returns the others', async () => {
     const { RangoClient, QuoteError } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })
-    const baseSwap = {
-      fromAmount: '1',
-      fromAmountMinValue: '0.1',
-      fromAmountMaxValue: '10',
-      fromAmountRestrictionType: 'INCLUSIVE',
-      recommendedSlippage: { error: false, slippage: '1' },
-    } as LegacySdk.SwapResult
-    const tooSmall = { ...baseSwap, fromAmountMinValue: '2' }
+    const baseSwap = swap()
+    const tooSmall = swap({ fromAmountMinValue: '2' })
     legacy.getAllRoutes.mockResolvedValue(
       response({
         results: [
@@ -222,6 +252,98 @@ describe('quotes', () => {
         minRequiredSlippage: '4',
       },
     })
+  })
+
+  test('gives each Quote its own balance-independent warnings', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const unpriced = swap()
+    unpriced.to = { ...unpriced.to, usdPrice: null }
+    legacy.getAllRoutes.mockResolvedValue(
+      response({
+        results: [
+          { ...result, requestId: 'clean' },
+          {
+            ...result,
+            requestId: 'loss',
+            outputAmount: '2400',
+            swaps: [swap({ toAmount: '2400' })],
+          },
+          { ...result, requestId: 'unpriced', swaps: [unpriced] },
+          {
+            ...result,
+            requestId: 'slippage',
+            swaps: [
+              swap({ recommendedSlippage: { error: false, slippage: '2' } }),
+            ],
+          },
+        ],
+      }),
+    )
+
+    const quotes = await client.quotes(request)
+
+    expect(
+      quotes.map(({ requestId, warnings }) => [requestId, warnings]),
+    ).toEqual([
+      ['clean', []],
+      [
+        'loss',
+        [
+          {
+            kind: 'HIGH_VALUE_LOSS',
+            usdIn: 3000,
+            usdOut: 2400,
+            priceImpact: -20,
+            totalFee: 0,
+            level: 'high',
+          },
+        ],
+      ],
+      ['unpriced', [{ kind: 'UNKNOWN_PRICE' }]],
+      [
+        'slippage',
+        [
+          {
+            kind: 'INSUFFICIENT_SLIPPAGE',
+            recommendedSlippages: [{ swapIndex: 0, slippage: '2' }],
+            minRequired: '2',
+          },
+        ],
+      ],
+    ])
+    expectTypeOf<Sdk.Quote['warnings']>().toEqualTypeOf<Sdk.QuoteWarning[]>()
+  })
+
+  test('raises HIGH_SLIPPAGE from the client thresholds, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { highSlippage: 1 },
+    })
+
+    const withClientConfig = await client.quotes(request)
+    const withOverride = await client.quotes(request, {
+      validation: { highSlippage: 5 },
+    })
+
+    expect(withClientConfig[0]?.warnings).toEqual([
+      { kind: 'HIGH_SLIPPAGE', slippage: '1.5' },
+    ])
+    expect(withOverride[0]?.warnings).toEqual([])
+  })
+
+  test('skips the slippage warnings when the request has no slippage', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { highSlippage: -1 },
+    })
+    const { slippage: _, ...withoutSlippage } = request
+
+    const quotes = await client.quotes(withoutSlippage)
+
+    expect(quotes[0]?.warnings).toEqual([])
   })
 
   test('resolves to an empty list when no route exists', async () => {

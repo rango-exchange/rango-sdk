@@ -2,6 +2,8 @@ import type { QuotesRequest } from '@rango-dev/sdk'
 
 import { getClient, QuotesError } from '@rango-dev/sdk'
 
+import { printWarnings } from './warnings.js'
+
 const TIMEOUT_MS = 30_000
 
 const request: QuotesRequest = {
@@ -32,6 +34,7 @@ export async function printQuotes() {
       console.log(
         `${quote.requestAmount} ${quote.from.symbol} -> ${quote.outputAmount} ${quote.to.symbol} via ${swappers}${tags ? ` [${tags}]` : ''}`,
       )
+      printWarnings(quote.warnings)
     }
   } catch (error) {
     if (!(error instanceof QuotesError)) {
