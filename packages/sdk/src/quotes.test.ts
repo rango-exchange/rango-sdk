@@ -344,6 +344,58 @@ describe('quotes', () => {
     expect(withOverride[0]?.warnings).toEqual([])
   })
 
+  test('raises HIGH_FEE and LONG_DURATION at the default thresholds', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+    const networkFee: Sdk.SwapResult['fee'][number] = {
+      name: 'Network Fee',
+      expenseType: 'FROM_SOURCE_WALLET',
+      asset: ETH,
+      amount: '5',
+      price: 3,
+      meta: null,
+    }
+    legacy.getAllRoutes.mockResolvedValue(
+      response({
+        results: [
+          {
+            ...result,
+            swaps: [
+              swap({ fee: [networkFee], estimatedTimeInSeconds: 600 }),
+              swap({ fee: [networkFee], estimatedTimeInSeconds: 300 }),
+            ],
+          },
+        ],
+      }),
+    )
+
+    const quotes = await client.quotes(request)
+
+    expect(quotes[0]?.warnings).toEqual([
+      { kind: 'HIGH_FEE', totalFeeUsd: 30 },
+      { kind: 'LONG_DURATION', estimatedTimeInSeconds: 900 },
+    ])
+  })
+
+  test('raises HIGH_FEE and LONG_DURATION from the client thresholds, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { highFee: 0, longDuration: 60 },
+    })
+
+    const withClientConfig = await client.quotes(request)
+    const withOverride = await client.quotes(request, {
+      validation: { highFee: 1, longDuration: 61 },
+    })
+
+    expect(withClientConfig[0]?.warnings).toEqual([
+      { kind: 'HIGH_FEE', totalFeeUsd: 0 },
+      { kind: 'LONG_DURATION', estimatedTimeInSeconds: 60 },
+    ])
+    expect(withOverride[0]?.warnings).toEqual([])
+  })
+
   test('skips the slippage warnings when the request has no slippage', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({

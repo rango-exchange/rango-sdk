@@ -268,6 +268,25 @@ describe('quote', () => {
     ])
   })
 
+  test('raises HIGH_FEE and LONG_DURATION from the client thresholds, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { highFee: 0, longDuration: 60 },
+    })
+
+    const withClientConfig = await client.quote(request)
+    const withOverride = await client.quote(request, {
+      validation: { highFee: 1, longDuration: 61 },
+    })
+
+    expect(withClientConfig.warnings).toEqual([
+      { kind: 'HIGH_FEE', totalFeeUsd: 0 },
+      { kind: 'LONG_DURATION', estimatedTimeInSeconds: 60 },
+    ])
+    expect(withOverride.warnings).toEqual([])
+  })
+
   test.each<[string, Record<string, unknown>, string, string]>([
     ['from is missing', { from: null }, 'from', 'MISSING'],
     ['to is missing', { to: undefined }, 'to', 'MISSING'],

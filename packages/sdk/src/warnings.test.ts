@@ -203,20 +203,22 @@ describe('quoteWarnings: value loss and price', () => {
     })
 
     test.each([
-      { name: 'just above the low threshold', usdOut: 97.1, level: 'low' },
+      { name: 'just above the low threshold', usdOut: 97.1, level: null },
       {
         name: 'between the low and highValueLoss thresholds',
         usdOut: 98,
-        level: 'low',
+        level: null,
       },
       {
         name: 'exactly at the highValueLoss threshold',
         usdOut: 99,
-        level: 'low',
+        level: null,
       },
       { name: 'exactly at the low threshold', usdOut: 97, level: 'low' },
       { name: 'just below the low threshold', usdOut: 96.9, level: 'low' },
+      { name: 'just above the high threshold', usdOut: 90.1, level: 'low' },
       { name: 'exactly at the high threshold', usdOut: 90, level: 'high' },
+      { name: 'below the high threshold', usdOut: 80, level: 'high' },
     ] as const)(
       'returns HIGH_VALUE_LOSS for a price impact $name',
       ({ usdOut, level }) => {
@@ -310,6 +312,114 @@ describe('quoteWarnings: value loss and price', () => {
     expect(quoteWarnings(route, undefined, defaults)).toEqual([
       { kind: 'UNKNOWN_PRICE' },
     ])
+  })
+})
+
+describe('quoteWarnings: fee', () => {
+  // A route with no price impact whose swaps charge these fees.
+  function charging(...swapFees: SwapFee[][]) {
+    const base = swap()
+    return {
+      requestAmount: '1',
+      outputAmount: '3000',
+      swaps: swapFees.map((fees) =>
+        swap({ to: { ...base.to, usdPrice: 1 }, fee: fees }),
+      ),
+    }
+  }
+
+  test.each([
+    { name: 'just below the threshold', amount: '29.99', raised: false },
+    { name: 'exactly at the threshold', amount: '30', raised: true },
+    { name: 'above the threshold', amount: '45', raised: true },
+  ])('HIGH_FEE for a total fee $name', ({ amount, raised }) => {
+    const route = charging([fee({ amount, price: 1 })])
+
+    expect(quoteWarnings(route, undefined, defaults)).toEqual(
+      raised ? [{ kind: 'HIGH_FEE', totalFeeUsd: Number(amount) }] : [],
+    )
+  })
+
+  test('sums every fee in every swap, including fees taken from the output', () => {
+    const route = charging(
+      [fee({ amount: '10', price: 1 }), fee({ amount: '2', price: 2.5 })],
+      [fee({ amount: '15', price: 1, expenseType: 'DECREASE_FROM_OUTPUT' })],
+    )
+
+    expect(quoteWarnings(route, undefined, defaults)).toEqual([
+      { kind: 'HIGH_FEE', totalFeeUsd: 30 },
+    ])
+  })
+
+  test('skips HIGH_FEE when any fee in any swap has an unknown price', () => {
+    const route = charging(
+      [fee({ amount: '100', price: 1 })],
+      [fee({ amount: '1', price: null })],
+    )
+
+    expect(quoteWarnings(route, undefined, defaults)).toEqual([])
+  })
+
+  test('raises HIGH_FEE from the highFee threshold', () => {
+    const route = charging([fee({ amount: '10', price: 1 })])
+
+    expect(
+      quoteWarnings(route, undefined, resolveThresholds({ highFee: 10 })),
+    ).toEqual([{ kind: 'HIGH_FEE', totalFeeUsd: 10 }])
+    expect(
+      quoteWarnings(route, undefined, resolveThresholds({ highFee: 11 })),
+    ).toEqual([])
+  })
+})
+
+describe('quoteWarnings: duration', () => {
+  // A route with no price impact of two swaps taking these times.
+  function taking(times: { first: number; second: number | null }) {
+    const base = swap()
+    const priced = { to: { ...base.to, usdPrice: 1 } }
+    return {
+      requestAmount: '1',
+      outputAmount: '3000',
+      swaps: [
+        swap({ ...priced, estimatedTimeInSeconds: times.first }),
+        // The server can omit the time despite the type.
+        { ...swap(priced), estimatedTimeInSeconds: times.second as number },
+      ],
+    }
+  }
+
+  test.each([
+    { name: 'just below the threshold', first: 600, second: 299, total: 899 },
+    { name: 'exactly at the threshold', first: 600, second: 300, total: 900 },
+    { name: 'above the threshold', first: 600, second: 600, total: 1200 },
+  ])('LONG_DURATION for a total time $name', ({ first, second, total }) => {
+    expect(
+      quoteWarnings(taking({ first, second }), undefined, defaults),
+    ).toEqual(
+      total >= defaults.longDuration
+        ? [{ kind: 'LONG_DURATION', estimatedTimeInSeconds: total }]
+        : [],
+    )
+  })
+
+  test('counts a swap with no estimated time as 0', () => {
+    expect(
+      quoteWarnings(taking({ first: 900, second: null }), undefined, defaults),
+    ).toEqual([{ kind: 'LONG_DURATION', estimatedTimeInSeconds: 900 }])
+    expect(
+      quoteWarnings(taking({ first: 899, second: null }), undefined, defaults),
+    ).toEqual([])
+  })
+
+  test('raises LONG_DURATION from the longDuration threshold', () => {
+    const route = taking({ first: 60, second: 60 })
+
+    expect(
+      quoteWarnings(route, undefined, resolveThresholds({ longDuration: 120 })),
+    ).toEqual([{ kind: 'LONG_DURATION', estimatedTimeInSeconds: 120 }])
+    expect(
+      quoteWarnings(route, undefined, resolveThresholds({ longDuration: 121 })),
+    ).toEqual([])
   })
 })
 

@@ -418,6 +418,25 @@ describe('confirm', () => {
     expect(warnings).toEqual([])
   })
 
+  test('raises HIGH_FEE and LONG_DURATION from the client thresholds, overridden per call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+      validation: { highFee: 0, longDuration: 60 },
+    })
+
+    const withClientConfig = await client.confirm(quote(), wallets)
+    const withOverride = await client.confirm(quote(), wallets, {
+      validation: { highFee: 1, longDuration: 61 },
+    })
+
+    expect(withClientConfig.warnings).toEqual([
+      { kind: 'HIGH_FEE', totalFeeUsd: 0 },
+      { kind: 'LONG_DURATION', estimatedTimeInSeconds: 60 },
+    ])
+    expect(withOverride.warnings).toEqual([])
+  })
+
   test('resolves with the quote() warnings, including INSUFFICIENT_BALANCE', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({ apiKey: 'test-key' })

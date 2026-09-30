@@ -120,7 +120,7 @@ Each **Quote** has:
 
 - `requestId`, `outputAmount`, `resultType`, `swaps`, `scores`, `tags` and `missingBlockchains`, from the routing result.
 - `from`, `to`, `requestAmount`, `slippage` and `routingOptions`: the request the **Quote** came from. `routingOptions` holds the other routing options you sent.
-- `warnings`: the [warnings](#warnings) that apply to this **Quote**: `HIGH_VALUE_LOSS`, `UNKNOWN_PRICE`, `INSUFFICIENT_SLIPPAGE` and `HIGH_SLIPPAGE`. Use them to badge risky options before the user picks one.
+- `warnings`: the [warnings](#warnings) that apply to this **Quote**: `HIGH_VALUE_LOSS`, `UNKNOWN_PRICE`, `INSUFFICIENT_SLIPPAGE`, `HIGH_SLIPPAGE`, `HIGH_FEE` and `LONG_DURATION`. Use them to badge risky, expensive or slow options before the user picks one.
 - `error`: `null` when the **Quote** is usable, or a `QuoteError` (not thrown) when it isn't. The type is `NO_ROUTE` for a **Quote** with no swaps (without a `diagnosisMessage`), or `AMOUNT_OUT_OF_RANGE` or `SLIPPAGE_TOO_LOW`, with the same `metadata` that [`quote()`](#quote) would throw. Disable or hide a **Quote** that has an error: [`confirm()`](#confirm) refuses it. One bad **Quote** never makes `quotes()` fail.
 
 ### Errors
@@ -342,10 +342,12 @@ A warning means the result is usable but risky. Warnings are returned, never thr
 
 Each warning is an object discriminated by `kind`:
 
-- `HIGH_VALUE_LOSS`: the user loses a large share of the value. It has `usdIn`, `usdOut`, `priceImpact` (a negative percentage, such as `-12.5`), `totalFee` (the USD value of the fees not taken from the output) and `level` (`low` or `high`). The USD values come from the assets' USD prices and each fee's own `price`. It's raised when an entry of the `highValueLoss` thresholds matches: the price impact is at or below its `threshold` and the input value is at least its `minInput`. `level` is `high` when the price impact is at or below `priceImpact.high`, and `low` otherwise, including when the price impact is above `priceImpact.low`. An output worth 0 USD is a price impact of `-100`.
+- `HIGH_VALUE_LOSS`: the user loses a large share of the value. It has `usdIn`, `usdOut`, `priceImpact` (a negative percentage, such as `-12.5`), `totalFee` (the USD value of the fees not taken from the output) and `level` (`low`, `high` or `null`). The USD values come from the assets' USD prices and each fee's own `price`. It's raised when an entry of the `highValueLoss` thresholds matches: the price impact is at or below its `threshold` and the input value is at least its `minInput`. `level` is `high` when the price impact is at or below `priceImpact.high`, otherwise `low` when it's at or below `priceImpact.low`, and otherwise `null`. With the default thresholds it's never `null`, but a `highValueLoss` entry above `priceImpact.low` can make it so. An output worth 0 USD is a price impact of `-100`.
 - `UNKNOWN_PRICE`: the USD value of the input or the output can't be computed, or the input is worth 0 USD, so no value loss can be checked.
 - `INSUFFICIENT_SLIPPAGE`: the requested slippage is below what a swap recommends, but no swap reported a slippage error. `recommendedSlippages` lists `{ swapIndex, slippage }` for each swap that recommends a slippage above the requested one, and `minRequired` is the highest slippage recommended by any swap.
 - `HIGH_SLIPPAGE`: the requested `slippage` is above the `highSlippage` threshold and higher than the minimum required.
+- `HIGH_FEE`: the route is expensive. `totalFeeUsd` is the sum, over every swap, of each fee's `amount` times its `price`, including fees taken from the output. It's raised when that total is at or above the `highFee` threshold, and skipped when any fee's price is unknown, so the figure is never too low.
+- `LONG_DURATION`: the route is slow. `estimatedTimeInSeconds` is the sum of every swap's estimated time, where a missing time counts as 0. It's raised when that sum is at or above the `longDuration` threshold.
 - `INSUFFICIENT_BALANCE`: a wallet doesn't hold enough of an asset. There is one warning per asset that is short, with `blockchain`, `address`, `asset`, `required`, `current` and `reason` (`FEE`, `INPUT_ASSET` or `FEE_AND_INPUT_ASSET`). `required` and `current` are machine-readable amounts, `{ amount, decimals }`. It comes from the server's balance check, so only `quote()` and `confirm()` return it, not `quotes()`.
 - `EXCESSIVE_OUTPUT_CHANGE`: the confirmed output is worth much less than the **Quote** passed to `confirm()`. It has `usdValueChange` (the confirmed output's USD value minus the **Quote**'s) and `percentageChange` (that change as a percentage of the **Quote**'s output value, such as `-2.5`). It's raised when an entry of the `excessiveOutputChange` thresholds matches: the percentage change is at or below its `threshold` and the input value is at least its `minInput`. It's skipped when a USD value can't be computed. Only `confirm()` returns it.
 
@@ -374,10 +376,12 @@ The warning and input thresholds default to the Rango widget's values:
 
 | Key | Default | Used by |
 | --- | --- | --- |
-| `priceImpact` | `{ low: -3, high: -10 }` | The `level` of `HIGH_VALUE_LOSS`: `high` at or below `high`, `low` otherwise |
+| `priceImpact` | `{ low: -3, high: -10 }` | The `level` of `HIGH_VALUE_LOSS`: `high` at or below `high`, otherwise `low` at or below `low`, otherwise `null` |
 | `highValueLoss` | `[{ threshold: -10, minInput: 400 }, { threshold: -5, minInput: 1000 }]` | `HIGH_VALUE_LOSS`. `threshold` is a price impact in percent, `minInput` an input value in USD |
 | `excessiveOutputChange` | `[{ threshold: -1, minInput: 1000 }, { threshold: -2, minInput: 500 }]` | `EXCESSIVE_OUTPUT_CHANGE`. `threshold` is an output change in percent, `minInput` an input value in USD |
 | `highSlippage` | `5` | `HIGH_SLIPPAGE`, in percent |
+| `highFee` | `30` | `HIGH_FEE`, a total fee in USD |
+| `longDuration` | `900` | `LONG_DURATION`, an estimated time in seconds |
 | `slippage` | `{ max: 30 }` | The [input check](#input-checks) on `slippage`: `max` is the highest slippage allowed, in percent. The lower bound, greater than 0, is fixed |
 
 Set your own on the client with `validation`, and override them for a single call with `opts.validation`. The call's values override the client's, and the client's override the defaults. Merging is per top-level key: a key you leave out keeps its value, and a key you set replaces it whole. An array you supply replaces the default array, it isn't merged with it.

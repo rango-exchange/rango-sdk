@@ -8,6 +8,8 @@ export type ValidationThresholds = {
   highValueLoss: ThresholdCriterion[]
   excessiveOutputChange: ThresholdCriterion[]
   highSlippage: number
+  highFee: number
+  longDuration: number
   // The lower bound, greater than 0, is fixed.
   slippage: { max: number }
 }
@@ -25,6 +27,8 @@ export const DEFAULT_VALIDATION_THRESHOLDS: ValidationThresholds = {
     { threshold: -2, minInput: 500 },
   ],
   highSlippage: 5,
+  highFee: 30,
+  longDuration: 900,
   slippage: { max: 30 },
 }
 

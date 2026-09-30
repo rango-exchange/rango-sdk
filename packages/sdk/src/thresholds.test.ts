@@ -20,6 +20,8 @@ describe('resolveThresholds', () => {
         { threshold: -2, minInput: 500 },
       ],
       highSlippage: 5,
+      highFee: 30,
+      longDuration: 900,
       slippage: { max: 30 },
     } satisfies ValidationThresholds)
   })
@@ -58,6 +60,16 @@ describe('resolveThresholds', () => {
     expect(
       resolveThresholds({ slippage: { max: 50 } }, { slippage: { max: 10 } }),
     ).toEqual({ ...DEFAULT_VALIDATION_THRESHOLDS, slippage: { max: 10 } })
+  })
+
+  test('applies highFee and longDuration from the client config and per-call override', () => {
+    expect(
+      resolveThresholds({ highFee: 50, longDuration: 600 }, { highFee: 20 }),
+    ).toEqual({
+      ...DEFAULT_VALIDATION_THRESHOLDS,
+      highFee: 20,
+      longDuration: 600,
+    })
   })
 
   test('keeps the earlier value for a key set to undefined', () => {
