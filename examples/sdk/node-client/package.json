@@ -1,0 +1,16 @@
+{
+  "name": "sdk-node-client",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"No need for a build. \"",
+    "clean": "echo \"No need for a clean. \""
+  },
+  "type": "module",
+  "dependencies": {
+    "@rango-dev/sdk": "^0.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.0"
+  }
+}
