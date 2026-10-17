@@ -3,17 +3,11 @@ import type { QuoteRequest } from '@rango-dev/sdk'
 import { SdkError } from '@rango-dev/sdk'
 
 import { describeInvalidInput } from './invalid-input.js'
+import { affiliate } from './quotes.js'
 import { client } from './rango.js'
 import { printWarnings } from './warnings.js'
 
 const TIMEOUT_MS = 30_000
-
-// Set these to your own referral code and fee wallets, or leave them out.
-const affiliate = {
-  affiliateRef: 'YOUR_REFERRAL_CODE',
-  affiliatePercent: 0.1,
-  affiliateWallets: { BSC: '0x0000000000000000000000000000000000000002' },
-}
 
 // Set these to wallets you own; the server checks their balances.
 const selectedWallets = {

@@ -1,12 +1,31 @@
 import type * as Sdk from './mod.js'
+import type * as LegacySdk from 'rango-sdk'
 
-import { describe, expect, expectTypeOf, test } from 'vitest'
+import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
+
+const legacy = vi.hoisted(() => ({ getAllRoutes: vi.fn() }))
+
+vi.mock('rango-sdk', async (importOriginal) => ({
+  ...(await importOriginal<typeof LegacySdk>()),
+  RangoClient: class {
+    readonly #args: unknown[]
+    constructor(...args: unknown[]) {
+      this.#args = args
+    }
+    getAllRoutes = async (...callArgs: unknown[]) =>
+      legacy.getAllRoutes(this.#args, ...callArgs)
+  },
+}))
 
 async function loadSdk(): Promise<typeof Sdk> {
   return import('./mod.js')
 }
 
 describe('client', () => {
+  beforeEach(() => {
+    legacy.getAllRoutes.mockReset()
+  })
+
   test('RangoClient is the only way to get a client', async () => {
     const sdk = await loadSdk()
 
@@ -17,6 +36,35 @@ describe('client', () => {
     void sdk.createClient
     // @ts-expect-error getClient is not exported.
     void sdk.getClient
+  })
+
+  test('two clients with different API keys each use their own config', async () => {
+    const { RangoClient } = await loadSdk()
+    legacy.getAllRoutes.mockResolvedValue({ results: [] })
+    const request = {
+      from: { blockchain: 'ETH', symbol: 'ETH', address: null },
+      to: { blockchain: 'BSC', symbol: 'BNB', address: null },
+      amount: '1',
+    }
+
+    const first = new RangoClient({
+      apiKey: 'first-key',
+      meta: { blockchains: [] },
+    })
+    const second = new RangoClient({
+      apiKey: 'second-key',
+      baseUrl: 'https://example.test',
+      meta: { blockchains: [] },
+    })
+    await first.quotes(request).catch(() => undefined)
+    await second.quotes(request).catch(() => undefined)
+    await first.quotes(request).catch(() => undefined)
+
+    expect(legacy.getAllRoutes.mock.calls.map(([args]) => args)).toEqual([
+      ['first-key', 'https://api.rango.exchange'],
+      ['second-key', 'https://example.test'],
+      ['first-key', 'https://api.rango.exchange'],
+    ])
   })
 
   test('has no affiliate settings', async () => {

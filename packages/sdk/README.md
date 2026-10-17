@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/@rango-dev%2Fsdk.svg)](https://badge.fury.io/js/@rango-dev%2Fsdk)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/rango-exchange/rango-sdk/blob/master/packages/sdk/LICENSE)
 
-> Under development: it provides the client and `quote()`; more methods come later.
+> Under development: it provides the client, `quotes()` and `quote()`; more methods come later.
 
 ## Install
 
@@ -43,7 +43,28 @@ import { client } from './rango.js'
 
 ## Methods
 
-`quote()` resolves to `{ data, warnings, _response }`. Build on `data`; `warnings` are the [warnings](#warnings) that apply; `_response` is the legacy API's raw response, an escape hatch (to log `traceId`, say). It takes an optional `signal` in its options, and results are plain JSON.
+`quote()` resolves to `{ data, warnings, _response }`; `quotes()` to `{ data, _response }`, with warnings on each entry. Build on `data`; `warnings` are the [warnings](#warnings) that apply; `_response` is the legacy API's raw response, an escape hatch (to log `traceId`, say). Every method takes an optional `signal` in its options, and results are plain JSON.
+
+### `quotes()`
+
+Every available **Quote** for a swap, without a wallet.
+
+```ts
+const { data } = await client.quotes({
+  from: { blockchain: 'ETH', symbol: 'ETH', address: null },
+  to: {
+    blockchain: 'BSC',
+    symbol: 'USDC',
+    address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+  },
+  amount: '1',
+})
+```
+
+`data.quotes` has one `{ data, warnings, error? }` entry per server result, in its order; one bad **Quote** never fails the call. An entry's `error` (the first of `NO_RESULT`, `BRIDGE_LIMIT` or `UNKNOWN_SLIPPAGE` that fails) is attached, not thrown: disable that **Quote**.
+
+- Throws: `INVALID_INPUT`, `REQUEST_CANCELED`, `NO_RESULT`, `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `TOO_MANY_REQUESTS`, `SERVER_ERROR`, `REQUEST_FAILED`.
+- Warnings per entry: those of `quote()` except `INSUFFICIENT_BALANCE`.
 
 ### `quote()`
 
@@ -78,20 +99,20 @@ try {
 }
 ```
 
-| Type                | Thrown when                                                                                                                                 | `metadata`                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `INVALID_INPUT`     | Before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; `destination`: `PATTERN_MISMATCH`, `NO_ADDRESS_PATTERNS`. | `{ field, reason }`                      |
-| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                  | none                                     |
-| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                             | `{ diagnosisMessage? }`                  |
-| `BAD_REQUEST`       | HTTP 400.                                                                                                                                   | none                                     |
-| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                   | none                                     |
-| `FORBIDDEN`         | HTTP 403.                                                                                                                                   | none                                     |
-| `NOT_FOUND`         | HTTP 404.                                                                                                                                   | none                                     |
-| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                   | none                                     |
-| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                            | none                                     |
-| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`.                                                                 | none                                     |
-| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                | `{ swap, limit, limitValue, exclusive }` |
-| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                  | none                                     |
+| Type                | Thrown when                                                                                                                                               | `metadata`                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `INVALID_INPUT`     | Before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; on `quote()`, `destination`: `PATTERN_MISMATCH`, `NO_ADDRESS_PATTERNS`. | `{ field, reason }`                      |
+| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                | none                                     |
+| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                           | `{ diagnosisMessage? }`                  |
+| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                 | none                                     |
+| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                 | none                                     |
+| `FORBIDDEN`         | HTTP 403.                                                                                                                                                 | none                                     |
+| `NOT_FOUND`         | HTTP 404.                                                                                                                                                 | none                                     |
+| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                 | none                                     |
+| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                          | none                                     |
+| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`.                                                                               | none                                     |
+| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                              | `{ swap, limit, limitValue, exclusive }` |
+| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                | none                                     |
 
 The metadata types are exported, and their fields are documented in your editor.
 
@@ -99,15 +120,15 @@ The metadata types are exported, and their fields are documented in your editor.
 
 A warning means the result is usable but risky. Every warning that applies is returned, never thrown, as `{ type, message, metadata }` (`SdkWarning`): switch on `type` to read `metadata`. `message` is an English sentence for developers, like `Error.message`; a UI words and translates a warning from `type` and `metadata`.
 
-| Type                    | Raised when                                                     | `metadata`                                                                   |
-| ----------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `HIGH_VALUE_LOSS`       | The price impact matches a high value loss threshold.           | `inputUsdValue`, `outputUsdValue`, `priceImpact`, `totalFee`, `warningLevel` |
-| `UNKNOWN_PRICE`         | The input's or output's USD value is unknown.                   | none                                                                         |
-| `INSUFFICIENT_SLIPPAGE` | The slippage is below what a swap recommends.                   | `recommendedSlippages`, `minRequiredSlippage`                                |
-| `HIGH_SLIPPAGE`         | The slippage is above the high slippage and the minimum needed. | `slippage`                                                                   |
-| `HIGH_FEE`              | The total fee is at or above the high fee.                      | `totalFee`                                                                   |
-| `LONG_DURATION`         | The estimated time is at or above the long duration.            | `estimatedTimeInSeconds`                                                     |
-| `INSUFFICIENT_BALANCE`  | A wallet lacks an asset (one warning per asset).                | `blockchain`, `address`, `asset`, `required`, `current`, `reason`            |
+| Type                    | Raised when                                                     | `metadata`                                                                   | Returned by                                  |
+| ----------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| `HIGH_VALUE_LOSS`       | The price impact matches a high value loss threshold.           | `inputUsdValue`, `outputUsdValue`, `priceImpact`, `totalFee`, `warningLevel` | all                                          |
+| `UNKNOWN_PRICE`         | The input's or output's USD value is unknown.                   | none                                                                         | all                                          |
+| `INSUFFICIENT_SLIPPAGE` | The slippage is below what a swap recommends.                   | `recommendedSlippages`, `minRequiredSlippage`                                | all                                          |
+| `HIGH_SLIPPAGE`         | The slippage is above the high slippage and the minimum needed. | `slippage`                                                                   | all                                          |
+| `HIGH_FEE`              | The total fee is at or above the high fee.                      | `totalFee`                                                                   | all                                          |
+| `LONG_DURATION`         | The estimated time is at or above the long duration.            | `estimatedTimeInSeconds`                                                     | all                                          |
+| `INSUFFICIENT_BALANCE`  | A wallet lacks an asset (one warning per asset).                | `blockchain`, `address`, `asset`, `required`, `current`, `reason`            | `quote()` unless `checkPrerequisites: false` |
 
 The [thresholds](#thresholds) are fixed; how each figure is computed is in the JSDoc of `SdkWarningMetadata` and the `…WarningMetadata` types, in your editor.
 
