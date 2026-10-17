@@ -1,5 +1,8 @@
 export { RangoClient } from './client.js'
 export type {
+  ConfirmQuote,
+  ConfirmRequest,
+  ConfirmResult,
   Quote,
   QuoteEntry,
   QuoteRequest,
@@ -22,6 +25,7 @@ export type {
 } from './errors/mod.js'
 export type { RequestOptions } from './types.js'
 export type {
+  ExcessiveOutputAmountChangeWarningMetadata,
   HighFeeWarningMetadata,
   HighSlippageWarningMetadata,
   HighValueLossLevel,
@@ -42,6 +46,7 @@ export type {
   BestRouteResponse,
   BlockchainMeta,
   BlockchainValidationStatus,
+  ConfirmRouteResponse,
   MultiRouteResponse,
   SwapResult,
 } from 'rango-sdk'

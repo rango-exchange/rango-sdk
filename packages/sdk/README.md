@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/@rango-dev%2Fsdk.svg)](https://badge.fury.io/js/@rango-dev%2Fsdk)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/rango-exchange/rango-sdk/blob/master/packages/sdk/LICENSE)
 
-> Under development: it provides the client, `quotes()` and `quote()`; more methods come later.
+> Under development: it provides the client, `quotes()`, `confirm()` and `quote()`; more methods come later.
 
 ## Install
 
@@ -22,7 +22,7 @@ const client = new RangoClient({
 })
 ```
 
-`meta.blockchains` is required: pass the meta API's blockchain list. `quote()` checks a set `destination` against the destination blockchain's address patterns in it. `baseUrl` defaults to `https://api.rango.exchange`.
+`meta.blockchains` is required: pass the meta API's blockchain list. `quote()` and `confirm()` check a set `destination` against the destination blockchain's address patterns in it. `baseUrl` defaults to `https://api.rango.exchange`.
 
 The package keeps no client of its own. To share one, export it from a module of yours and import it where you need it:
 
@@ -43,7 +43,7 @@ import { client } from './rango.js'
 
 ## Methods
 
-`quote()` resolves to `{ data, warnings, _response }`; `quotes()` to `{ data, _response }`, with warnings on each entry. Build on `data`; `warnings` are the [warnings](#warnings) that apply; `_response` is the legacy API's raw response, an escape hatch (to log `traceId`, say). Every method takes an optional `signal` in its options, and results are plain JSON.
+`quote()` and `confirm()` resolve to `{ data, warnings, _response }`; `quotes()` to `{ data, _response }`, with warnings on each entry. Build on `data`; `warnings` are the [warnings](#warnings) that apply; `_response` is the legacy API's raw response, an escape hatch (to log `traceId`, say). Every method takes an optional `signal` in its options, and results are plain JSON.
 
 ### `quotes()`
 
@@ -61,10 +61,28 @@ const { data } = await client.quotes({
 })
 ```
 
-`data.quotes` has one `{ data, warnings, error? }` entry per server result, in its order; one bad **Quote** never fails the call. An entry's `error` (the first of `NO_RESULT`, `BRIDGE_LIMIT` or `UNKNOWN_SLIPPAGE` that fails) is attached, not thrown: disable that **Quote**.
+`data.quotes` has one `{ data, warnings, error? }` entry per server result, in its order; one bad **Quote** never fails the call. An entry's `error` (the first of `NO_RESULT`, `BRIDGE_LIMIT` or `UNKNOWN_SLIPPAGE` that fails) is attached, not thrown: disable that **Quote**, since `confirm()` doesn't check it.
 
 - Throws: `INVALID_INPUT`, `REQUEST_CANCELED`, `NO_RESULT`, `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `TOO_MANY_REQUESTS`, `SERVER_ERROR`, `REQUEST_FAILED`.
 - Warnings per entry: those of `quote()` except `INSUFFICIENT_BALANCE`.
+
+### `confirm()`
+
+Turns the chosen **Quote** into a **Route** for the user's wallets. Pass the entry's `data` as `request.quote` unchanged. A set `destination` is checked against the **Quote**'s `to` blockchain in the client's `meta.blockchains`.
+
+```ts
+const chosen = data.quotes.find((entry) => !entry.error)
+const selectedWallets = { ETH: '0x...', BSC: '0x...' }
+const { data: route, warnings } = await client.confirm({
+  quote: chosen.data,
+  selectedWallets,
+})
+```
+
+`data` is a `Route`, the same type `quote()` returns, with your `selectedWallets` and the **Quote**'s `slippage` merged in.
+
+- Throws: those of `quote()`.
+- Warnings: those of `quote()`, plus `EXCESSIVE_OUTPUT_AMOUNT_CHANGE`.
 
 ### `quote()`
 
@@ -79,7 +97,7 @@ const { data: route, warnings } = await client.quote({
 })
 ```
 
-`data` is a `Route`, with the request's `selectedWallets` and `slippage` merged in. A set `destination` is checked against `to`'s blockchain in the client's `meta.blockchains`.
+`data` is a `Route`, as from `confirm()`, with the request's `selectedWallets` and `slippage` merged in. A set `destination` is checked against `to`'s blockchain in the client's `meta.blockchains`, as in `confirm()`.
 
 With `checkPrerequisites: false` the server skips the balance check: no `INSUFFICIENT_BALANCE`, and `createTransaction` may refuse the request ID.
 
@@ -99,20 +117,20 @@ try {
 }
 ```
 
-| Type                | Thrown when                                                                                                                                               | `metadata`                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `INVALID_INPUT`     | Before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; on `quote()`, `destination`: `PATTERN_MISMATCH`, `NO_ADDRESS_PATTERNS`. | `{ field, reason }`                      |
-| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                | none                                     |
-| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                           | `{ diagnosisMessage? }`                  |
-| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                 | none                                     |
-| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                 | none                                     |
-| `FORBIDDEN`         | HTTP 403.                                                                                                                                                 | none                                     |
-| `NOT_FOUND`         | HTTP 404.                                                                                                                                                 | none                                     |
-| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                 | none                                     |
-| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                          | none                                     |
-| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`.                                                                               | none                                     |
-| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                              | `{ swap, limit, limitValue, exclusive }` |
-| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                | none                                     |
+| Type                | Thrown when                                                                                                                                                               | `metadata`                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `INVALID_INPUT`     | Before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; on `quote()` and `confirm()`, `destination`: `PATTERN_MISMATCH`, `NO_ADDRESS_PATTERNS`. | `{ field, reason }`                      |
+| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                                | none                                     |
+| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                                           | `{ diagnosisMessage? }`                  |
+| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                                 | none                                     |
+| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                                 | none                                     |
+| `FORBIDDEN`         | HTTP 403.                                                                                                                                                                 | none                                     |
+| `NOT_FOUND`         | HTTP 404.                                                                                                                                                                 | none                                     |
+| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                                 | none                                     |
+| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                                          | none                                     |
+| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`.                                                                                               | none                                     |
+| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                                              | `{ swap, limit, limitValue, exclusive }` |
+| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                                | none                                     |
 
 The metadata types are exported, and their fields are documented in your editor.
 
@@ -120,15 +138,16 @@ The metadata types are exported, and their fields are documented in your editor.
 
 A warning means the result is usable but risky. Every warning that applies is returned, never thrown, as `{ type, message, metadata }` (`SdkWarning`): switch on `type` to read `metadata`. `message` is an English sentence for developers, like `Error.message`; a UI words and translates a warning from `type` and `metadata`.
 
-| Type                    | Raised when                                                     | `metadata`                                                                   | Returned by                                  |
-| ----------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
-| `HIGH_VALUE_LOSS`       | The price impact matches a high value loss threshold.           | `inputUsdValue`, `outputUsdValue`, `priceImpact`, `totalFee`, `warningLevel` | all                                          |
-| `UNKNOWN_PRICE`         | The input's or output's USD value is unknown.                   | none                                                                         | all                                          |
-| `INSUFFICIENT_SLIPPAGE` | The slippage is below what a swap recommends.                   | `recommendedSlippages`, `minRequiredSlippage`                                | all                                          |
-| `HIGH_SLIPPAGE`         | The slippage is above the high slippage and the minimum needed. | `slippage`                                                                   | all                                          |
-| `HIGH_FEE`              | The total fee is at or above the high fee.                      | `totalFee`                                                                   | all                                          |
-| `LONG_DURATION`         | The estimated time is at or above the long duration.            | `estimatedTimeInSeconds`                                                     | all                                          |
-| `INSUFFICIENT_BALANCE`  | A wallet lacks an asset (one warning per asset).                | `blockchain`, `address`, `asset`, `required`, `current`, `reason`            | `quote()` unless `checkPrerequisites: false` |
+| Type                             | Raised when                                                     | `metadata`                                                                   | Returned by                                               |
+| -------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `HIGH_VALUE_LOSS`                | The price impact matches a high value loss threshold.           | `inputUsdValue`, `outputUsdValue`, `priceImpact`, `totalFee`, `warningLevel` | all                                                       |
+| `UNKNOWN_PRICE`                  | The input's or output's USD value is unknown.                   | none                                                                         | all                                                       |
+| `INSUFFICIENT_SLIPPAGE`          | The slippage is below what a swap recommends.                   | `recommendedSlippages`, `minRequiredSlippage`                                | all                                                       |
+| `HIGH_SLIPPAGE`                  | The slippage is above the high slippage and the minimum needed. | `slippage`                                                                   | all                                                       |
+| `HIGH_FEE`                       | The total fee is at or above the high fee.                      | `totalFee`                                                                   | all                                                       |
+| `LONG_DURATION`                  | The estimated time is at or above the long duration.            | `estimatedTimeInSeconds`                                                     | all                                                       |
+| `INSUFFICIENT_BALANCE`           | A wallet lacks an asset (one warning per asset).                | `blockchain`, `address`, `asset`, `required`, `current`, `reason`            | `confirm()`, `quote()` unless `checkPrerequisites: false` |
+| `EXCESSIVE_OUTPUT_AMOUNT_CHANGE` | The confirmed output is worth much less than `request.quote`'s. | `usdValueChange`, `percentageChange`                                         | `confirm()`                                               |
 
 The [thresholds](#thresholds) are fixed; how each figure is computed is in the JSDoc of `SdkWarningMetadata` and the `…WarningMetadata` types, in your editor.
 
@@ -147,17 +166,19 @@ function describe(warning: SdkWarning): string {
 
 ## Thresholds
 
-| Threshold           | Value                                                      | Used by                                |
-| ------------------- | ---------------------------------------------------------- | -------------------------------------- |
-| Price impact levels | `low` at `-3`, `high` at `-10`                             | `HIGH_VALUE_LOSS`'s `warningLevel` (%) |
-| High value loss     | `-10` on an input of 400 USD or more, `-5` on 1000 or more | `HIGH_VALUE_LOSS` (price impact %)     |
-| High slippage       | `5`                                                        | `HIGH_SLIPPAGE` (%)                    |
-| High fee            | `30`                                                       | `HIGH_FEE` (USD)                       |
-| Long duration       | `900`                                                      | `LONG_DURATION` (seconds)              |
+| Threshold               | Value                                                      | Used by                                            |
+| ----------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| Price impact levels     | `low` at `-3`, `high` at `-10`                             | `HIGH_VALUE_LOSS`'s `warningLevel` (%)             |
+| High value loss         | `-10` on an input of 400 USD or more, `-5` on 1000 or more | `HIGH_VALUE_LOSS` (price impact %)                 |
+| Excessive output change | `-1` on an input of 1000 USD or more, `-2` on 500 or more  | `EXCESSIVE_OUTPUT_AMOUNT_CHANGE` (output change %) |
+| High slippage           | `5`                                                        | `HIGH_SLIPPAGE` (%)                                |
+| High fee                | `30`                                                       | `HIGH_FEE` (USD)                                   |
+| Long duration           | `900`                                                      | `LONG_DURATION` (seconds)                          |
 
 The values are fixed and can't be configured.
 
-## Retries and timeouts
+## Refreshing, retries and timeouts
 
+- **Refreshing:** call `confirm()` again with the same request, `request.quote` included; if the **Quote** is stale, call `quotes()` again.
 - **Retries:** the SDK never retries; catch the error and call again, for example on `REQUEST_FAILED`.
 - **Timeouts:** none built in. Pass `signal: AbortSignal.timeout(10_000)`; it throws `REQUEST_CANCELED`.

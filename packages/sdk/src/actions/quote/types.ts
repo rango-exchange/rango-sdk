@@ -31,7 +31,7 @@ export type RouteResponse = Omit<
   result: SimulationResult
 }
 
-// What `quote()` resolves to, and what `execute()` takes.
+// What `quote()` and `confirm()` resolve to, and what `execute()` takes.
 export type Route = RouteResponse & {
   selectedWallets: BestRouteRequest['selectedWallets']
   slippage?: string

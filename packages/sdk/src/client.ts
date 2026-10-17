@@ -1,4 +1,6 @@
 import type {
+  ConfirmRequest,
+  ConfirmResult,
   QuoteRequest,
   QuoteResult,
   QuotesRequest,
@@ -11,7 +13,7 @@ import type { RequestOptions } from './types.js'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
-import { fetchQuote, fetchQuotes } from './actions/mod.js'
+import { confirmQuote, fetchQuote, fetchQuotes } from './actions/mod.js'
 import { resolveConfig } from './configs.js'
 
 export class RangoClient {
@@ -19,7 +21,7 @@ export class RangoClient {
   readonly #httpClient: LegacyRangoClient
 
   /**
-   * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the meta API's blockchain list as `meta.blockchains`, used by `quote()` to check a set `destination`.
+   * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the meta API's blockchain list as `meta.blockchains`, used by `quote()` and `confirm()` to check a set `destination`.
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#usage
    */
   constructor(config: RangoClientConfig) {
@@ -81,5 +83,32 @@ export class RangoClient {
     opts?: RequestOptions,
   ): Promise<QuotesResult> {
     return fetchQuotes(this.#httpClient, request, opts)
+  }
+
+  /**
+   * Turns the chosen Quote into a Route for the user's wallets.
+   *
+   * @param request - Pass the entry's `data` as `quote` unchanged.
+   * @returns `data`: a Route, and the `warnings` that apply.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * const chosen = data.quotes.find((entry) => !entry.error)
+   * const selectedWallets = { ETH: '0x...', BSC: '0x...' }
+   * const { data: route, warnings } = await client.confirm({
+   *   quote: chosen.data,
+   *   selectedWallets,
+   * })
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#confirm
+   */
+  async confirm(
+    request: ConfirmRequest,
+    options?: RequestOptions,
+  ): Promise<ConfirmResult> {
+    return confirmQuote(this.#httpClient, request, {
+      ...options,
+      meta: this.#config.meta,
+    })
   }
 }

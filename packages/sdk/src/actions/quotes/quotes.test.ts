@@ -317,7 +317,8 @@ describe('quotes', () => {
     expect(quotes[0]?.data).not.toHaveProperty('slippage')
   })
 
-  test('a Quote has no error or warnings', () => {
+  test('a Quote fits ConfirmQuote as it is, and has no error or warnings', () => {
+    expectTypeOf<Sdk.Quote>().toExtend<Sdk.ConfirmQuote>()
     expectTypeOf<Sdk.Quote>().not.toHaveProperty('error')
     expectTypeOf<Sdk.Quote>().not.toHaveProperty('warnings')
   })

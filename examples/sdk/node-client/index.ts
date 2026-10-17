@@ -2,11 +2,15 @@
 
 import { SdkError } from '@rango-dev/sdk'
 
+import { confirmFirstQuote } from './confirm.js'
 import { printRoute } from './quote.js'
 import { printQuotes } from './quotes.js'
 
 try {
-  await printQuotes()
+  const quotes = await printQuotes()
+  if (quotes) {
+    await confirmFirstQuote(quotes)
+  }
   await printRoute()
 } catch (error) {
   // Each step handles the SDK errors it expects; this catches any other.

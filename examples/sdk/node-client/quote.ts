@@ -10,7 +10,7 @@ import { printWarnings } from './warnings.js'
 const TIMEOUT_MS = 30_000
 
 // Set these to wallets you own; the server checks their balances.
-const selectedWallets = {
+export const selectedWallets = {
   BSC: '0x0000000000000000000000000000000000000001',
   AVAX_CCHAIN: '0x0000000000000000000000000000000000000001',
 }

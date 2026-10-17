@@ -10,8 +10,8 @@ import type { SwapResult } from 'rango-sdk'
 
 export type NoResultMetadata = {
   /**
-   * The server's reason, when it gives one: the response's first diagnosis message. A Quote with no swaps gives
-   * none.
+   * The server's reason, when it gives one: the response's first diagnosis message. A Quote with no swaps and a
+   * confirm response with no result give none.
    */
   diagnosisMessage?: string
 }
@@ -40,7 +40,7 @@ export type BridgeLimitMetadata = {
 
 /**
  * The input field that fails a check, and why. `quote()` and `quotes()` check `to` (`SAME_ASSET` as `from`) and
- * `amount` (`NOT_A_NUMBER` or `NOT_POSITIVE`). `quote()` checks `destination`
+ * `amount` (`NOT_A_NUMBER` or `NOT_POSITIVE`). `quote()` and `confirm()` check `destination`
  * (`PATTERN_MISMATCH` with every address pattern of the destination blockchain, or `NO_ADDRESS_PATTERNS` when that
  * blockchain has none in the client's `meta.blockchains`). The slippage isn't checked.
  */

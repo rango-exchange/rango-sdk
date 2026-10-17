@@ -18,6 +18,8 @@ export function describeWarning(warning: SdkWarning): string {
       return 'The USD value of the input or output is unknown.'
     case 'INSUFFICIENT_SLIPPAGE':
       return `Slippage is below what a swap recommends. Use at least ${warning.metadata.minRequiredSlippage}%.`
+    case 'EXCESSIVE_OUTPUT_AMOUNT_CHANGE':
+      return `The output changed by ${warning.metadata.percentageChange.toFixed(2)}% ($${warning.metadata.usdValueChange.toFixed(2)}) since the quote.`
     case 'HIGH_SLIPPAGE':
       return `Slippage of ${warning.metadata.slippage}% is higher than needed.`
     case 'HIGH_FEE':

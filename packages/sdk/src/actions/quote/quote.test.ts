@@ -317,11 +317,18 @@ describe('quote', () => {
     expect(route).not.toHaveProperty('slippage')
   })
 
+  test('types the quote and confirm data as the same Route', () => {
+    expectTypeOf<Sdk.QuoteResult['data']>().toEqualTypeOf<
+      Sdk.ConfirmResult['data']
+    >()
+  })
+
   test('types the result with no error field and the legacy response as _response', () => {
     expectTypeOf<Sdk.QuoteResult>().not.toHaveProperty('error')
     expectTypeOf<
       Sdk.QuoteResult['_response']
     >().toEqualTypeOf<LegacySdk.BestRouteResponse>()
+    expectTypeOf<Sdk.QuoteResult>().not.toExtend<Sdk.ConfirmResult>()
   })
 
   test('fills in only selectedWallets and slippage from the request when the response leaves fields out', async () => {

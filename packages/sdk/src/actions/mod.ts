@@ -1,3 +1,9 @@
+export { confirmQuote } from './confirm/mod.js'
+export type {
+  ConfirmQuote,
+  ConfirmRequest,
+  ConfirmResult,
+} from './confirm/mod.js'
 export { fetchQuote } from './quote/mod.js'
 export type {
   QuoteRequest,

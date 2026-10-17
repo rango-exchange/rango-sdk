@@ -108,6 +108,7 @@ describe('warning exports', () => {
       HIGH_FEE: Sdk.HighFeeWarningMetadata
       LONG_DURATION: Sdk.LongDurationWarningMetadata
       INSUFFICIENT_BALANCE: Sdk.InsufficientBalanceWarningMetadata
+      EXCESSIVE_OUTPUT_AMOUNT_CHANGE: Sdk.ExcessiveOutputAmountChangeWarningMetadata
     }>()
     expectTypeOf<
       Sdk.HighValueLossWarningMetadata['warningLevel']

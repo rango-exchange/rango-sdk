@@ -1,4 +1,4 @@
-import type { QuotesRequest } from '@rango-dev/sdk'
+import type { QuotesData, QuotesRequest } from '@rango-dev/sdk'
 
 import { SdkError } from '@rango-dev/sdk'
 
@@ -27,7 +27,7 @@ const request: QuotesRequest = {
   ...affiliate,
 }
 
-export async function printQuotes() {
+export async function printQuotes(): Promise<QuotesData | undefined> {
   try {
     const { data } = await client.quotes(request, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -41,7 +41,11 @@ export async function printQuotes() {
         `${data.requestAmount} ${data.from.symbol} -> ${quote.outputAmount} ${data.to.symbol} via ${swappers}${tags ? ` [${tags}]` : ''}`,
       )
       printWarnings(entry.warnings)
+      if (entry.error) {
+        console.log(`  Can't be confirmed: ${entry.error.type}`)
+      }
     }
+    return data
   } catch (error) {
     if (!(error instanceof SdkError)) {
       throw error
@@ -78,5 +82,6 @@ export async function printQuotes() {
         // quotes() attaches these to a Quote's entry instead of throwing them.
         throw error
     }
+    return undefined
   }
 }
