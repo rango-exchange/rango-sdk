@@ -53,9 +53,9 @@ export type RecommendedSlippage = {
 /**
  * The requested slippage is below the highest slippage any swap recommends.
  *
- * Skipped when there is no slippage. Slippages are read with `parseFloat`. A swap the server flags
- * as having no computed slippage gets the `UNKNOWN_SLIPPAGE` error, and this warning can still be raised for that
- * route, so a `quotes()` entry can carry both.
+ * Skipped when there is no slippage (on `confirm()`, the slippage is `request.quote.slippage`). Slippages are read with
+ * `parseFloat`. A swap the server flags as having no computed slippage gets the
+ * `UNKNOWN_SLIPPAGE` error, and this warning can still be raised for that route, so a `quotes()` entry can carry both.
  */
 export type InsufficientSlippageWarningMetadata = {
   /** Each swap whose recommended slippage is above the requested one, with that recommendation. */
@@ -67,7 +67,8 @@ export type InsufficientSlippageWarningMetadata = {
 /**
  * The requested slippage is above 5 (%) and higher than the minimum any swap requires.
  *
- * Skipped when there is no slippage, and when `INSUFFICIENT_SLIPPAGE` is raised.
+ * Skipped when there is no slippage (on `confirm()`, the slippage is `request.quote.slippage`), and when
+ * `INSUFFICIENT_SLIPPAGE` is raised.
  */
 export type HighSlippageWarningMetadata = {
   /** The requested slippage, read with `parseFloat` and turned back into a string, so `'5.0'` becomes `'5'`. */
@@ -94,7 +95,7 @@ export type LongDurationWarningMetadata = {
  * A wallet doesn't hold enough of an asset: one warning per asset that is short.
  *
  * It comes from the server's balance check (every `ok: false` entry of `validationStatus`, in the server's order),
- * so only a `quote()` without `checkPrerequisites: false` returns it.
+ * so only `confirm()` and a `quote()` without `checkPrerequisites: false` return it.
  */
 export type InsufficientBalanceWarningMetadata = {
   blockchain: string
@@ -105,6 +106,20 @@ export type InsufficientBalanceWarningMetadata = {
   /** A machine-readable amount, `{ amount, decimals }`. */
   current: Amount
   reason: InsufficientBalanceReason
+}
+
+/**
+ * The confirmed output is worth much less than the output of the Quote passed to `confirm()` as `request.quote`.
+ * Only `confirm()` returns it.
+ *
+ * Raised when `percentageChange` is at or below `-1` with a Quote input of at least 1000 USD, or at or below `-2` with
+ * at least 500. The input value is the Quote's. Skipped when a USD value can't be computed, and when the Quote's output is worth 0 USD.
+ */
+export type ExcessiveOutputAmountChangeWarningMetadata = {
+  /** The confirmed output's USD value minus the Quote's, unrounded. */
+  usdValueChange: number
+  /** `usdValueChange` as a percentage of the Quote's output USD value, such as `-2.5`, unrounded. */
+  percentageChange: number
 }
 
 export type SdkWarningMetadata = {
@@ -120,4 +135,5 @@ export type SdkWarningMetadata = {
   HIGH_FEE: HighFeeWarningMetadata
   LONG_DURATION: LongDurationWarningMetadata
   INSUFFICIENT_BALANCE: InsufficientBalanceWarningMetadata
+  EXCESSIVE_OUTPUT_AMOUNT_CHANGE: ExcessiveOutputAmountChangeWarningMetadata
 }

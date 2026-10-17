@@ -1,12 +1,8 @@
-import type {
-  CheckedResponse,
-  ErrorFields,
-  Route,
-  RouteResponse,
-} from './types.js'
+import type { ErrorFields, Route, RouteResponse } from './types.js'
 import type { BridgeLimitMetadata } from '../../errors/mod.js'
 import type {
   Asset,
+  BestRouteResponse,
   BlockchainMeta,
   SimulationResult,
   SwapResult,
@@ -177,6 +173,10 @@ function getBrokenLimit(swap: SwapResult): BrokenLimit | null {
   return null
 }
 
+// A checked best-route response, or the confirm response's checked `result`, which lacks the error fields.
+type CheckedRoute = Omit<BestRouteResponse, ErrorFields | 'result'> &
+  Partial<Pick<BestRouteResponse, ErrorFields>> & { result: SimulationResult }
+
 export function omitErrorFields<
   T extends Partial<Record<ErrorFields, unknown>>,
 >(response: T): Omit<T, ErrorFields> {
@@ -190,14 +190,14 @@ export function omitErrorFields<
 }
 
 // The Route: a checked route response without its error fields and diagnosis messages.
-export function omitRouteErrorFields(route: CheckedResponse): RouteResponse {
+export function omitRouteErrorFields(route: CheckedRoute): RouteResponse {
   const { diagnosisMessages: _diagnosisMessages, ...rest } =
     omitErrorFields(route)
   return rest
 }
 
 export function toRoute(
-  route: CheckedResponse,
+  route: CheckedRoute,
   selectedWallets: Route['selectedWallets'],
   slippage: string | undefined,
 ): Route {

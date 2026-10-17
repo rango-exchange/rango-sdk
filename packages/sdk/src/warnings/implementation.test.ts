@@ -1,4 +1,5 @@
 import type {
+  ExcessiveOutputAmountChangeWarningMetadata,
   HighFeeWarningMetadata,
   HighSlippageWarningMetadata,
   HighValueLossWarningMetadata,
@@ -28,6 +29,8 @@ describe('SdkWarning', () => {
       LONG_DURATION:
         "The route's estimated time is at or above the long-duration threshold.",
       INSUFFICIENT_BALANCE: "A wallet doesn't hold enough of an asset.",
+      EXCESSIVE_OUTPUT_AMOUNT_CHANGE:
+        'The confirmed output is worth much less than the quoted output.',
     })
   })
 
@@ -82,6 +85,11 @@ describe('SdkWarning', () => {
           expectTypeOf(
             warning.metadata,
           ).toEqualTypeOf<InsufficientBalanceWarningMetadata>()
+          break
+        case 'EXCESSIVE_OUTPUT_AMOUNT_CHANGE':
+          expectTypeOf(
+            warning.metadata,
+          ).toEqualTypeOf<ExcessiveOutputAmountChangeWarningMetadata>()
           break
       }
     }

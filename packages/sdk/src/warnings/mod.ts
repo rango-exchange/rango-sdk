@@ -1,4 +1,5 @@
 export type {
+  ExcessiveOutputAmountChangeWarningMetadata,
   HighFeeWarningMetadata,
   HighSlippageWarningMetadata,
   HighValueLossLevel,
@@ -13,6 +14,7 @@ export type {
 export { createWarning } from './implementation.js'
 export type { SdkWarning, SdkWarningType } from './implementation.js'
 export {
+  EXCESSIVE_OUTPUT_CHANGE_CRITERIA,
   HIGH_FEE_THRESHOLD,
   HIGH_SLIPPAGE_THRESHOLD,
   HIGH_VALUE_LOSS_CRITERIA,

@@ -7,6 +7,12 @@ export const HIGH_VALUE_LOSS_CRITERIA = [
   { threshold: -5, minInput: 1000 },
 ] as const
 
+// EXCESSIVE_OUTPUT_AMOUNT_CHANGE: output change percentage and minimum input in USD.
+export const EXCESSIVE_OUTPUT_CHANGE_CRITERIA = [
+  { threshold: -1, minInput: 1000 },
+  { threshold: -2, minInput: 500 },
+] as const
+
 // HIGH_SLIPPAGE, as a percentage.
 export const HIGH_SLIPPAGE_THRESHOLD = 5
 
