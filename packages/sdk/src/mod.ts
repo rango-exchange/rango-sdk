@@ -1,7 +1,12 @@
 export { RangoClient } from './client.js'
 export type {
+  Quote,
+  QuoteEntry,
   QuoteRequest,
   QuoteResult,
+  QuotesData,
+  QuotesRequest,
+  QuotesResult,
   Route,
   RouteResponse,
 } from './actions/mod.js'
@@ -37,5 +42,6 @@ export type {
   BestRouteResponse,
   BlockchainMeta,
   BlockchainValidationStatus,
+  MultiRouteResponse,
   SwapResult,
 } from 'rango-sdk'

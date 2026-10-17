@@ -54,7 +54,8 @@ export type RecommendedSlippage = {
  * The requested slippage is below the highest slippage any swap recommends.
  *
  * Skipped when there is no slippage. Slippages are read with `parseFloat`. A swap the server flags
- * as having no computed slippage gets the `UNKNOWN_SLIPPAGE` error instead, which `quote()` throws.
+ * as having no computed slippage gets the `UNKNOWN_SLIPPAGE` error, and this warning can still be raised for that
+ * route, so a `quotes()` entry can carry both.
  */
 export type InsufficientSlippageWarningMetadata = {
   /** Each swap whose recommended slippage is above the requested one, with that recommendation. */

@@ -1,4 +1,9 @@
-import type { QuoteRequest, QuoteResult } from './actions/mod.js'
+import type {
+  QuoteRequest,
+  QuoteResult,
+  QuotesRequest,
+  QuotesResult,
+} from './actions/mod.js'
 import type { RangoClientConfig, ResolvedConfig } from './configs.js'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- for `{@link SdkError}` in the TSDoc
 import type { SdkError } from './errors/mod.js'
@@ -6,7 +11,7 @@ import type { RequestOptions } from './types.js'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
-import { fetchQuote } from './actions/mod.js'
+import { fetchQuote, fetchQuotes } from './actions/mod.js'
 import { resolveConfig } from './configs.js'
 
 export class RangoClient {
@@ -50,5 +55,31 @@ export class RangoClient {
       ...opts,
       meta: this.#config.meta,
     })
+  }
+
+  /**
+   * Every available Quote for a swap, without a wallet.
+   *
+   * @returns `data.quotes`: one entry per server result, with its `warnings`. An entry's `error` is attached, not thrown.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * const { data } = await client.quotes({
+   *   from: { blockchain: 'ETH', symbol: 'ETH', address: null },
+   *   to: {
+   *     blockchain: 'BSC',
+   *     symbol: 'USDC',
+   *     address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+   *   },
+   *   amount: '1',
+   * })
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#quotes
+   */
+  async quotes(
+    request: QuotesRequest,
+    opts?: RequestOptions,
+  ): Promise<QuotesResult> {
+    return fetchQuotes(this.#httpClient, request, opts)
   }
 }

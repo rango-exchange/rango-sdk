@@ -5,3 +5,11 @@ export type {
   Route,
   RouteResponse,
 } from './quote/mod.js'
+export { fetchQuotes } from './quotes/mod.js'
+export type {
+  Quote,
+  QuoteEntry,
+  QuotesData,
+  QuotesRequest,
+  QuotesResult,
+} from './quotes/mod.js'
