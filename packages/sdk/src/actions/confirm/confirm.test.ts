@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
 const legacy = vi.hoisted(() => ({
   confirmRoute: vi.fn(),
   getAllRoutes: vi.fn(),
+  getBlockchains: vi.fn(),
 }))
 
 vi.mock('rango-sdk', async (importOriginal) => ({
@@ -13,6 +14,7 @@ vi.mock('rango-sdk', async (importOriginal) => ({
   RangoClient: class {
     confirmRoute = legacy.confirmRoute
     getAllRoutes = legacy.getAllRoutes
+    getBlockchains = legacy.getBlockchains
   },
 }))
 
@@ -106,6 +108,15 @@ const blockchains = [
   chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
 ]
 
+// A client whose blockchain list, once fetched, holds these blockchains.
+async function createClient(
+  chains: readonly Sdk.BlockchainMeta[] = blockchains,
+): Promise<Sdk.RangoClient> {
+  const { RangoClient } = await loadSdk()
+  legacy.getBlockchains.mockResolvedValue([...chains])
+  return new RangoClient({ apiKey: 'test-key' })
+}
+
 const SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
 
 function request(overrides: Partial<Sdk.ConfirmQuote> = {}) {
@@ -185,16 +196,13 @@ async function confirmError(promise: Promise<unknown>) {
 describe('confirm', () => {
   beforeEach(() => {
     vi.resetModules()
+    legacy.getBlockchains.mockReset()
     legacy.confirmRoute.mockReset()
     legacy.confirmRoute.mockResolvedValue(response())
   })
 
   test("sends exactly the Quote's request ID, the wallets and the destination, with the signal", async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
 
     await client.confirm(request({ requestId: 'request-2' }), {
@@ -220,11 +228,7 @@ describe('confirm', () => {
     ],
     ['forwards an empty destination', { destination: '' }, { destination: '' }],
   ])('%s, without checking it', async (_, given, sent) => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains: [] },
-    })
+    const client = await createClient([])
 
     await client.confirm({ quote: quote(), selectedWallets: {}, ...given })
 
@@ -264,11 +268,7 @@ describe('confirm', () => {
   ])(
     'throws INVALID_INPUT without sending a request when the destination %s',
     async (_, destination, chains, reason) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains: chains },
-      })
+      const client = await createClient(chains)
 
       const error = await confirmError(
         client.confirm({ ...request(), destination }),
@@ -283,16 +283,10 @@ describe('confirm', () => {
   )
 
   test("reads the destination blockchain from the Quote's `to`", async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: {
-        blockchains: [
-          chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
-          chain('BNB', ['^bnb1']),
-        ],
-      },
-    })
+    const client = await createClient([
+      chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
+      chain('BNB', ['^bnb1']),
+    ])
 
     const error = await confirmError(
       client.confirm(request({ to: { ...USDC, blockchain: 'BNB' } })),
@@ -307,29 +301,102 @@ describe('confirm', () => {
   })
 
   test('sends a destination that matches any pattern, skipping a pattern that is not a valid regular expression', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: {
-        blockchains: [
-          chain('BSC', ['^invalid($', '^bnb1', '^(0x)[0-9a-f]{40}$']),
-        ],
-      },
-    })
+    const client = await createClient([
+      chain('BSC', ['^invalid($', '^bnb1', '^(0x)[0-9a-f]{40}$']),
+    ])
 
     await client.confirm(request())
 
     expect(legacy.confirmRoute).toHaveBeenCalledOnce()
   })
 
+  test('fetches the blockchain list once on a cold cache, with no signal, and caches it', async () => {
+    const client = await createClient()
+
+    expect(client.cache.get('blockchains')).toBeUndefined()
+    await client.confirm(request())
+
+    expect(legacy.getBlockchains.mock.calls).toStrictEqual([
+      [{ signal: undefined }],
+    ])
+    expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
+    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+  })
+
+  test("doesn't fetch the blockchain list again once it is cached", async () => {
+    const client = await createClient()
+
+    await client.confirm(request())
+    await client.confirm(request())
+
+    expect(legacy.getBlockchains).toHaveBeenCalledOnce()
+    expect(legacy.confirmRoute).toHaveBeenCalledTimes(2)
+  })
+
+  test('sends the signal with the blockchain list fetch', async () => {
+    const client = await createClient()
+    const controller = new AbortController()
+
+    await client.confirm(request(), { signal: controller.signal })
+
+    expect(legacy.getBlockchains.mock.lastCall).toStrictEqual([
+      { signal: controller.signal },
+    ])
+  })
+
+  test('throws an SdkError typed by HTTP status when the blockchain list fetch fails, caching nothing, and fetches again on the next call', async () => {
+    const client = await createClient()
+    legacy.getBlockchains.mockRejectedValueOnce(
+      httpError(SERVER_ERROR, { error: 'Server is down' }),
+    )
+
+    const error = await confirmError(client.confirm(request()))
+
+    expect(error).toMatchObject({
+      type: 'SERVER_ERROR',
+      message: 'Server is down',
+    })
+    expect(client.cache.get('blockchains')).toBeUndefined()
+    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+
+    await client.confirm(request())
+
+    expect(legacy.getBlockchains).toHaveBeenCalledTimes(2)
+    expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
+    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+  })
+
+  test('throws REQUEST_CANCELED when the signal aborts the blockchain list fetch, caching nothing', async () => {
+    const client = await createClient()
+    const controller = new AbortController()
+    legacy.getBlockchains.mockImplementationOnce(async () => {
+      controller.abort()
+      throw new TypeError('aborted')
+    })
+
+    const error = await confirmError(
+      client.confirm(request(), { signal: controller.signal }),
+    )
+
+    expect(error).toHaveProperty('type', 'REQUEST_CANCELED')
+    expect(client.cache.get('blockchains')).toBeUndefined()
+    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+  })
+
+  test('types the blockchains slot, and has no metadata slot', async () => {
+    const client = await createClient()
+
+    expectTypeOf(client.cache.get('blockchains')).toEqualTypeOf<
+      readonly Sdk.BlockchainMeta[] | undefined
+    >()
+    // @ts-expect-error there is no metadata slot
+    void client.cache.get('metadata')
+  })
+
   test.each(['abc', '0', '100'])(
     "doesn't check the Quote's slippage %j",
     async (slippage) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
 
       await client.confirm(request({ slippage }))
 
@@ -338,11 +405,7 @@ describe('confirm', () => {
   )
 
   test('accepts a Quote without a slippage and gives it no slippage warnings', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.confirmRoute.mockResolvedValue(
       response({
         result: result({
@@ -368,11 +431,7 @@ describe('confirm', () => {
   })
 
   test('resolves to data (the confirm result without its diagnosis messages, with selectedWallets and slippage), no warnings and _response as received', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const confirmedResult = result({
       diagnosisMessages: ['Some swappers are down'],
     })
@@ -412,11 +471,7 @@ describe('confirm', () => {
   })
 
   test('fills nothing in from the request or the Quote when the result leaves fields out', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const {
       from: _from,
       to: _to,
@@ -436,11 +491,7 @@ describe('confirm', () => {
   })
 
   test('carries a copy of selectedWallets and the Quote slippage, without the destination', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const selectedWallets = { ETH: '0xfrom', BSC: '0xto', SOLANA: 'sol' }
 
     const confirmed = await client.confirm({
@@ -469,11 +520,7 @@ describe('confirm', () => {
   })
 
   test('has no slippage key when the Quote has none', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const { slippage: _, ...withoutSlippage } = quote()
 
     const confirmed = await client.confirm({
@@ -486,11 +533,7 @@ describe('confirm', () => {
   })
 
   test('confirms a Quote taken from a quotes() result as it is', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.getAllRoutes.mockResolvedValue({
       from: ETH,
       to: USDC,
@@ -537,11 +580,7 @@ describe('confirm', () => {
   })
 
   test('resolves to plain JSON that survives a round-trip unchanged', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     const confirmed = await client.confirm(request())
 
@@ -579,7 +618,7 @@ describe('confirm', () => {
       )
       await client.confirm(
         { quote: quote(), selectedWallets },
-        // @ts-expect-error the blockchains are set on the client
+        // @ts-expect-error the client fetches the blockchains itself
         { meta: { blockchains } },
       )
       // @ts-expect-error the request needs the Quote
@@ -596,11 +635,8 @@ describe('confirm', () => {
   })
 
   test('sends the request for a Quote whose entry has an error, without checking it', async () => {
-    const { RangoClient, SdkError } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const { SdkError } = await loadSdk()
+    const client = await createClient()
     const entry = {
       data: quote(),
       warnings: [],
@@ -624,11 +660,7 @@ describe('confirm', () => {
   })
 
   test('raises EXCESSIVE_OUTPUT_AMOUNT_CHANGE against the passed Quote', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.confirmRoute.mockResolvedValue(
       response({
         result: result({
@@ -665,11 +697,7 @@ describe('confirm', () => {
   ])(
     'takes the input value of EXCESSIVE_OUTPUT_AMOUNT_CHANGE from $name',
     async ({ quoteAmount, routeAmount, raised }) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
       legacy.confirmRoute.mockResolvedValue(
         response({
           result: result({
@@ -694,11 +722,7 @@ describe('confirm', () => {
   )
 
   test('does not raise EXCESSIVE_OUTPUT_AMOUNT_CHANGE for a drop smaller than 1%', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.confirmRoute.mockResolvedValue(
       response({
         result: result({
@@ -717,11 +741,7 @@ describe('confirm', () => {
   })
 
   test('raises HIGH_FEE and LONG_DURATION at the thresholds', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const networkFee: Sdk.SwapResult['fee'][number] = {
       name: 'Network Fee',
       expenseType: 'FROM_SOURCE_WALLET',
@@ -763,11 +783,7 @@ describe('confirm', () => {
   })
 
   test('takes no per-call validation option', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     expectTypeOf(client.confirm)
       .parameter(1)
@@ -775,11 +791,7 @@ describe('confirm', () => {
   })
 
   test('resolves with the quote() warnings, including INSUFFICIENT_BALANCE', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const shortOnFee = {
       asset: ETH,
       requiredAmount: { amount: '2000000000000000000', decimals: 18 },
@@ -832,11 +844,7 @@ describe('confirm', () => {
   })
 
   test('throws REQUEST_CANCELED when the signal aborts the request', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     const canceled = new Error('canceled')
     legacy.confirmRoute.mockImplementation(async () => {
@@ -856,11 +864,7 @@ describe('confirm', () => {
   })
 
   test('throws BAD_REQUEST with the body error message for an HTTP 400', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const badRequest = httpError(BAD_REQUEST, { error: 'Route expired' })
     legacy.confirmRoute.mockRejectedValue(badRequest)
 
@@ -875,11 +879,7 @@ describe('confirm', () => {
   })
 
   test('throws SERVER_ERROR with the fallback message for an HTTP 500 with no error', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const serverError = httpError(SERVER_ERROR, { errorCode: 42, traceId: 7 })
     legacy.confirmRoute.mockRejectedValue(serverError)
 
@@ -894,11 +894,7 @@ describe('confirm', () => {
   })
 
   test('throws REQUEST_FAILED when the response has an error', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const failed = response({
       ok: false,
       result: null,
@@ -919,11 +915,7 @@ describe('confirm', () => {
   })
 
   test('throws REQUEST_FAILED for ok: false with no error message', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const failed = response({ ok: false })
     legacy.confirmRoute.mockResolvedValue(failed)
 
@@ -937,11 +929,7 @@ describe('confirm', () => {
   })
 
   test('throws NO_RESULT when the response has no result', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const empty = response({ result: null })
     legacy.confirmRoute.mockResolvedValue(empty)
 
@@ -955,11 +943,7 @@ describe('confirm', () => {
   })
 
   test('throws NO_RESULT with the first diagnosis message for a null routing result', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const empty = response({
       result: result({ result: null, diagnosisMessages: ['No liquidity'] }),
     })
@@ -974,11 +958,7 @@ describe('confirm', () => {
   })
 
   test('throws BRIDGE_LIMIT for a swap outside its limits', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const tooSmall = swap({ fromAmount: '0.1' })
     legacy.confirmRoute.mockResolvedValue(
       response({
@@ -1007,11 +987,7 @@ describe('confirm', () => {
   })
 
   test('throws UNKNOWN_SLIPPAGE for a flagged swap', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const flagged = response({
       result: result({
         result: {
@@ -1034,11 +1010,7 @@ describe('confirm', () => {
   })
 
   test('throws REQUEST_FAILED with the original as cause for a TypeError inside the pipeline', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.confirmRoute.mockResolvedValue(null)
 
     const error = await confirmError(client.confirm(request()))
@@ -1048,11 +1020,7 @@ describe('confirm', () => {
   })
 
   test('throws REQUEST_CANCELED for a TypeError inside the pipeline when the signal was aborted', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     legacy.confirmRoute.mockImplementation(async () => {
       controller.abort()
@@ -1068,11 +1036,8 @@ describe('confirm', () => {
   })
 
   test('rejects with an SdkError raised inside the pipeline unchanged, even when the signal was aborted', async () => {
-    const { RangoClient, SdkError } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const { SdkError } = await loadSdk()
+    const client = await createClient()
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
     legacy.confirmRoute.mockImplementation(async () => {
@@ -1088,11 +1053,7 @@ describe('confirm', () => {
   })
 
   test('rejects with the SdkError a result check throws, even when the signal was aborted', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     const empty = response({ result: null })
     legacy.confirmRoute.mockImplementation(async () => {
@@ -1108,11 +1069,8 @@ describe('confirm', () => {
   })
 
   test('narrows a caught error with instanceof, then metadata on type', async () => {
-    const { RangoClient, SdkError } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const { SdkError } = await loadSdk()
+    const client = await createClient()
     legacy.confirmRoute.mockResolvedValue(response({ result: null }))
 
     let type: unknown

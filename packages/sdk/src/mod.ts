@@ -23,7 +23,7 @@ export type {
   SdkErrorOptions,
   SdkErrorType,
 } from './errors/mod.js'
-export type { RequestOptions } from './types.js'
+export type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
 export type {
   ExcessiveOutputAmountChangeWarningMetadata,
   HighFeeWarningMetadata,

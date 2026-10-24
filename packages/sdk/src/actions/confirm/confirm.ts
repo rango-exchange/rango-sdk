@@ -1,8 +1,10 @@
 import type { ConfirmOptions, ConfirmRequest, ConfirmResult } from './types.js'
+import type { Cache } from '../../cache/mod.js'
+import type { CacheSchema } from '../../types.js'
 import type { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
 import { throwRequestError } from '../../errors/mod.js'
-import { validateDestination } from '../quote/mod.js'
+import { getBlockchainsAndValidateDestination } from '../quote/mod.js'
 
 import {
   buildConfirmRouteRequest,
@@ -13,14 +15,17 @@ import {
 
 export async function confirmQuote(
   httpClient: LegacyRangoClient,
+  cache: Cache<CacheSchema>,
   request: ConfirmRequest,
-  options: ConfirmOptions,
+  options: ConfirmOptions = {},
 ): Promise<ConfirmResult> {
   const { quote } = request
-  validateDestination(
+  await getBlockchainsAndValidateDestination(
+    httpClient,
+    cache,
     request.destination,
     quote.to.blockchain,
-    options.meta.blockchains,
+    options.signal,
   )
 
   return httpClient

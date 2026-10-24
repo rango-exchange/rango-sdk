@@ -3,16 +3,15 @@ export { fetchQuote } from './quote.js'
 export type {
   CheckedResponse,
   ErrorFields,
-  QuoteOptions,
   QuoteRequest,
   QuoteResult,
   Route,
   RouteResponse,
 } from './types.js'
 export {
+  getBlockchainsAndValidateDestination,
   omitErrorFields,
   omitRouteErrorFields,
-  validateDestination,
   validateRoute,
   validateSwapRequest,
 } from './utils.js'

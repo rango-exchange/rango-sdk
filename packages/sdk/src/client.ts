@@ -9,19 +9,32 @@ import type {
 import type { RangoClientConfig, ResolvedConfig } from './configs.js'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- for `{@link SdkError}` in the TSDoc
 import type { SdkError } from './errors/mod.js'
-import type { RequestOptions } from './types.js'
+import type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
 import { confirmQuote, fetchQuote, fetchQuotes } from './actions/mod.js'
+import { Cache } from './cache/mod.js'
 import { resolveConfig } from './configs.js'
 
 export class RangoClient {
+  /**
+   * What this client has cached. Read only.
+   *
+   * @example
+   * ```ts
+   * const blockchains = client.cache.get('blockchains')
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#clientcache
+   */
+  readonly cache: ReadonlyCache
+
   readonly #config: ResolvedConfig
   readonly #httpClient: LegacyRangoClient
+  readonly #cache: Cache<CacheSchema>
 
   /**
-   * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the meta API's blockchain list as `meta.blockchains`, used by `quote()` and `confirm()` to check a set `destination`.
+   * @param config - Your `apiKey`, and a `baseUrl` that defaults to `https://api.rango.exchange`.
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#usage
    */
   constructor(config: RangoClientConfig) {
@@ -30,10 +43,14 @@ export class RangoClient {
       this.#config.apiKey,
       this.#config.baseUrl,
     )
+    this.#cache = new Cache()
+    this.cache = { get: (key) => this.#cache.get(key) }
   }
 
   /**
    * The best Route in one step, when you have the user's wallets.
+   *
+   * A set `destination` is checked against the cached blockchain list, fetched on first need.
    *
    * @param request - `checkPrerequisites` defaults to `true`.
    * @returns `data`: a Route, and the `warnings` that apply.
@@ -53,10 +70,7 @@ export class RangoClient {
     request: QuoteRequest,
     opts?: RequestOptions,
   ): Promise<QuoteResult> {
-    return fetchQuote(this.#httpClient, request, {
-      ...opts,
-      meta: this.#config.meta,
-    })
+    return fetchQuote(this.#httpClient, this.#cache, request, opts)
   }
 
   /**
@@ -88,6 +102,8 @@ export class RangoClient {
   /**
    * Turns the chosen Quote into a Route for the user's wallets.
    *
+   * A set `destination` is checked against the blockchain list, which the client fetches and caches the first time.
+   *
    * @param request - Pass the entry's `data` as `quote` unchanged.
    * @returns `data`: a Route, and the `warnings` that apply.
    * @throws {@link SdkError}
@@ -106,9 +122,6 @@ export class RangoClient {
     request: ConfirmRequest,
     options?: RequestOptions,
   ): Promise<ConfirmResult> {
-    return confirmQuote(this.#httpClient, request, {
-      ...options,
-      meta: this.#config.meta,
-    })
+    return confirmQuote(this.#httpClient, this.#cache, request, options)
   }
 }

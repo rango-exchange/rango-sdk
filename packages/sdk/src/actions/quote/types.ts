@@ -1,9 +1,7 @@
-import type { RequestOptions } from '../../types.js'
 import type { SdkWarning } from '../../warnings/mod.js'
 import type {
   BestRouteRequest,
   BestRouteResponse,
-  BlockchainMeta,
   SimulationResult,
 } from 'rango-sdk'
 
@@ -16,10 +14,6 @@ export type QuoteRequest = Omit<BestRouteRequest, 'checkPrerequisites'> & {
    * @defaultValue true
    */
   checkPrerequisites?: boolean
-}
-
-export type QuoteOptions = RequestOptions & {
-  meta: { blockchains: readonly BlockchainMeta[] }
 }
 
 export type ErrorFields = 'error' | 'errorCode' | 'traceId'

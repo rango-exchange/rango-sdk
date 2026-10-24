@@ -16,13 +16,10 @@ yarn add @rango-dev/sdk # or: npm install @rango-dev/sdk
 ```ts
 import { RangoClient } from '@rango-dev/sdk'
 
-const client = new RangoClient({
-  apiKey: 'YOUR_API_KEY',
-  meta: { blockchains },
-})
+const client = new RangoClient({ apiKey: 'YOUR_API_KEY' })
 ```
 
-`meta.blockchains` is required: pass the meta API's blockchain list. `quote()` and `confirm()` check a set `destination` against the destination blockchain's address patterns in it. `baseUrl` defaults to `https://api.rango.exchange`.
+`baseUrl` defaults to `https://api.rango.exchange`.
 
 The package keeps no client of its own. To share one, export it from a module of yours and import it where you need it:
 
@@ -30,10 +27,7 @@ The package keeps no client of its own. To share one, export it from a module of
 // rango.ts
 import { RangoClient } from '@rango-dev/sdk'
 
-export const client = new RangoClient({
-  apiKey: 'YOUR_API_KEY',
-  meta: { blockchains },
-})
+export const client = new RangoClient({ apiKey: 'YOUR_API_KEY' })
 ```
 
 ```ts
@@ -68,7 +62,7 @@ const { data } = await client.quotes({
 
 ### `confirm()`
 
-Turns the chosen **Quote** into a **Route** for the user's wallets. Pass the entry's `data` as `request.quote` unchanged. A set `destination` is checked against the **Quote**'s `to` blockchain in the client's `meta.blockchains`.
+Turns the chosen **Quote** into a **Route** for the user's wallets. Pass the entry's `data` as `request.quote` unchanged. A set `destination` is checked against the address patterns of the **Quote**'s `to` blockchain in the [blockchain list](#clientcache).
 
 ```ts
 const chosen = data.quotes.find((entry) => !entry.error)
@@ -97,12 +91,22 @@ const { data: route, warnings } = await client.quote({
 })
 ```
 
-`data` is a `Route`, as from `confirm()`, with the request's `selectedWallets` and `slippage` merged in. A set `destination` is checked against `to`'s blockchain in the client's `meta.blockchains`, as in `confirm()`.
+`data` is a `Route`, as from `confirm()`, with the request's `selectedWallets` and `slippage` merged in. A set `destination` is checked against `to`'s blockchain in the [blockchain list](#clientcache), fetched with the call's `signal` if not yet cached; a failed fetch caches nothing.
 
 With `checkPrerequisites: false` the server skips the balance check: no `INSUFFICIENT_BALANCE`, and `createTransaction` may refuse the request ID.
 
 - Throws: `INVALID_INPUT`, `REQUEST_CANCELED`, `NO_RESULT`, `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `TOO_MANY_REQUESTS`, `SERVER_ERROR`, `REQUEST_FAILED`, `BRIDGE_LIMIT`, `UNKNOWN_SLIPPAGE`.
 - Warnings: `HIGH_VALUE_LOSS`, `UNKNOWN_PRICE`, `INSUFFICIENT_SLIPPAGE`, `HIGH_SLIPPAGE`, `HIGH_FEE`, `LONG_DURATION`, `INSUFFICIENT_BALANCE`.
+
+### `client.cache`
+
+Each client keeps its own in-memory cache, which the SDK fills. Read it with `get`:
+
+```ts
+const blockchains = client.cache.get('blockchains') // readonly BlockchainMeta[], or undefined
+```
+
+`get('blockchains')` is the blockchain list (`/meta/blockchains`) that `quote()` and `confirm()` check a `destination` against, or `undefined` until the first of them with a destination fetches it. It is kept for the client's lifetime and never refetched. The cache has no expiry and no size limit, and two clients never share it. Its type, `ReadonlyCache`, has only `get`, and so does the object at runtime: the app reads the cache, and only the SDK writes to it. The blockchain list is read-only by type only, so don't mutate what you read.
 
 ## Errors
 
@@ -117,20 +121,20 @@ try {
 }
 ```
 
-| Type                | Thrown when                                                                                                                                                               | `metadata`                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `INVALID_INPUT`     | Before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; on `quote()` and `confirm()`, `destination`: `PATTERN_MISMATCH`, `NO_ADDRESS_PATTERNS`. | `{ field, reason }`                      |
-| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                                | none                                     |
-| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                                           | `{ diagnosisMessage? }`                  |
-| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                                 | none                                     |
-| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                                 | none                                     |
-| `FORBIDDEN`         | HTTP 403.                                                                                                                                                                 | none                                     |
-| `NOT_FOUND`         | HTTP 404.                                                                                                                                                                 | none                                     |
-| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                                 | none                                     |
-| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                                          | none                                     |
-| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`.                                                                                               | none                                     |
-| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                                              | `{ swap, limit, limitValue, exclusive }` |
-| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                                | none                                     |
+| Type                | Thrown when                                                                                                                                                                                                                                                                                                                                    | `metadata`                               |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `INVALID_INPUT`     | Before the swap request. With a `destination` and no blockchain list cached, after the list fetch, whose errors come first. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; on `quote()` and `confirm()`, `destination`: `NO_ADDRESS_PATTERNS` (the destination blockchain has none in the blockchain list), `PATTERN_MISMATCH`. | `{ field, reason }`                      |
+| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                                                                                                                                                                                                     | none                                     |
+| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                                                                                                                                                                                                                | `{ diagnosisMessage? }`                  |
+| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                                                                                                                                                                                                      | none                                     |
+| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                                                                                                                                                                                                      | none                                     |
+| `FORBIDDEN`         | HTTP 403.                                                                                                                                                                                                                                                                                                                                      | none                                     |
+| `NOT_FOUND`         | HTTP 404.                                                                                                                                                                                                                                                                                                                                      | none                                     |
+| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                                                                                                                                                                                                      | none                                     |
+| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                                                                                                                                                                                                               | none                                     |
+| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`.                                                                                                                                                                                                                                                                    | none                                     |
+| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                                                                                                                                                                                                                   | `{ swap, limit, limitValue, exclusive }` |
+| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                                                                                                                                                                                                     | none                                     |
 
 The metadata types are exported, and their fields are documented in your editor.
 
