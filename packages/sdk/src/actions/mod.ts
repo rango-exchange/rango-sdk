@@ -1,8 +1,9 @@
 export { confirmQuote } from './confirm/mod.js'
 export type {
-  ConfirmQuote,
-  ConfirmRequest,
+  ConfirmOptions,
+  ConfirmReq,
   ConfirmResult,
+  SelectedWallets,
 } from './confirm/mod.js'
 export { fetchQuote } from './quote/mod.js'
 export type {
@@ -16,6 +17,7 @@ export type {
   Quote,
   QuoteEntry,
   QuotesData,
-  QuotesRequest,
+  QuotesOptions,
+  QuotesReq,
   QuotesResult,
 } from './quotes/mod.js'

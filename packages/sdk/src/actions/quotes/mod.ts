@@ -3,6 +3,7 @@ export type {
   Quote,
   QuoteEntry,
   QuotesData,
-  QuotesRequest,
+  QuotesOptions,
+  QuotesReq,
   QuotesResult,
 } from './types.js'

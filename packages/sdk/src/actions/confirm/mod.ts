@@ -1,7 +1,7 @@
 export { confirmQuote } from './confirm.js'
 export type {
   ConfirmOptions,
-  ConfirmQuote,
-  ConfirmRequest,
+  ConfirmReq,
   ConfirmResult,
+  SelectedWallets,
 } from './types.js'

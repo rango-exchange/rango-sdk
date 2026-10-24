@@ -1,15 +1,17 @@
 import type {
-  ConfirmRequest,
+  ConfirmOptions,
   ConfirmResult,
   QuoteRequest,
   QuoteResult,
-  QuotesRequest,
+  QuotesOptions,
   QuotesResult,
+  SelectedWallets,
 } from './actions/mod.js'
 import type { RangoClientConfig, ResolvedConfig } from './configs.js'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- for `{@link SdkError}` in the TSDoc
 import type { SdkError } from './errors/mod.js'
 import type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
+import type { Asset } from 'rango-sdk'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
@@ -21,10 +23,6 @@ export class RangoClient {
   /**
    * What this client has cached. Read only.
    *
-   * @example
-   * ```ts
-   * const blockchains = client.cache.get('blockchains')
-   * ```
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#clientcache
    */
   readonly cache: ReadonlyCache
@@ -76,52 +74,64 @@ export class RangoClient {
   /**
    * Every available Quote for a swap, without a wallet.
    *
+   * Each successful call caches the returned Quotes for `confirm()`.
+   *
    * @returns `data.quotes`: one entry per server result, with its `warnings`. An entry's `error` is attached, not thrown.
    * @throws {@link SdkError}
    * @example
    * ```ts
-   * const { data } = await client.quotes({
-   *   from: { blockchain: 'ETH', symbol: 'ETH', address: null },
-   *   to: {
+   * const { data } = await client.quotes(
+   *   { blockchain: 'ETH', symbol: 'ETH', address: null },
+   *   {
    *     blockchain: 'BSC',
    *     symbol: 'USDC',
    *     address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
    *   },
-   *   amount: '1',
-   * })
+   *   '1',
+   *   { req: { slippage: '1' } },
+   * )
    * ```
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#quotes
    */
   async quotes(
-    request: QuotesRequest,
-    opts?: RequestOptions,
+    from: Asset,
+    to: Asset,
+    amount: string,
+    options?: QuotesOptions,
   ): Promise<QuotesResult> {
-    return fetchQuotes(this.#httpClient, request, opts)
+    return fetchQuotes(this.#httpClient, this.#cache, from, to, amount, options)
   }
 
   /**
-   * Turns the chosen Quote into a Route for the user's wallets.
+   * Turns the cached Quote with this request ID into a Route for the user's wallets.
    *
-   * A set `destination` is checked against the blockchain list, which the client fetches and caches the first time.
+   * A set `req.destination` is checked as in `quote()`.
    *
-   * @param request - Pass the entry's `data` as `quote` unchanged.
+   * @param requestId - The `requestId` of a Quote cached by `quotes()`.
    * @returns `data`: a Route, and the `warnings` that apply.
    * @throws {@link SdkError}
    * @example
    * ```ts
    * const chosen = data.quotes.find((entry) => !entry.error)
    * const selectedWallets = { ETH: '0x...', BSC: '0x...' }
-   * const { data: route, warnings } = await client.confirm({
-   *   quote: chosen.data,
+   * const { data: route, warnings } = await client.confirm(
+   *   chosen.data.requestId,
    *   selectedWallets,
-   * })
+   * )
    * ```
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#confirm
    */
   async confirm(
-    request: ConfirmRequest,
-    options?: RequestOptions,
+    requestId: string,
+    selectedWallets: SelectedWallets,
+    options?: ConfirmOptions,
   ): Promise<ConfirmResult> {
-    return confirmQuote(this.#httpClient, this.#cache, request, options)
+    return confirmQuote(
+      this.#httpClient,
+      this.#cache,
+      requestId,
+      selectedWallets,
+      options,
+    )
   }
 }

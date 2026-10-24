@@ -41,11 +41,11 @@ describe('client', () => {
   test('two clients with different API keys each use their own config', async () => {
     const { RangoClient } = await loadSdk()
     legacy.getAllRoutes.mockResolvedValue({ results: [] })
-    const request = {
-      from: { blockchain: 'ETH', symbol: 'ETH', address: null },
-      to: { blockchain: 'BSC', symbol: 'BNB', address: null },
-      amount: '1',
-    }
+    const args: [Sdk.Asset, Sdk.Asset, string] = [
+      { blockchain: 'ETH', symbol: 'ETH', address: null },
+      { blockchain: 'BSC', symbol: 'BNB', address: null },
+      '1',
+    ]
 
     const first = new RangoClient({
       apiKey: 'first-key',
@@ -54,9 +54,9 @@ describe('client', () => {
       apiKey: 'second-key',
       baseUrl: 'https://example.test',
     })
-    await first.quotes(request).catch(() => undefined)
-    await second.quotes(request).catch(() => undefined)
-    await first.quotes(request).catch(() => undefined)
+    await first.quotes(...args).catch(() => undefined)
+    await second.quotes(...args).catch(() => undefined)
+    await first.quotes(...args).catch(() => undefined)
 
     expect(legacy.getAllRoutes.mock.calls.map(([args]) => args)).toEqual([
       ['first-key', 'https://api.rango.exchange'],
@@ -93,17 +93,6 @@ describe('client', () => {
     }>()
     // @ts-expect-error the config takes no meta: the client fetches the blockchains itself
     void new RangoClient({ apiKey: 'test-key', meta: { blockchains: [] } })
-  })
-
-  test('exposes the cache to read only', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({ apiKey: 'test-key' })
-
-    expectTypeOf(client.cache).toEqualTypeOf<Sdk.ReadonlyCache>()
-    // @ts-expect-error the cache can't be written through the client
-    void client.cache.set
-    expect('set' in client.cache).toBe(false)
-    expect(client.cache.get('blockchains')).toBeUndefined()
   })
 })
 

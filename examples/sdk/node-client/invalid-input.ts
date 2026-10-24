@@ -6,6 +6,8 @@ export function describeInvalidInput({
   reason,
 }: InvalidInputMetadata): string {
   switch (field) {
+    case 'requestId':
+      return 'This Quote is no longer cached. Fetch the quotes again.'
     case 'to':
       return 'Choose two different assets.'
     case 'amount':

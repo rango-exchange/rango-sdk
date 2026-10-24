@@ -1,4 +1,4 @@
-import type { QuotesData, QuotesRequest } from '@rango-dev/sdk'
+import type { Asset, QuotesData, QuotesReq } from '@rango-dev/sdk'
 
 import { SdkError } from '@rango-dev/sdk'
 
@@ -15,21 +15,21 @@ export const affiliate = {
   affiliateWallets: { BSC: '0x0000000000000000000000000000000000000002' },
 }
 
-const request: QuotesRequest = {
-  from: { blockchain: 'BSC', symbol: 'BNB', address: null },
-  to: {
-    blockchain: 'AVAX_CCHAIN',
-    symbol: 'USDT.E',
-    address: '0xc7198437980c041c805a1edcba50c1ce5db95118',
-  },
-  amount: '0.1',
-  slippage: '1.0',
-  ...affiliate,
+const from: Asset = { blockchain: 'BSC', symbol: 'BNB', address: null }
+const to: Asset = {
+  blockchain: 'AVAX_CCHAIN',
+  symbol: 'USDT.E',
+  address: '0xc7198437980c041c805a1edcba50c1ce5db95118',
 }
+
+// The optional fields sent to the server.
+const req: QuotesReq = { slippage: '1.0', ...affiliate }
 
 export async function printQuotes(): Promise<QuotesData | undefined> {
   try {
-    const { data } = await client.quotes(request, {
+    // The client adds the returned Quotes to its cached `quotes` map, under `data.routeId` then request ID, for confirm().
+    const { data } = await client.quotes(from, to, '0.1', {
+      req,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
 

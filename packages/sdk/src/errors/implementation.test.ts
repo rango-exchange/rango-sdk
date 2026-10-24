@@ -95,6 +95,9 @@ describe('SdkError', () => {
         break
       case 'INVALID_INPUT':
         switch (caught.metadata.field) {
+          case 'requestId':
+            expectTypeOf(caught.metadata.reason).toEqualTypeOf<'NOT_FOUND'>()
+            break
           case 'to':
             expectTypeOf(caught.metadata.reason).toEqualTypeOf<'SAME_ASSET'>()
             break

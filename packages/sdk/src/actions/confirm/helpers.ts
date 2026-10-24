@@ -1,10 +1,12 @@
 import type {
   CheckedResponse,
-  ConfirmQuote,
-  ConfirmRequest,
   ConfirmResult,
+  SelectedWallets,
   WarnedResponse,
 } from './types.js'
+import type { Cache } from '../../cache/mod.js'
+import type { CacheSchema } from '../../types.js'
+import type { Quote } from '../quotes/mod.js'
 import type { ConfirmRouteRequest, ConfirmRouteResponse } from 'rango-sdk'
 
 import { NO_RESULT_MESSAGE, SdkError } from '../../errors/mod.js'
@@ -16,12 +18,29 @@ import {
 
 import { getOutputChangeWarnings } from './warnings.js'
 
+export function getCachedQuote(
+  cache: Cache<CacheSchema>,
+  requestId: string,
+): Quote {
+  for (const quotes of cache.get('quotes')?.values() ?? []) {
+    const quote = quotes.get(requestId)
+    if (quote !== undefined) {
+      return quote
+    }
+  }
+  throw new SdkError(
+    'INVALID_INPUT',
+    "`requestId` isn't in the client's cache: pass the request ID of a Quote that one of this client's last 10 successful `quotes()` returned.",
+    { metadata: { field: 'requestId', reason: 'NOT_FOUND' } },
+  )
+}
+
 // The `destination` key is left out when the caller left it out.
-export function buildConfirmRouteRequest({
-  quote,
-  selectedWallets,
-  destination,
-}: ConfirmRequest): ConfirmRouteRequest {
+export function buildConfirmRouteRequest(
+  quote: Quote,
+  selectedWallets: SelectedWallets,
+  destination: string | undefined,
+): ConfirmRouteRequest {
   return {
     requestId: quote.requestId,
     selectedWallets,
@@ -51,7 +70,7 @@ export function checkErrors(response: ConfirmRouteResponse): CheckedResponse {
   return { response, route }
 }
 
-export function checkWarnings(quote: ConfirmQuote) {
+export function checkWarnings(quote: Quote) {
   return ({ response, route }: CheckedResponse): WarnedResponse => ({
     response,
     route,
@@ -67,7 +86,7 @@ export function checkWarnings(quote: ConfirmQuote) {
 }
 
 export function generateResult(
-  selectedWallets: ConfirmRequest['selectedWallets'],
+  selectedWallets: SelectedWallets,
   slippage: string | undefined,
 ) {
   return ({ response, route, warnings }: WarnedResponse): ConfirmResult => ({
