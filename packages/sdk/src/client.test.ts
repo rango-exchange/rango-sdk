@@ -49,12 +49,10 @@ describe('client', () => {
 
     const first = new RangoClient({
       apiKey: 'first-key',
-      meta: { blockchains: [] },
     })
     const second = new RangoClient({
       apiKey: 'second-key',
       baseUrl: 'https://example.test',
-      meta: { blockchains: [] },
     })
     await first.quotes(request).catch(() => undefined)
     await second.quotes(request).catch(() => undefined)
@@ -72,26 +70,40 @@ describe('client', () => {
 
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     expect('setAffiliate' in client).toBe(false)
     expectTypeOf<keyof Sdk.RangoClientConfig>().toEqualTypeOf<
-      'apiKey' | 'baseUrl' | 'meta'
+      'apiKey' | 'baseUrl'
     >()
     // @ts-expect-error The Affiliate type is no longer exported.
     expectTypeOf<Sdk.Affiliate>()
   })
 
-  test('requires the blockchains meta in the config', () => {
-    expectTypeOf<Sdk.RangoClientConfig['meta']>().toEqualTypeOf<{
-      blockchains: readonly Sdk.BlockchainMeta[]
-    }>()
-    expectTypeOf<{ apiKey: string }>().not.toExtend<Sdk.RangoClientConfig>()
-    expectTypeOf<{
+  test('takes only an API key and an optional base URL', async () => {
+    const { RangoClient } = await loadSdk()
+
+    expect(new RangoClient({ apiKey: 'test-key' })).toBeInstanceOf(RangoClient)
+    expect(
+      new RangoClient({ apiKey: 'test-key', baseUrl: 'https://example.test' }),
+    ).toBeInstanceOf(RangoClient)
+    expectTypeOf<Sdk.RangoClientConfig>().toEqualTypeOf<{
       apiKey: string
-      meta: Record<string, never>
-    }>().not.toExtend<Sdk.RangoClientConfig>()
+      baseUrl?: string
+    }>()
+    // @ts-expect-error the config takes no meta: the client fetches the blockchains itself
+    void new RangoClient({ apiKey: 'test-key', meta: { blockchains: [] } })
+  })
+
+  test('exposes the cache to read only', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({ apiKey: 'test-key' })
+
+    expectTypeOf(client.cache).toEqualTypeOf<Sdk.ReadonlyCache>()
+    // @ts-expect-error the cache can't be written through the client
+    void client.cache.set
+    expect('set' in client.cache).toBe(false)
+    expect(client.cache.get('blockchains')).toBeUndefined()
   })
 })
 

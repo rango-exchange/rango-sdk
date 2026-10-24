@@ -1,21 +1,29 @@
-import type { QuoteOptions, QuoteRequest, QuoteResult } from './types.js'
+import type { QuoteRequest, QuoteResult } from './types.js'
+import type { Cache } from '../../cache/mod.js'
+import type { CacheSchema, RequestOptions } from '../../types.js'
 import type { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
 import { throwRequestError } from '../../errors/mod.js'
 
 import { checkErrors, checkWarnings, generateResult } from './helpers.js'
-import { validateDestination, validateSwapRequest } from './utils.js'
+import {
+  getBlockchainsAndValidateDestination,
+  validateSwapRequest,
+} from './utils.js'
 
 export async function fetchQuote(
   httpClient: LegacyRangoClient,
+  cache: Cache<CacheSchema>,
   request: QuoteRequest,
-  opts: QuoteOptions,
+  opts: RequestOptions = {},
 ): Promise<QuoteResult> {
   validateSwapRequest(request)
-  validateDestination(
+  await getBlockchainsAndValidateDestination(
+    httpClient,
+    cache,
     request.destination,
     request.to.blockchain,
-    opts.meta.blockchains,
+    opts.signal,
   )
 
   return httpClient

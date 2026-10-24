@@ -1,7 +1,7 @@
+import type { RequestOptions } from '../../types.js'
 import type { SdkWarning } from '../../warnings/mod.js'
 import type {
   CheckedResponse as CheckedRouteResponse,
-  QuoteOptions,
   Route,
 } from '../quote/mod.js'
 import type {
@@ -25,7 +25,7 @@ export type ConfirmRequest = Omit<ConfirmRouteRequest, 'requestId'> & {
   quote: ConfirmQuote
 }
 
-export type ConfirmOptions = QuoteOptions
+export type ConfirmOptions = RequestOptions
 
 export type ConfirmResult = {
   data: Route

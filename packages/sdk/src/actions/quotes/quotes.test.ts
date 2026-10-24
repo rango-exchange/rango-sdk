@@ -128,7 +128,6 @@ describe('quotes', () => {
     new RangoClient({
       apiKey: 'test-key',
       baseUrl: 'https://example.test',
-      meta: { blockchains: [] },
     })
 
     expect(legacy.constructorArgs).toEqual([
@@ -139,7 +138,7 @@ describe('quotes', () => {
   test('builds the legacy client with the default base URL when none is given', async () => {
     const { RangoClient } = await loadSdk()
 
-    new RangoClient({ apiKey: 'test-key', meta: { blockchains: [] } })
+    new RangoClient({ apiKey: 'test-key' })
 
     expect(legacy.constructorArgs).toEqual([
       ['test-key', 'https://api.rango.exchange'],
@@ -150,7 +149,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const withAffiliate: Sdk.QuotesRequest = {
@@ -172,7 +170,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     await client.quotes(request)
@@ -184,7 +181,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     await client.quotes({
@@ -205,7 +201,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const success = response({
       diagnosisMessages: ['Some swappers are down'],
@@ -253,7 +248,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const {
       from: _from,
@@ -276,7 +270,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(
       response({
@@ -308,7 +301,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const { slippage: _, ...withoutSlippage } = request
 
@@ -327,7 +319,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const baseSwap = swap()
     const tooSmall = swap({ fromAmountMinValue: '2' })
@@ -416,7 +407,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const unpriced = swap()
     unpriced.to = { ...unpriced.to, usdPrice: null }
@@ -494,7 +484,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     const atThreshold = await client.quotes({ ...request, slippage: '5' })
@@ -514,7 +503,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     expectTypeOf(client.quotes)
@@ -526,7 +514,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const networkFee: Sdk.SwapResult['fee'][number] = {
       name: 'Network Fee',
@@ -571,7 +558,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(
       response({
@@ -596,7 +582,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(
       response({
@@ -631,7 +616,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const unexpected = new TypeError('unreadable limit')
     const unreadable = Object.defineProperty(swap(), 'fromAmountMinValue', {
@@ -653,7 +637,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(null)
 
@@ -668,7 +651,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     legacy.getAllRoutes.mockImplementation(async () => {
@@ -689,7 +671,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
@@ -709,7 +690,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const empty = response({ results: [] })
@@ -748,7 +728,6 @@ describe('quotes', () => {
       const { RangoClient, SdkError } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
 
       // Untyped callers can send anything; the checks still run.
@@ -774,7 +753,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     await client.quotes({ ...request, from: ETH, to })
@@ -788,7 +766,6 @@ describe('quotes', () => {
       const { RangoClient } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
 
       await client.quotes({ ...request, slippage })
@@ -804,7 +781,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const badRequest = httpError(BAD_REQUEST, {
       error: 'Amount is too small',
@@ -833,7 +809,6 @@ describe('quotes', () => {
       const { RangoClient, SdkError } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
       const noResults = response({
         results: results as LegacySdk.MultiRouteSimulationResult[],
@@ -861,7 +836,6 @@ describe('quotes', () => {
       const { RangoClient } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
       legacy.getAllRoutes.mockResolvedValue(
         response({
@@ -883,7 +857,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const canceled = httpError(BAD_REQUEST, { error: 'canceled' })
@@ -910,7 +883,6 @@ describe('quotes', () => {
       const { RangoClient, SdkError } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
       const failure = httpError(status, {
         error: 'Failed',
@@ -936,7 +908,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const networkError = new Error('Network Error')
     legacy.getAllRoutes.mockRejectedValue(networkError)
@@ -954,7 +925,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const failed = response({
       results: [],
@@ -979,7 +949,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockRejectedValue(new Error('Network Error'))
 
@@ -1020,7 +989,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockRejectedValue(new Error('Network Error'))
 

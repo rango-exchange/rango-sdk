@@ -1,16 +1,23 @@
 import type { ErrorFields, Route, RouteResponse } from './types.js'
+import type { Cache } from '../../cache/mod.js'
 import type { BridgeLimitMetadata } from '../../errors/mod.js'
+import type { CacheSchema } from '../../types.js'
 import type {
   Asset,
   BestRouteResponse,
   BlockchainMeta,
+  RangoClient as LegacyRangoClient,
   SimulationResult,
   SwapResult,
 } from 'rango-sdk'
 
 import BigNumber from 'bignumber.js'
 
-import { NO_RESULT_MESSAGE, SdkError } from '../../errors/mod.js'
+import {
+  NO_RESULT_MESSAGE,
+  SdkError,
+  throwRequestError,
+} from '../../errors/mod.js'
 
 // Compares by blockchain, symbol and address; a missing and a null address are equal.
 export function isSameAsset(a: Asset, b: Asset): boolean {
@@ -57,22 +64,39 @@ export function validateSwapRequest(request: {
   }
 }
 
-// Checks a set destination against the address patterns of the blockchain named `blockchain`.
-export function validateDestination(
+export async function getBlockchainsAndValidateDestination(
+  httpClient: LegacyRangoClient,
+  cache: Cache<CacheSchema>,
   destination: string | undefined,
   blockchain: string,
-  blockchains: readonly BlockchainMeta[] | undefined,
-): void {
+  signal?: AbortSignal,
+): Promise<void> {
   if (destination === undefined || destination === '') {
     return
   }
-  const patterns = blockchains?.find(
+  let blockchains = cache.get('blockchains')
+  if (blockchains === undefined) {
+    blockchains = await httpClient
+      .getBlockchains({ signal })
+      .catch((cause: unknown) => throwRequestError(cause, signal))
+    cache.set('blockchains', blockchains)
+  }
+  validateDestination(destination, blockchain, blockchains)
+}
+
+// Checks a destination against the address patterns, in the blockchain list, of the blockchain named `blockchain`.
+function validateDestination(
+  destination: string,
+  blockchain: string,
+  blockchains: readonly BlockchainMeta[],
+): void {
+  const patterns = blockchains.find(
     (meta) => meta.name === blockchain,
   )?.addressPatterns
   if (!patterns?.length) {
     throw new SdkError(
       'INVALID_INPUT',
-      "`destination` can't be checked: the destination blockchain has no address patterns in the client's `meta.blockchains`.",
+      "`destination` can't be checked: the destination blockchain has no address patterns in the blockchain list.",
       { metadata: { field: 'destination', reason: 'NO_ADDRESS_PATTERNS' } },
     )
   }

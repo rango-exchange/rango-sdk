@@ -3,12 +3,16 @@ import type * as Sdk from '../../mod.js'
 import * as LegacySdk from 'rango-sdk'
 import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
 
-const legacy = vi.hoisted(() => ({ getBestRoute: vi.fn() }))
+const legacy = vi.hoisted(() => ({
+  getBestRoute: vi.fn(),
+  getBlockchains: vi.fn(),
+}))
 
 vi.mock('rango-sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof LegacySdk>()),
   RangoClient: class {
     getBestRoute = legacy.getBestRoute
+    getBlockchains = legacy.getBlockchains
   },
 }))
 
@@ -54,6 +58,15 @@ const blockchains = [
   chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
   chain('ARBITRUM', ['^(0x)[0-9A-Fa-f]{40}$']),
 ]
+
+// A client whose blockchain list, once fetched, holds these blockchains.
+async function createClient(
+  chains: readonly Sdk.BlockchainMeta[] = blockchains,
+): Promise<Sdk.RangoClient> {
+  const { RangoClient } = await loadSdk()
+  legacy.getBlockchains.mockResolvedValue([...chains])
+  return new RangoClient({ apiKey: 'test-key' })
+}
 
 const request: Sdk.QuoteRequest = {
   from: ETH,
@@ -159,15 +172,12 @@ describe('quote', () => {
   beforeEach(() => {
     vi.resetModules()
     legacy.getBestRoute.mockReset()
+    legacy.getBlockchains.mockReset()
     legacy.getBestRoute.mockResolvedValue(response())
   })
 
   test('sends the request with the affiliate fields as given and the signal', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     const withAffiliate: Sdk.QuoteRequest = {
       ...request,
@@ -185,11 +195,7 @@ describe('quote', () => {
   })
 
   test('sends no affiliate fields when the request has none', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     await client.quote(request)
 
@@ -200,11 +206,7 @@ describe('quote', () => {
   })
 
   test('sends each request with its own affiliate', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     await client.quote({
       ...request,
@@ -223,11 +225,7 @@ describe('quote', () => {
   test.each([true, false])(
     'sends checkPrerequisites: %s as given',
     async (checkPrerequisites) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
 
       await client.quote({ ...request, checkPrerequisites })
 
@@ -244,11 +242,7 @@ describe('quote', () => {
   ])(
     'sends checkPrerequisites: true when the request %s',
     async (_, quoteRequest) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
 
       await client.quote(quoteRequest)
 
@@ -269,11 +263,7 @@ describe('quote', () => {
   })
 
   test('resolves to data (the response without its error fields and diagnosis messages, with selectedWallets and slippage merged in), no warnings and _response as received', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const success = response({
       diagnosisMessages: ['Some swappers are down'],
       traceId: 12,
@@ -305,11 +295,7 @@ describe('quote', () => {
   })
 
   test('leaves the slippage key out when the request has none', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const { slippage: _slippage, ...withoutSlippage } = request
 
     const { data: route } = await client.quote(withoutSlippage)
@@ -332,11 +318,7 @@ describe('quote', () => {
   })
 
   test('fills in only selectedWallets and slippage from the request when the response leaves fields out', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const {
       from: _from,
       to: _to,
@@ -356,11 +338,7 @@ describe('quote', () => {
   })
 
   test('resolves with every warning that applies, including INSUFFICIENT_BALANCE', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const shortOnFee = {
       asset: ETH,
       requiredAmount: { amount: '2000000000000000000', decimals: 18 },
@@ -427,11 +405,7 @@ describe('quote', () => {
   })
 
   test('raises HIGH_SLIPPAGE above the threshold', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     const atThreshold = await client.quote({ ...request, slippage: '5' })
     const above = await client.quote({ ...request, slippage: '6' })
@@ -447,20 +421,16 @@ describe('quote', () => {
   })
 
   test('takes no per-call validation option', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     expectTypeOf(client.quote)
       .parameter(1)
       .toEqualTypeOf<Sdk.RequestOptions | undefined>()
   })
 
-  test('takes the blockchains from the client config, not the options', () => {
+  test('takes the blockchains from the client, not the options', () => {
     const misuse = async (client: Sdk.RangoClient) => {
-      // @ts-expect-error the blockchains are set on the client
+      // @ts-expect-error the client fetches the blockchains itself
       await client.quote(request, { meta: { blockchains } })
     }
 
@@ -468,11 +438,7 @@ describe('quote', () => {
   })
 
   test('raises HIGH_FEE and LONG_DURATION at the thresholds', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const networkFee: Sdk.SwapResult['fee'][number] = {
       name: 'Network Fee',
       expenseType: 'FROM_SOURCE_WALLET',
@@ -532,11 +498,7 @@ describe('quote', () => {
   ])(
     'throws INVALID_INPUT without sending a request when %s',
     async (_, overrides, field, reason) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
       // Untyped callers can send anything; the checks still run.
       const error = await quoteError(client.quote({ ...request, ...overrides }))
 
@@ -557,10 +519,7 @@ describe('quote', () => {
     ['forwards an empty destination', { destination: '' }],
   ])('%s, without checking it', async (_, given) => {
     const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains: [] },
-    })
+    const client = new RangoClient({ apiKey: 'test-key' })
     const { destination: _destination, ...withoutDestination } = request
     const sent = { ...withoutDestination, ...given }
 
@@ -570,6 +529,8 @@ describe('quote', () => {
       checkPrerequisites: true,
       ...sent,
     })
+    expect(legacy.getBlockchains).not.toHaveBeenCalled()
+    expect(client.cache.get('blockchains')).toBeUndefined()
   })
 
   test.each([
@@ -601,11 +562,7 @@ describe('quote', () => {
   ])(
     'throws INVALID_INPUT without sending a request when the destination %s',
     async (_, destination, chains, reason) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains: chains },
-      })
+      const client = await createClient(chains)
 
       const error = await quoteError(client.quote({ ...request, destination }))
 
@@ -617,17 +574,123 @@ describe('quote', () => {
     },
   )
 
-  test("reads the destination blockchain from the request's `to`", async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: {
-        blockchains: [
-          chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
-          chain('BNB', ['^bnb1']),
-        ],
-      },
+  test('fetches the blockchain list once on a cold cache, with no signal, and caches it', async () => {
+    const client = await createClient()
+
+    expect(client.cache.get('blockchains')).toBeUndefined()
+    await client.quote(request)
+
+    expect(legacy.getBlockchains.mock.calls).toStrictEqual([
+      [{ signal: undefined }],
+    ])
+    expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
+    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+  })
+
+  test("doesn't fetch the blockchain list again once it is cached", async () => {
+    const client = await createClient()
+
+    await client.quote(request)
+    await client.quote(request)
+    await quoteError(client.quote({ ...request, destination: '0x123' }))
+
+    expect(legacy.getBlockchains).toHaveBeenCalledOnce()
+    expect(legacy.getBestRoute).toHaveBeenCalledTimes(2)
+  })
+
+  test('keeps a cached empty blockchain list', async () => {
+    const client = await createClient([])
+
+    const first = await quoteError(client.quote(request))
+    const second = await quoteError(client.quote(request))
+
+    for (const error of [first, second]) {
+      expect(error).toMatchObject({
+        type: 'INVALID_INPUT',
+        metadata: { field: 'destination', reason: 'NO_ADDRESS_PATTERNS' },
+      })
+    }
+    expect(client.cache.get('blockchains')).toStrictEqual([])
+    expect(legacy.getBlockchains).toHaveBeenCalledOnce()
+  })
+
+  test('sends the signal with the blockchain list fetch', async () => {
+    const client = await createClient()
+    const controller = new AbortController()
+
+    await client.quote(request, { signal: controller.signal })
+
+    expect(legacy.getBlockchains.mock.lastCall).toStrictEqual([
+      { signal: controller.signal },
+    ])
+  })
+
+  test('throws an SdkError typed by HTTP status when the blockchain list fetch fails, caching nothing, and fetches again on the next call', async () => {
+    const client = await createClient()
+    legacy.getBlockchains.mockRejectedValueOnce(
+      httpError(SERVER_ERROR, { error: 'Server is down' }),
+    )
+
+    const error = await quoteError(client.quote(request))
+
+    expect(error).toMatchObject({
+      type: 'SERVER_ERROR',
+      message: 'Server is down',
     })
+    expect(client.cache.get('blockchains')).toBeUndefined()
+    expect(legacy.getBestRoute).not.toHaveBeenCalled()
+
+    await client.quote(request)
+
+    expect(legacy.getBlockchains).toHaveBeenCalledTimes(2)
+    expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
+    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+  })
+
+  test('throws REQUEST_CANCELED when the signal aborts the blockchain list fetch, caching nothing', async () => {
+    const client = await createClient()
+    const controller = new AbortController()
+    legacy.getBlockchains.mockImplementationOnce(async () => {
+      controller.abort()
+      throw new TypeError('aborted')
+    })
+
+    const error = await quoteError(
+      client.quote(request, { signal: controller.signal }),
+    )
+
+    expect(error).toHaveProperty('type', 'REQUEST_CANCELED')
+    expect(client.cache.get('blockchains')).toBeUndefined()
+    expect(legacy.getBestRoute).not.toHaveBeenCalled()
+  })
+
+  test("two clients don't share a cached blockchain list", async () => {
+    const first = await createClient()
+    const second = await createClient()
+
+    await first.quote(request)
+
+    expect(first.cache.get('blockchains')).toBeDefined()
+    expect(second.cache.get('blockchains')).toBeUndefined()
+  })
+
+  test('types the blockchains slot, and has no metadata slot', async () => {
+    const client = await createClient()
+
+    expectTypeOf(client.cache.get('blockchains')).toEqualTypeOf<
+      readonly Sdk.BlockchainMeta[] | undefined
+    >()
+    // @ts-expect-error there is no metadata slot
+    void client.cache.get('metadata')
+    // @ts-expect-error there is no metadata() method
+    void client.metadata
+  })
+
+  test("reads the destination blockchain from the request's `to`", async () => {
+    const client = await createClient([
+      chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
+      chain('BNB', ['^bnb1']),
+    ])
 
     const error = await quoteError(
       client.quote({ ...request, to: { ...USDC, blockchain: 'BNB' } }),
@@ -642,15 +705,9 @@ describe('quote', () => {
   })
 
   test('sends a destination that matches any pattern, skipping a pattern that is not a valid regular expression', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: {
-        blockchains: [
-          chain('BSC', ['^invalid($', '^bnb1', '^(0x)[0-9a-f]{40}$']),
-        ],
-      },
-    })
+    const client = await createClient([
+      chain('BSC', ['^invalid($', '^bnb1', '^(0x)[0-9a-f]{40}$']),
+    ])
 
     await client.quote(request)
 
@@ -663,11 +720,7 @@ describe('quote', () => {
   ])(
     'checks the request before the destination when %s',
     async (_, overrides, field, reason) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
 
       const error = await quoteError(
         client.quote({ ...request, ...overrides, destination: '0x123' }),
@@ -677,6 +730,7 @@ describe('quote', () => {
         type: 'INVALID_INPUT',
         metadata: { field, reason },
       })
+      expect(legacy.getBlockchains).not.toHaveBeenCalled()
     },
   )
 
@@ -685,11 +739,7 @@ describe('quote', () => {
     ['symbol', { ...ETH, symbol: 'WETH' }],
     ['address', { ...ETH, address: '0x1' }],
   ])('sends a request whose assets differ only by %s', async (_, to) => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
 
     await client.quote({ ...request, from: ETH, to })
 
@@ -699,11 +749,7 @@ describe('quote', () => {
   test.each(['abc', '0', '-1', '100'])(
     'sends the slippage %j as it is',
     async (slippage) => {
-      const { RangoClient } = await loadSdk()
-      const client = new RangoClient({
-        apiKey: 'test-key',
-        meta: { blockchains },
-      })
+      const client = await createClient()
 
       await client.quote({ ...request, slippage })
 
@@ -715,11 +761,7 @@ describe('quote', () => {
   )
 
   test('throws REQUEST_CANCELED when the signal aborts the request, even for an HTTP 400', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     const canceled = httpError(BAD_REQUEST, { error: 'canceled' })
     legacy.getBestRoute.mockImplementation(async () => {
@@ -739,11 +781,7 @@ describe('quote', () => {
   })
 
   test('throws BAD_REQUEST with the body error message for an HTTP 400', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const badRequest = httpError(BAD_REQUEST, {
       error: 'Amount is too small',
       errorCode: 1,
@@ -762,11 +800,7 @@ describe('quote', () => {
   })
 
   test('throws SERVER_ERROR with the fallback message for an HTTP 500 with no error', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const serverError = httpError(SERVER_ERROR, { errorCode: 42, traceId: 7 })
     legacy.getBestRoute.mockRejectedValue(serverError)
 
@@ -781,11 +815,7 @@ describe('quote', () => {
   })
 
   test('throws REQUEST_FAILED without metadata for a network failure', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const networkError = new Error('Network Error')
     legacy.getBestRoute.mockRejectedValue(networkError)
 
@@ -799,11 +829,7 @@ describe('quote', () => {
   })
 
   test('throws REQUEST_FAILED when the response has an error, before checking the result', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const failed = response({
       result: null,
       error: 'Invalid asset',
@@ -823,11 +849,7 @@ describe('quote', () => {
   })
 
   test('throws NO_RESULT with the first diagnosis message for a null result', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const empty = response({
       result: null,
       diagnosisMessages: ['No liquidity', 'Other'],
@@ -844,11 +866,7 @@ describe('quote', () => {
   })
 
   test('throws NO_RESULT for a result with no swaps', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.getBestRoute.mockResolvedValue(
       response({
         result: {
@@ -865,11 +883,7 @@ describe('quote', () => {
   })
 
   test('throws BRIDGE_LIMIT for a swap outside its limits', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const tooLarge = swap({
       fromAmount: '10',
       recommendedSlippage: { error: true, slippage: '3' },
@@ -899,11 +913,7 @@ describe('quote', () => {
   })
 
   test('throws UNKNOWN_SLIPPAGE for a flagged swap, with or without a slippage', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const flaggedResponse = response({
       result: {
         outputAmount: '3000',
@@ -928,11 +938,7 @@ describe('quote', () => {
   })
 
   test('throws REQUEST_FAILED with the original as cause for a TypeError inside the pipeline', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     legacy.getBestRoute.mockResolvedValue(null)
 
     const error = await quoteError(client.quote(request))
@@ -942,11 +948,7 @@ describe('quote', () => {
   })
 
   test('throws REQUEST_CANCELED for a TypeError inside the pipeline when the signal was aborted', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     legacy.getBestRoute.mockImplementation(async () => {
       controller.abort()
@@ -962,11 +964,8 @@ describe('quote', () => {
   })
 
   test('rejects with an SdkError raised inside the pipeline unchanged, even when the signal was aborted', async () => {
-    const { RangoClient, SdkError } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const { SdkError } = await loadSdk()
+    const client = await createClient()
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
     legacy.getBestRoute.mockImplementation(async () => {
@@ -982,11 +981,7 @@ describe('quote', () => {
   })
 
   test('rejects with the SdkError a result check throws, even when the signal was aborted', async () => {
-    const { RangoClient } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const client = await createClient()
     const controller = new AbortController()
     const empty = response({ result: null })
     legacy.getBestRoute.mockImplementation(async () => {
@@ -1002,11 +997,8 @@ describe('quote', () => {
   })
 
   test('narrows a caught error with instanceof SdkError, then metadata on type', async () => {
-    const { RangoClient, SdkError } = await loadSdk()
-    const client = new RangoClient({
-      apiKey: 'test-key',
-      meta: { blockchains },
-    })
+    const { SdkError } = await loadSdk()
+    const client = await createClient()
     legacy.getBestRoute.mockResolvedValue(
       response({ result: null, diagnosisMessages: ['No route'] }),
     )
