@@ -1,31 +1,22 @@
-import type { RequestOptions } from '../../types.js'
 import type { SdkWarning } from '../../warnings/mod.js'
 import type {
   CheckedResponse as CheckedRouteResponse,
   Route,
 } from '../quote/mod.js'
-import type {
-  Asset,
+import type { ConfirmRouteRequest, ConfirmRouteResponse } from 'rango-sdk'
+
+export type SelectedWallets = ConfirmRouteRequest['selectedWallets']
+
+// `requestId` and `selectedWallets` are `confirm()` arguments, so they can't be given twice.
+export type ConfirmReq = Omit<
   ConfirmRouteRequest,
-  ConfirmRouteResponse,
-  MultiRouteSimulationResult,
-} from 'rango-sdk'
+  'requestId' | 'selectedWallets'
+>
 
-// A Quote from `quotes()` fits this as it is. Without a slippage, there are no slippage warnings.
-export type ConfirmQuote = Pick<
-  MultiRouteSimulationResult,
-  'requestId' | 'outputAmount' | 'swaps'
-> & {
-  requestAmount: string
-  to: Asset
-  slippage?: string
+export type ConfirmOptions = {
+  req?: ConfirmReq
+  signal?: AbortSignal
 }
-
-export type ConfirmRequest = Omit<ConfirmRouteRequest, 'requestId'> & {
-  quote: ConfirmQuote
-}
-
-export type ConfirmOptions = RequestOptions
 
 export type ConfirmResult = {
   data: Route

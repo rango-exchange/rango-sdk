@@ -19,9 +19,10 @@ export async function confirmFirstQuote(quotes: QuotesData) {
   const quote = entry.data
 
   try {
+    // confirm() reads the Quote by its request ID from the Quotes the client's last 10 successful quotes() cached.
     const { data: route, warnings } = await client.confirm(
-      // The entry's Quote, as it is.
-      { quote, selectedWallets },
+      quote.requestId,
+      selectedWallets,
       { signal: AbortSignal.timeout(TIMEOUT_MS) },
     )
 
