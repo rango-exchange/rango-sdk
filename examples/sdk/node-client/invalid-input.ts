@@ -6,6 +6,8 @@ export function describeInvalidInput({
   reason,
 }: InvalidInputMetadata): string {
   switch (field) {
+    case 'requestId':
+      return 'This Quote is no longer cached. Fetch the quotes again.'
     case 'to':
       return 'Choose two different assets.'
     case 'amount':
@@ -13,8 +15,11 @@ export function describeInvalidInput({
         ? 'Enter an amount greater than 0.'
         : 'Enter a valid amount.'
     case 'destination':
-      return reason === 'PATTERN_MISMATCH'
-        ? 'The destination is not a valid address on the destination blockchain.'
-        : "The destination can't be checked for this blockchain."
+      switch (reason) {
+        case 'NO_ADDRESS_PATTERNS':
+          return "The destination can't be checked for this blockchain."
+        case 'PATTERN_MISMATCH':
+          return 'The destination is not a valid address on the destination blockchain.'
+      }
   }
 }

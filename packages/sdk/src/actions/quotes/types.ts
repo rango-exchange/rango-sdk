@@ -8,7 +8,13 @@ import type {
   MultiRouteSimulationResult,
 } from 'rango-sdk'
 
-export type QuotesRequest = MultiRouteRequest
+// `from`, `to` and `amount` are `quotes()` arguments, so they can't be given twice.
+export type QuotesReq = Omit<MultiRouteRequest, 'from' | 'to' | 'amount'>
+
+export type QuotesOptions = {
+  req?: QuotesReq
+  signal?: AbortSignal
+}
 
 export type Quote = MultiRouteSimulationResult & {
   requestAmount: string
