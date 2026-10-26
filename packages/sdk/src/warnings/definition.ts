@@ -53,7 +53,7 @@ export type RecommendedSlippage = {
 /**
  * The requested slippage is below the highest slippage any swap recommends.
  *
- * Skipped when there is no slippage (on `confirm()`, the slippage is `request.quote.slippage`). Slippages are read with
+ * Skipped when there is no slippage (on `confirm()`, the slippage is the Quote's). Slippages are read with
  * `parseFloat`. A swap the server flags as having no computed slippage gets the
  * `UNKNOWN_SLIPPAGE` error, and this warning can still be raised for that route, so a `quotes()` entry can carry both.
  */
@@ -67,7 +67,7 @@ export type InsufficientSlippageWarningMetadata = {
 /**
  * The requested slippage is above 5 (%) and higher than the minimum any swap requires.
  *
- * Skipped when there is no slippage (on `confirm()`, the slippage is `request.quote.slippage`), and when
+ * Skipped when there is no slippage (on `confirm()`, the slippage is the Quote's), and when
  * `INSUFFICIENT_SLIPPAGE` is raised.
  */
 export type HighSlippageWarningMetadata = {
@@ -109,7 +109,7 @@ export type InsufficientBalanceWarningMetadata = {
 }
 
 /**
- * The confirmed output is worth much less than the output of the Quote passed to `confirm()` as `request.quote`.
+ * The confirmed output is worth much less than the cached Quote's output.
  * Only `confirm()` returns it.
  *
  * Raised when `percentageChange` is at or below `-1` with a Quote input of at least 1000 USD, or at or below `-2` with

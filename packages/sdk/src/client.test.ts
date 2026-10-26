@@ -41,24 +41,22 @@ describe('client', () => {
   test('two clients with different API keys each use their own config', async () => {
     const { RangoClient } = await loadSdk()
     legacy.getAllRoutes.mockResolvedValue({ results: [] })
-    const request = {
-      from: { blockchain: 'ETH', symbol: 'ETH', address: null },
-      to: { blockchain: 'BSC', symbol: 'BNB', address: null },
-      amount: '1',
-    }
+    const args: [Sdk.Asset, Sdk.Asset, string] = [
+      { blockchain: 'ETH', symbol: 'ETH', address: null },
+      { blockchain: 'BSC', symbol: 'BNB', address: null },
+      '1',
+    ]
 
     const first = new RangoClient({
       apiKey: 'first-key',
-      meta: { blockchains: [] },
     })
     const second = new RangoClient({
       apiKey: 'second-key',
       baseUrl: 'https://example.test',
-      meta: { blockchains: [] },
     })
-    await first.quotes(request).catch(() => undefined)
-    await second.quotes(request).catch(() => undefined)
-    await first.quotes(request).catch(() => undefined)
+    await first.quotes(...args).catch(() => undefined)
+    await second.quotes(...args).catch(() => undefined)
+    await first.quotes(...args).catch(() => undefined)
 
     expect(legacy.getAllRoutes.mock.calls.map(([args]) => args)).toEqual([
       ['first-key', 'https://api.rango.exchange'],
@@ -72,26 +70,29 @@ describe('client', () => {
 
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
     expect('setAffiliate' in client).toBe(false)
     expectTypeOf<keyof Sdk.RangoClientConfig>().toEqualTypeOf<
-      'apiKey' | 'baseUrl' | 'meta'
+      'apiKey' | 'baseUrl'
     >()
     // @ts-expect-error The Affiliate type is no longer exported.
     expectTypeOf<Sdk.Affiliate>()
   })
 
-  test('requires the blockchains meta in the config', () => {
-    expectTypeOf<Sdk.RangoClientConfig['meta']>().toEqualTypeOf<{
-      blockchains: readonly Sdk.BlockchainMeta[]
-    }>()
-    expectTypeOf<{ apiKey: string }>().not.toExtend<Sdk.RangoClientConfig>()
-    expectTypeOf<{
+  test('takes only an API key and an optional base URL', async () => {
+    const { RangoClient } = await loadSdk()
+
+    expect(new RangoClient({ apiKey: 'test-key' })).toBeInstanceOf(RangoClient)
+    expect(
+      new RangoClient({ apiKey: 'test-key', baseUrl: 'https://example.test' }),
+    ).toBeInstanceOf(RangoClient)
+    expectTypeOf<Sdk.RangoClientConfig>().toEqualTypeOf<{
       apiKey: string
-      meta: Record<string, never>
-    }>().not.toExtend<Sdk.RangoClientConfig>()
+      baseUrl?: string
+    }>()
+    // @ts-expect-error the config takes no meta: the client fetches the blockchains itself
+    void new RangoClient({ apiKey: 'test-key', meta: { blockchains: [] } })
   })
 })
 

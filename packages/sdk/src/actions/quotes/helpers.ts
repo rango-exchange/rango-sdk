@@ -1,4 +1,11 @@
-import type { CheckedResponse, QuotesResult, WarnedResponse } from './types.js'
+import type {
+  CheckedResponse,
+  Quote,
+  QuotesResult,
+  WarnedResponse,
+} from './types.js'
+import type { Cache } from '../../cache/mod.js'
+import type { CacheSchema } from '../../types.js'
 import type { MultiRouteResponse } from 'rango-sdk'
 
 import { NO_RESULT_MESSAGE, SdkError } from '../../errors/mod.js'
@@ -7,6 +14,8 @@ import {
   omitErrorFields,
   validateRoute,
 } from '../quote/mod.js'
+
+import { MAX_CACHED_ROUTES } from './constants.js'
 
 // Throws for a failure of the whole response, and gives each server result its first error.
 export function checkErrors(response: MultiRouteResponse): CheckedResponse {
@@ -77,5 +86,25 @@ export function generateResult(slippage: string | undefined) {
       },
       _response: response,
     }
+  }
+}
+
+export function cacheAndReturnResult(cache: Cache<CacheSchema>) {
+  return (result: QuotesResult): QuotesResult => {
+    const quotes = new Map<string, Quote>()
+    for (const { data } of result.data.quotes) {
+      quotes.set(data.requestId, structuredClone(data))
+    }
+    const routes = new Map(cache.get('quotes'))
+    // Maps keep insertion order, so keys() yields the oldest first. Deleting before set moves a repeated route ID to newest.
+    routes.delete(result.data.routeId)
+    routes.set(result.data.routeId, quotes)
+    // Each call adds at most one route, so at most the oldest one needs evicting.
+    if (routes.size > MAX_CACHED_ROUTES) {
+      const [oldestRouteId] = routes.keys()
+      routes.delete(oldestRouteId)
+    }
+    cache.set('quotes', routes)
+    return result
   }
 }

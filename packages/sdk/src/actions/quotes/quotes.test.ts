@@ -29,12 +29,14 @@ const USDC = {
   address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
 }
 
-const request: Sdk.QuotesRequest = {
+const req: Sdk.QuotesReq = { slippage: '1.5', swappers: ['Across'] }
+
+// What the server gets for `quotes(ETH, USDC, '1', { req })`.
+const request: LegacySdk.MultiRouteRequest = {
   from: ETH,
   to: USDC,
   amount: '1',
-  slippage: '1.5',
-  swappers: ['Across'],
+  ...req,
 }
 
 function swap(overrides: Partial<Sdk.SwapResult> = {}): Sdk.SwapResult {
@@ -128,7 +130,6 @@ describe('quotes', () => {
     new RangoClient({
       apiKey: 'test-key',
       baseUrl: 'https://example.test',
-      meta: { blockchains: [] },
     })
 
     expect(legacy.constructorArgs).toEqual([
@@ -139,7 +140,7 @@ describe('quotes', () => {
   test('builds the legacy client with the default base URL when none is given', async () => {
     const { RangoClient } = await loadSdk()
 
-    new RangoClient({ apiKey: 'test-key', meta: { blockchains: [] } })
+    new RangoClient({ apiKey: 'test-key' })
 
     expect(legacy.constructorArgs).toEqual([
       ['test-key', 'https://api.rango.exchange'],
@@ -150,32 +151,66 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
-    const withAffiliate: Sdk.QuotesRequest = {
-      ...request,
+    const affiliate = {
       affiliateRef: 'REF',
       affiliatePercent: 0.2,
       affiliateWallets: { ETH: '0xaff' },
     }
 
-    await client.quotes(withAffiliate, { signal: controller.signal })
+    await client.quotes(ETH, USDC, '1', {
+      req: { ...req, ...affiliate },
+      signal: controller.signal,
+    })
 
-    expect(sentBody()).toEqual(withAffiliate)
+    expect(sentBody()).toEqual({ ...request, ...affiliate })
     expect(legacy.getAllRoutes.mock.lastCall?.[1]).toEqual({
       signal: controller.signal,
     })
+  })
+
+  test('sends from, to and amount alone when called without options', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+
+    await client.quotes(ETH, USDC, '1')
+
+    expect(legacy.getAllRoutes.mock.lastCall).toEqual([
+      { from: ETH, to: USDC, amount: '1' },
+      { signal: undefined },
+    ])
+  })
+
+  test('rejects from, to and amount in options.req, and the one-object call', () => {
+    const misuse = async (client: Sdk.RangoClient) => {
+      // @ts-expect-error from is an argument
+      await client.quotes(ETH, USDC, '1', { req: { from: ETH } })
+      // @ts-expect-error to is an argument
+      await client.quotes(ETH, USDC, '1', { req: { to: USDC } })
+      // @ts-expect-error amount is an argument
+      await client.quotes(ETH, USDC, '1', { req: { amount: '2' } })
+      // @ts-expect-error request fields don't sit flat in the options
+      await client.quotes(ETH, USDC, '1', { slippage: '1' })
+      // @ts-expect-error the one-object call is replaced
+      await client.quotes(request)
+    }
+
+    expectTypeOf(misuse).toBeFunction()
+    expectTypeOf<Sdk.QuotesReq>().toEqualTypeOf<
+      Omit<LegacySdk.MultiRouteRequest, 'from' | 'to' | 'amount'>
+    >()
   })
 
   test('sends no affiliate fields when the request has none', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
-    await client.quotes(request)
+    await client.quotes(ETH, USDC, '1', { req })
 
     expect(sentBody()).toEqual(request)
   })
@@ -184,28 +219,22 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
-    await client.quotes({
-      ...request,
-      affiliateRef: 'OLD',
-      affiliatePercent: 0.1,
+    await client.quotes(ETH, USDC, '1', {
+      req: { ...req, affiliateRef: 'OLD', affiliatePercent: 0.1 },
     })
-    await client.quotes({ ...request, affiliateRef: 'NEW' })
+    await client.quotes(ETH, USDC, '1', {
+      req: { ...req, affiliateRef: 'NEW' },
+    })
 
     expect(sentBody()).toEqual({ ...request, affiliateRef: 'NEW' })
-  })
-
-  test('takes the legacy multi-route request as it is', () => {
-    expectTypeOf<Sdk.QuotesRequest>().toEqualTypeOf<LegacySdk.MultiRouteRequest>()
   })
 
   test('returns data (the response without its error fields and results, with an entry per Quote) and _response as received', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const success = response({
       diagnosisMessages: ['Some swappers are down'],
@@ -213,7 +242,7 @@ describe('quotes', () => {
     })
     legacy.getAllRoutes.mockResolvedValue(success)
 
-    const quotes = await client.quotes(request)
+    const quotes = await client.quotes(ETH, USDC, '1', { req })
 
     expect(quotes).toEqual({
       data: {
@@ -253,7 +282,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const {
       from: _from,
@@ -263,7 +291,7 @@ describe('quotes', () => {
     } = response()
     legacy.getAllRoutes.mockResolvedValue(partial)
 
-    const { data } = await client.quotes(request)
+    const { data } = await client.quotes(ETH, USDC, '1', { req })
 
     expect(data).not.toHaveProperty('from')
     expect(data).not.toHaveProperty('to')
@@ -276,7 +304,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(
       response({
@@ -288,9 +315,8 @@ describe('quotes', () => {
       }),
     )
 
-    const { data } = await client.quotes({
-      ...request,
-      slippage: '3',
+    const { data } = await client.quotes(ETH, USDC, '1', {
+      req: { ...req, slippage: '3' },
     })
 
     expect(data.requestAmount).toBe('2')
@@ -308,17 +334,17 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
-    const { slippage: _, ...withoutSlippage } = request
+    const { slippage: _, ...withoutSlippage } = req
 
-    const quotes = (await client.quotes(withoutSlippage)).data.quotes
+    const quotes = (
+      await client.quotes(ETH, USDC, '1', { req: withoutSlippage })
+    ).data.quotes
 
     expect(quotes[0]?.data).not.toHaveProperty('slippage')
   })
 
-  test('a Quote fits ConfirmQuote as it is, and has no error or warnings', () => {
-    expectTypeOf<Sdk.Quote>().toExtend<Sdk.ConfirmQuote>()
+  test('a Quote has no error or warnings', () => {
     expectTypeOf<Sdk.Quote>().not.toHaveProperty('error')
     expectTypeOf<Sdk.Quote>().not.toHaveProperty('warnings')
   })
@@ -327,7 +353,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const baseSwap = swap()
     const tooSmall = swap({ fromAmountMinValue: '2' })
@@ -366,7 +391,7 @@ describe('quotes', () => {
       }),
     )
 
-    const quotes = (await client.quotes(request)).data.quotes
+    const quotes = (await client.quotes(ETH, USDC, '1', { req })).data.quotes
 
     expect(quotes.map((entry) => entry.data.requestId)).toEqual([
       'ok',
@@ -416,7 +441,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const unpriced = swap()
     unpriced.to = { ...unpriced.to, usdPrice: null }
@@ -442,7 +466,7 @@ describe('quotes', () => {
       }),
     )
 
-    const quotes = (await client.quotes(request)).data.quotes
+    const quotes = (await client.quotes(ETH, USDC, '1', { req })).data.quotes
 
     expect(
       quotes.map(({ data, warnings }) => [data.requestId, warnings]),
@@ -494,11 +518,14 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
-    const atThreshold = await client.quotes({ ...request, slippage: '5' })
-    const above = await client.quotes({ ...request, slippage: '6' })
+    const atThreshold = await client.quotes(ETH, USDC, '1', {
+      req: { ...req, slippage: '5' },
+    })
+    const above = await client.quotes(ETH, USDC, '1', {
+      req: { ...req, slippage: '6' },
+    })
 
     expect(atThreshold.data.quotes[0]?.warnings).toEqual([])
     expect(above.data.quotes[0]?.warnings).toEqual([
@@ -510,23 +537,26 @@ describe('quotes', () => {
     ])
   })
 
-  test('takes no per-call validation option', async () => {
+  test('takes only req and signal as options', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
-    expectTypeOf(client.quotes)
-      .parameter(1)
-      .toEqualTypeOf<{ signal?: AbortSignal } | undefined>()
+    expectTypeOf(client.quotes).parameters.toEqualTypeOf<
+      [
+        Sdk.Asset,
+        Sdk.Asset,
+        string,
+        ({ req?: Sdk.QuotesReq; signal?: AbortSignal } | undefined)?,
+      ]
+    >()
   })
 
   test('raises HIGH_FEE and LONG_DURATION at the default thresholds', async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const networkFee: Sdk.SwapResult['fee'][number] = {
       name: 'Network Fee',
@@ -550,7 +580,7 @@ describe('quotes', () => {
       }),
     )
 
-    const quotes = (await client.quotes(request)).data.quotes
+    const quotes = (await client.quotes(ETH, USDC, '1', { req })).data.quotes
 
     expect(quotes[0]?.warnings).toEqual([
       {
@@ -571,7 +601,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(
       response({
@@ -585,9 +614,11 @@ describe('quotes', () => {
         ],
       }),
     )
-    const { slippage: _, ...withoutSlippage } = request
+    const { slippage: _, ...withoutSlippage } = req
 
-    const quotes = (await client.quotes(withoutSlippage)).data.quotes
+    const quotes = (
+      await client.quotes(ETH, USDC, '1', { req: withoutSlippage })
+    ).data.quotes
 
     expect(quotes[0]?.warnings).toEqual([])
   })
@@ -596,7 +627,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(
       response({
@@ -608,7 +638,7 @@ describe('quotes', () => {
       }),
     )
 
-    const quotes = (await client.quotes(request)).data.quotes
+    const quotes = (await client.quotes(ETH, USDC, '1', { req })).data.quotes
 
     expect(quotes.map((entry) => entry.data.requestId)).toEqual(['empty', 'ok'])
     expect(quotes[0]?.error).toBeInstanceOf(SdkError)
@@ -631,7 +661,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const unexpected = new TypeError('unreadable limit')
     const unreadable = Object.defineProperty(swap(), 'fromAmountMinValue', {
@@ -643,7 +672,9 @@ describe('quotes', () => {
       response({ results: [{ ...result, swaps: [unreadable] }] }),
     )
 
-    const error = await client.quotes(request).catch((caught) => caught)
+    const error = await client
+      .quotes(ETH, USDC, '1', { req })
+      .catch((caught) => caught)
 
     expect(error).toBeInstanceOf(SdkError)
     expect(error).toMatchObject({ type: 'REQUEST_FAILED', cause: unexpected })
@@ -653,11 +684,12 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockResolvedValue(null)
 
-    const error = await client.quotes(request).catch((e: unknown) => e)
+    const error = await client
+      .quotes(ETH, USDC, '1', { req })
+      .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(SdkError)
     expect(error).toHaveProperty('type', 'REQUEST_FAILED')
@@ -668,7 +700,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     legacy.getAllRoutes.mockImplementation(async () => {
@@ -677,7 +708,7 @@ describe('quotes', () => {
     })
 
     const error = await client
-      .quotes(request, { signal: controller.signal })
+      .quotes(ETH, USDC, '1', { req, signal: controller.signal })
       .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(SdkError)
@@ -689,7 +720,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
@@ -699,7 +729,7 @@ describe('quotes', () => {
     })
 
     const error = await client
-      .quotes(request, { signal: controller.signal })
+      .quotes(ETH, USDC, '1', { req, signal: controller.signal })
       .catch((e: unknown) => e)
 
     expect(error).toBe(raised)
@@ -709,7 +739,6 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const empty = response({ results: [] })
@@ -719,13 +748,20 @@ describe('quotes', () => {
     })
 
     const error = await client
-      .quotes(request, { signal: controller.signal })
+      .quotes(ETH, USDC, '1', { req, signal: controller.signal })
       .catch((e: unknown) => e)
 
     expect(error).toMatchObject({ type: 'NO_RESULT' })
   })
 
-  test.each<[string, Record<string, unknown>, string, string]>([
+  test.each<
+    [
+      string,
+      { from?: Sdk.Asset; to?: Sdk.Asset; amount?: string },
+      string,
+      string,
+    ]
+  >([
     ['to is the same asset as from', { to: { ...ETH } }, 'to', 'SAME_ASSET'],
     [
       'to has the same blockchain, symbol and address as from',
@@ -748,12 +784,15 @@ describe('quotes', () => {
       const { RangoClient, SdkError } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
 
-      // Untyped callers can send anything; the checks still run.
       const error = await client
-        .quotes({ ...request, ...overrides })
+        .quotes(
+          overrides.from ?? ETH,
+          overrides.to ?? USDC,
+          overrides.amount ?? '1',
+          { req },
+        )
         .catch((e: unknown) => e)
 
       expect(error).toBeInstanceOf(SdkError)
@@ -774,10 +813,9 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
 
-    await client.quotes({ ...request, from: ETH, to })
+    await client.quotes(ETH, to, '1', { req })
 
     expect(legacy.getAllRoutes).toHaveBeenCalledOnce()
   })
@@ -788,10 +826,9 @@ describe('quotes', () => {
       const { RangoClient } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
 
-      await client.quotes({ ...request, slippage })
+      await client.quotes(ETH, USDC, '1', { req: { ...req, slippage } })
 
       expect(legacy.getAllRoutes).toHaveBeenCalledWith(
         { ...request, slippage },
@@ -804,7 +841,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const badRequest = httpError(BAD_REQUEST, {
       error: 'Amount is too small',
@@ -813,7 +849,9 @@ describe('quotes', () => {
     })
     legacy.getAllRoutes.mockRejectedValue(badRequest)
 
-    const error = await client.quotes(request).catch((e: unknown) => e)
+    const error = await client
+      .quotes(ETH, USDC, '1', { req })
+      .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(SdkError)
     expect(error).toMatchObject({
@@ -833,7 +871,6 @@ describe('quotes', () => {
       const { RangoClient, SdkError } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
       const noResults = response({
         results: results as LegacySdk.MultiRouteSimulationResult[],
@@ -841,7 +878,9 @@ describe('quotes', () => {
       })
       legacy.getAllRoutes.mockResolvedValue(noResults)
 
-      const error = await client.quotes(request).catch((e: unknown) => e)
+      const error = await client
+        .quotes(ETH, USDC, '1', { req })
+        .catch((e: unknown) => e)
 
       expect(error).toBeInstanceOf(SdkError)
       expect(error).toMatchObject({
@@ -861,7 +900,6 @@ describe('quotes', () => {
       const { RangoClient } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
       legacy.getAllRoutes.mockResolvedValue(
         response({
@@ -870,7 +908,9 @@ describe('quotes', () => {
         }),
       )
 
-      const error = await client.quotes(request).catch((e: unknown) => e)
+      const error = await client
+        .quotes(ETH, USDC, '1', { req })
+        .catch((e: unknown) => e)
 
       expect(error).toMatchObject({ type: 'NO_RESULT', metadata: {} })
       expect((error as Sdk.SdkError).metadata).not.toHaveProperty(
@@ -883,7 +923,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const controller = new AbortController()
     const canceled = httpError(BAD_REQUEST, { error: 'canceled' })
@@ -893,7 +932,7 @@ describe('quotes', () => {
     })
 
     const error = await client
-      .quotes(request, { signal: controller.signal })
+      .quotes(ETH, USDC, '1', { req, signal: controller.signal })
       .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(SdkError)
@@ -910,7 +949,6 @@ describe('quotes', () => {
       const { RangoClient, SdkError } = await loadSdk()
       const client = new RangoClient({
         apiKey: 'test-key',
-        meta: { blockchains: [] },
       })
       const failure = httpError(status, {
         error: 'Failed',
@@ -919,7 +957,9 @@ describe('quotes', () => {
       })
       legacy.getAllRoutes.mockRejectedValue(failure)
 
-      const error = await client.quotes(request).catch((e: unknown) => e)
+      const error = await client
+        .quotes(ETH, USDC, '1', { req })
+        .catch((e: unknown) => e)
 
       expect(error).toBeInstanceOf(SdkError)
       expect(error).toBeInstanceOf(Error)
@@ -936,12 +976,13 @@ describe('quotes', () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const networkError = new Error('Network Error')
     legacy.getAllRoutes.mockRejectedValue(networkError)
 
-    const error = await client.quotes(request).catch((e: unknown) => e)
+    const error = await client
+      .quotes(ETH, USDC, '1', { req })
+      .catch((e: unknown) => e)
 
     expect(error).toMatchObject({
       type: 'REQUEST_FAILED',
@@ -954,7 +995,6 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     const failed = response({
       results: [],
@@ -964,7 +1004,9 @@ describe('quotes', () => {
     })
     legacy.getAllRoutes.mockResolvedValue(failed)
 
-    const error = await client.quotes(request).catch((e: unknown) => e)
+    const error = await client
+      .quotes(ETH, USDC, '1', { req })
+      .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(SdkError)
     expect(error).toMatchObject({
@@ -979,13 +1021,12 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockRejectedValue(new Error('Network Error'))
 
     let type: unknown
     try {
-      await client.quotes(request)
+      await client.quotes(ETH, USDC, '1', { req })
     } catch (error) {
       if (!(error instanceof SdkError)) {
         throw error
@@ -1020,11 +1061,12 @@ describe('quotes', () => {
     const { RangoClient, SdkError } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
-      meta: { blockchains: [] },
     })
     legacy.getAllRoutes.mockRejectedValue(new Error('Network Error'))
 
-    const error = await client.quotes(request).catch((e: unknown) => e)
+    const error = await client
+      .quotes(ETH, USDC, '1', { req })
+      .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(SdkError)
     expect(error).toBeInstanceOf(Error)
@@ -1039,5 +1081,346 @@ describe('quotes', () => {
       data: Sdk.Quote
       warnings: Sdk.SdkWarning[]
     }>().toExtend<Sdk.QuoteEntry>()
+  })
+})
+
+describe('quotes cache', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    legacy.getAllRoutes.mockReset()
+  })
+
+  test('has no quotes map before the first successful call', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+
+    expect(client.cache.get('quotes')).toBeUndefined()
+  })
+
+  test("caches every Quote under the response's route ID, then its request ID, including one whose entry has an error, without its warnings or error", async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    legacy.getAllRoutes.mockResolvedValue(
+      response({
+        routeId: 'route-a',
+        results: [
+          { ...result, requestId: 'ok' },
+          {
+            ...result,
+            requestId: 'too-small',
+            swaps: [swap({ fromAmountMinValue: '2' })],
+          },
+        ],
+      }),
+    )
+
+    const { data } = await client.quotes(ETH, USDC, '1', { req })
+
+    expect(data.quotes[1]?.error).toBeDefined()
+    const routes = client.cache.get('quotes')
+    expect([...(routes?.keys() ?? [])]).toEqual([data.routeId])
+    const quotes = routes?.get('route-a')
+    expect([...(quotes?.keys() ?? [])]).toEqual(['ok', 'too-small'])
+    for (const entry of data.quotes) {
+      const cached = quotes?.get(entry.data.requestId)
+      expect(cached).toEqual(entry.data)
+      expect(cached).not.toBe(entry.data)
+      expect(cached).not.toHaveProperty('warnings')
+      expect(cached).not.toHaveProperty('error')
+    }
+  })
+
+  test('keeps the cached Quote unchanged when the app mutates the Quote quotes() returned, nested values included', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    // Objects of its own, since the returned Quote shares them with the response.
+    legacy.getAllRoutes.mockResolvedValue(
+      response({
+        to: { ...USDC },
+        results: [{ ...result, swaps: [swap()], scores: [...result.scores] }],
+      }),
+    )
+    const { data } = await client.quotes(ETH, USDC, '1', { req })
+    const returned = data.quotes[0]?.data
+    if (!returned) {
+      throw new Error('quotes() returned no Quote')
+    }
+    const before = structuredClone(returned)
+
+    returned.requestId = 'mutated'
+    returned.slippage = '99'
+    returned.to.blockchain = 'X'
+    const [firstSwap] = returned.swaps
+    if (firstSwap) {
+      firstSwap.toAmount = '0'
+    }
+    returned.scores.length = 0
+
+    expect(
+      client.cache.get('quotes')?.get('route-1')?.get('request-1'),
+    ).toEqual(before)
+  })
+
+  test.each([
+    ['INVALID_INPUT', () => undefined, '0'],
+    [
+      'NO_RESULT',
+      () =>
+        legacy.getAllRoutes.mockResolvedValue(
+          response({ routeId: 'route-thrown', results: [] }),
+        ),
+      '1',
+    ],
+    [
+      'REQUEST_FAILED',
+      () => legacy.getAllRoutes.mockRejectedValue(new Error('Network Error')),
+      '1',
+    ],
+  ])(
+    'leaves the quotes map as it was after a call that throws %s',
+    async (type, arrange, amount) => {
+      const { RangoClient } = await loadSdk()
+      const client = new RangoClient({
+        apiKey: 'test-key',
+      })
+      legacy.getAllRoutes.mockResolvedValue(
+        response({
+          routeId: 'route-kept',
+          results: [{ ...result, requestId: 'kept' }],
+        }),
+      )
+      const { data } = await client.quotes(ETH, USDC, '1', { req })
+      const before = client.cache.get('quotes')
+      legacy.getAllRoutes.mockResolvedValue(
+        response({
+          routeId: 'route-thrown',
+          results: [{ ...result, requestId: 'thrown' }],
+        }),
+      )
+      arrange()
+
+      const error = await client
+        .quotes(ETH, USDC, amount, { req })
+        .catch((e: unknown) => e)
+
+      expect(error).toMatchObject({ type })
+      const routes = client.cache.get('quotes')
+      expect(routes).toBe(before)
+      expect([...(routes?.keys() ?? [])]).toEqual(['route-kept'])
+      expect(routes?.get('route-kept')?.get('kept')).toEqual(
+        data.quotes[0]?.data,
+      )
+    },
+  )
+
+  test("a later successful call adds its route ID as the newest, keeping the earlier call's Quotes", async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-a',
+        results: [{ ...result, requestId: 'first' }],
+      }),
+    )
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-b',
+        results: [{ ...result, requestId: 'second' }],
+      }),
+    )
+
+    const first = await client.quotes(ETH, USDC, '1', { req })
+    const second = await client.quotes(ETH, USDC, '1', { req })
+
+    const routes = client.cache.get('quotes')
+    expect([...(routes?.keys() ?? [])]).toEqual(['route-a', 'route-b'])
+    expect(routes?.get('route-a')?.get('first')).toEqual(
+      first.data.quotes[0]?.data,
+    )
+    expect(routes?.get('route-b')?.get('second')).toEqual(
+      second.data.quotes[0]?.data,
+    )
+  })
+
+  test('keeps the last 10 route IDs, dropping the oldest on the 11th', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    const routeIds = Array.from({ length: 11 }, (_, index) => `route-${index}`)
+    for (const routeId of routeIds) {
+      legacy.getAllRoutes.mockResolvedValueOnce(
+        response({ routeId, results: [{ ...result, requestId: routeId }] }),
+      )
+      await client.quotes(ETH, USDC, '1', { req })
+    }
+
+    const routes = client.cache.get('quotes')
+    expect([...(routes?.keys() ?? [])]).toEqual(routeIds.slice(1))
+    expect(routes?.get('route-0')).toBeUndefined()
+  })
+
+  test('replaces a route ID that is already cached and moves it to the newest place', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-a',
+        results: [{ ...result, requestId: 'old' }],
+      }),
+    )
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({ routeId: 'route-b', results: [result] }),
+    )
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-a',
+        results: [{ ...result, requestId: 'new' }],
+      }),
+    )
+
+    await client.quotes(ETH, USDC, '1', { req })
+    await client.quotes(ETH, USDC, '1', { req })
+    const repeated = await client.quotes(ETH, USDC, '1', { req })
+
+    const routes = client.cache.get('quotes')
+    expect([...(routes?.keys() ?? [])]).toEqual(['route-b', 'route-a'])
+    expect([...(routes?.get('route-a')?.keys() ?? [])]).toEqual(['new'])
+    expect(routes?.get('route-a')?.get('new')).toEqual(
+      repeated.data.quotes[0]?.data,
+    )
+  })
+
+  test('stores a new outer map on each successful call, leaving the one it read and each inner map unchanged', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-a',
+        results: [{ ...result, requestId: 'first' }],
+      }),
+    )
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-b',
+        results: [{ ...result, requestId: 'second' }],
+      }),
+    )
+
+    await client.quotes(ETH, USDC, '1', { req })
+    const held = client.cache.get('quotes')
+    const heldInner = held?.get('route-a')
+    expect(client.cache.get('quotes')).toBe(held)
+
+    await client.quotes(ETH, USDC, '1', { req })
+
+    const routes = client.cache.get('quotes')
+    expect(routes).not.toBe(held)
+    expect([...(held?.keys() ?? [])]).toEqual(['route-a'])
+    expect(routes?.get('route-a')).toBe(heldInner)
+    expect([...(heldInner?.keys() ?? [])]).toEqual(['first'])
+  })
+
+  test('adds overlapping calls in the order they resolve', async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    const slowResponse = Promise.withResolvers<LegacySdk.MultiRouteResponse>()
+    legacy.getAllRoutes.mockReturnValueOnce(slowResponse.promise)
+    legacy.getAllRoutes.mockResolvedValueOnce(
+      response({
+        routeId: 'route-fast',
+        results: [{ ...result, requestId: 'fast' }],
+      }),
+    )
+
+    const slow = client.quotes(ETH, USDC, '1', { req })
+    await client.quotes(ETH, USDC, '1', { req })
+    slowResponse.resolve(
+      response({
+        routeId: 'route-slow',
+        results: [{ ...result, requestId: 'slow' }],
+      }),
+    )
+    await slow
+
+    expect([...(client.cache.get('quotes')?.keys() ?? [])]).toEqual([
+      'route-fast',
+      'route-slow',
+    ])
+  })
+
+  test("two clients don't share cached Quotes", async () => {
+    const { RangoClient } = await loadSdk()
+    const first = new RangoClient({
+      apiKey: 'test-key',
+    })
+    const second = new RangoClient({
+      apiKey: 'test-key',
+    })
+    legacy.getAllRoutes.mockResolvedValue(response())
+
+    await first.quotes(ETH, USDC, '1', { req })
+
+    expect(
+      first.cache.get('quotes')?.get('route-1')?.get('request-1'),
+    ).toBeDefined()
+    expect(second.cache.get('quotes')).toBeUndefined()
+  })
+
+  test('types the quotes slot as read-only maps and exposes no set', async () => {
+    const sdk = await loadSdk()
+    const client = new sdk.RangoClient({
+      apiKey: 'test-key',
+    })
+
+    expectTypeOf(client.cache.get('quotes')).toEqualTypeOf<
+      ReadonlyMap<string, ReadonlyMap<string, Sdk.Quote>> | undefined
+    >()
+    expectTypeOf(client.cache).toEqualTypeOf<Sdk.ReadonlyCache>()
+    // @ts-expect-error a request ID is not a cache slot
+    void client.cache.get('request-1')
+    // @ts-expect-error the app can't write to the cache
+    void client.cache.set
+    expect('set' in client.cache).toBe(false)
+    const routes = client.cache.get('quotes')
+    // @ts-expect-error the quotes map is read-only
+    void routes?.set
+    // @ts-expect-error the quotes map is read-only
+    void routes?.delete
+    // @ts-expect-error the quotes map is read-only
+    void routes?.clear
+    const quotes = routes?.get('route-1')
+    // @ts-expect-error a route's map is read-only
+    void quotes?.set
+    // @ts-expect-error a route's map is read-only
+    void quotes?.delete
+    // @ts-expect-error a route's map is read-only
+    void quotes?.clear
+  })
+
+  test('exports the read-only cache type, and keeps the Cache class internal with no key constant', async () => {
+    const sdk = await loadSdk()
+
+    expect('Cache' in sdk).toBe(false)
+    expect(Object.keys(sdk).filter((name) => /KEY/i.test(name))).toEqual([])
+    // @ts-expect-error Cache is not exported.
+    void sdk.Cache
+    expectTypeOf<Sdk.ReadonlyCache>().toHaveProperty('get')
+    // @ts-expect-error QuotesRequest is replaced by QuotesReq.
+    expectTypeOf<Sdk.QuotesRequest>().not.toBeNever()
   })
 })

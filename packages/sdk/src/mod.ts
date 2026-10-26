@@ -1,17 +1,19 @@
 export { RangoClient } from './client.js'
 export type {
-  ConfirmQuote,
-  ConfirmRequest,
+  ConfirmOptions,
+  ConfirmReq,
   ConfirmResult,
   Quote,
   QuoteEntry,
   QuoteRequest,
   QuoteResult,
   QuotesData,
-  QuotesRequest,
+  QuotesOptions,
+  QuotesReq,
   QuotesResult,
   Route,
   RouteResponse,
+  SelectedWallets,
 } from './actions/mod.js'
 export type { RangoClientConfig } from './configs.js'
 export { SdkError } from './errors/mod.js'
@@ -23,7 +25,7 @@ export type {
   SdkErrorOptions,
   SdkErrorType,
 } from './errors/mod.js'
-export type { RequestOptions } from './types.js'
+export type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
 export type {
   ExcessiveOutputAmountChangeWarningMetadata,
   HighFeeWarningMetadata,
