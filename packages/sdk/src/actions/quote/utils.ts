@@ -66,6 +66,7 @@ export function validateSwapRequest(request: {
 /**
  * Loads the blockchain list through the client's cache: a hit makes no request, a miss fetches it with `getBlockchains` and stores it.
  * A failed load throws through `throwRequestError` and stores nothing, so the next call tries again.
+ * The destination check calls it, and the execution tasks reach it through the Manager's context.
  */
 export async function loadBlockchains(
   httpClient: LegacyClient,

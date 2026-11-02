@@ -12,6 +12,17 @@ type HttpErrorType =
   | 'REQUEST_FAILED'
 
 /*
+ * Rethrows an SdkError as it is, and throws anything else as REQUEST_FAILED with the fixed message. For a failure
+ * where no HTTP request was made, so it's never typed by HTTP status.
+ */
+export function throwSdkError(cause: unknown): never {
+  if (cause instanceof SdkError) {
+    throw cause
+  }
+  throw new SdkError('REQUEST_FAILED', REQUEST_FAILED_MESSAGE, { cause })
+}
+
+/*
  * Rethrows an SdkError as it is, and throws anything else as REQUEST_CANCELED, the type of its HTTP status, or
  * REQUEST_FAILED.
  */

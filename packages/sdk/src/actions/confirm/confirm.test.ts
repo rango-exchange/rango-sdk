@@ -1162,7 +1162,12 @@ describe('confirm', () => {
         case 'INVALID_INPUT':
           expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
           expectTypeOf(error.metadata.field).toEqualTypeOf<
-            'requestId' | 'to' | 'amount' | 'destination'
+            | 'requestId'
+            | 'to'
+            | 'amount'
+            | 'destination'
+            | 'options'
+            | 'walletTypes'
           >()
           if (error.metadata.field === 'requestId') {
             expectTypeOf(error.metadata.reason).toEqualTypeOf<'NOT_FOUND'>()

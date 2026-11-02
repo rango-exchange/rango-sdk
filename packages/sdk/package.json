@@ -42,10 +42,13 @@
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
   },
   "dependencies": {
+    "@rango-dev/queue-manager-core": "0.0.0-experimental-4a5bac44-20261029",
     "bignumber.js": "^9.3.1",
-    "rango-sdk": "^0.6.0"
+    "rango-sdk": "^0.6.0",
+    "rango-types": "^0.6.0"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.6",
     "vitest": "^4.1.5"
   },
   "publishConfig": {
