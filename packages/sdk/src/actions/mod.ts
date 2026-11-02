@@ -10,13 +10,17 @@ export {
   startOrUnblockExecution,
 } from './execute/mod.js'
 export type {
+  BlockReason,
   ExecutionEngine,
   ExecutionConfig,
   ExecutionFailure,
+  ExecutionHistory,
   ExecutionOptions,
   ExecutionRecord,
   ExecutionTransaction,
+  HistoryItem,
 } from './execute/mod.js'
+export { getAllExecutions, getExecution } from './history/mod.js'
 export { fetchQuote } from './quote/mod.js'
 export type {
   QuoteRequest,
