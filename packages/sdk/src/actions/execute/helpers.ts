@@ -48,13 +48,19 @@ export async function createExecution(
   requestId: string,
   options: ExecutionOptions,
 ): Promise<void> {
-  const { manager } = executionEngine
+  const { manager, context } = executionEngine
   const confirmedRoute = state.cache.get('confirmed')?.get(requestId)
   if (confirmedRoute === undefined) {
     throw new SdkError(
       'INVALID_INPUT',
       'No confirmed route or stored execution has this `requestId`.',
       { metadata: { field: 'requestId', reason: 'NOT_FOUND' } },
+    )
+  }
+  if (context.isPaused()) {
+    throw new SdkError(
+      'CLIENT_PAUSED',
+      'The client is paused: call `resume()` first.',
     )
   }
 

@@ -20,6 +20,7 @@ import {
   resetHttpClient,
   SELECTED_WALLETS,
   settle,
+  statusResponse,
   succeeded,
   USDC,
 } from '../../../tests/support.js'
@@ -114,6 +115,14 @@ describe('execute() edge cases', () => {
           selectedWallets: SELECTED_WALLETS,
         })
         return data.requestId
+      },
+    ],
+    [
+      'the ID of a deleted Execution',
+      async (client, port) => {
+        await runToEnd(client, port, 'SUCCESS')
+        await client.delete('request-1')
+        return 'request-1'
       },
     ],
   ]
@@ -265,6 +274,102 @@ describe('execute() edge cases', () => {
       expect(events).toHaveLength(eventCount)
     },
   )
+})
+
+describe('delete()', () => {
+  beforeEach(() => {
+    factory = new IDBFactory()
+    freshStart(factory)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test.each(SUCCESS_OR_FAILED_STATUSES)(
+    'removes an Execution that ended %s, emitting no event, also for a client loading the same database',
+    async (status) => {
+      const port = recordingNamespaces()
+      const { client, events } = await createExecutionClient(port)
+      await runToEnd(client, port, status, 'request-1')
+      await runToEnd(client, port, 'SUCCESS', 'request-2')
+      const eventCount = events.length
+
+      await client.delete('request-1')
+
+      expect(await client.history.get('request-1')).toBeUndefined()
+      expect(await requestIds(client)).toEqual(['request-2'])
+      expect(events).toHaveLength(eventCount)
+
+      freshStart(factory)
+      const { client: loaded } = await createExecutionClient(
+        recordingNamespaces(),
+      )
+      expect(await loaded.history.get('request-1')).toBeUndefined()
+      expect(await requestIds(loaded)).toEqual(['request-2'])
+    },
+  )
+
+  test('throws REQUEST_FAILED with the storage error as cause when storage can’t remove the record, and keeps the Execution in history', async () => {
+    const port = recordingNamespaces()
+    const { client, events } = await createExecutionClient(port)
+    await runToEnd(client, port, 'SUCCESS')
+    const before = await client.history.get('request-1')
+    const eventCount = events.length
+    const storageError = new DOMException('Disk is full.', 'QuotaExceededError')
+    const storeDelete = vi
+      .spyOn(IDBObjectStore.prototype, 'delete')
+      .mockImplementation(() => {
+        throw storageError
+      })
+
+    const error = await expectSdkError(client.delete('request-1'))
+
+    expect(error).toMatchObject({
+      type: 'REQUEST_FAILED',
+      message: 'The request failed.',
+      cause: storageError,
+    })
+    expect(await client.history.get('request-1')).toEqual(before)
+    expect(events).toHaveLength(eventCount)
+    storeDelete.mockRestore()
+    freshStart(factory)
+    const { client: loaded } = await createExecutionClient(
+      recordingNamespaces(),
+    )
+    expect(await loaded.history.get('request-1')).toEqual(before)
+  })
+
+  test('leaves a running Execution and an unknown ID as they are, and the running one still ends SUCCESS', async () => {
+    httpClient.checkStatus.mockReset()
+    httpClient.checkStatus.mockResolvedValue(statusResponse())
+    const { client, events } = await createExecutionClient(
+      recordingNamespaces(),
+    )
+    await confirmQuote(client)
+    await client.execute('request-1', EXECUTION_OPTIONS)
+    await settle()
+    const before = structuredClone(await client.history.get('request-1'))
+    expect(before?._queue.status).toBe('RUNNING')
+    const eventCount = events.length
+
+    await expect(client.delete('request-1')).resolves.toBeUndefined()
+    await expect(client.delete('request-typo')).resolves.toBeUndefined()
+    await settle()
+
+    expect(await client.history.get('request-1')).toEqual(before)
+    expect(await requestIds(client)).toEqual(['request-1'])
+    expect(events).toHaveLength(eventCount)
+
+    httpClient.checkStatus.mockResolvedValue(succeeded)
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    await settle()
+
+    expect((await client.history.get('request-1'))?._queue.status).toBe(
+      'SUCCESS',
+    )
+  })
 })
 
 describe('confirmed cache', () => {

@@ -45,6 +45,11 @@ export type SdkContext = {
   signResponsesAwaitingWait: Map<string, unknown>
   // `true` while this client is paused by `pauseOnStart: true` or `pause()`.
   isPaused: () => boolean
+  /*
+   * Core copies the context once per run, and `pause()` aborts this then swaps a new one in,
+   * so each task keeps its run's controller.
+   */
+  runController: AbortController
   // The one `HistoryItem` builder, for the events, `history` and `delete()`.
   view: (requestId: string) => HistoryItem | undefined
   // Read without building a `HistoryItem`.
@@ -69,6 +74,7 @@ export type StoredQueue = Omit<QueueInfo, 'status' | 'list' | 'actions'> & {
   }
   actions: {
     run: () => void
+    cancel: () => void
     setStorage: SetStorage<ExecutionRecord>
     getStorage: () => ExecutionRecord
   }
@@ -100,6 +106,9 @@ export type TaskResult =
 
 // An entry's new `checkResult`, stored in the same write as the failure.
 export type FailedCheck = { transactionId: string; checkResult: CheckResult }
+
+// What a failure is written through: a task's actions, or a stored queue's for `cancel()`.
+export type StorageAccess = Pick<SdkActions, 'getStorage' | 'setStorage'>
 
 export type HyperliquidTransaction = Extract<
   Transaction,

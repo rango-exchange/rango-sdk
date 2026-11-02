@@ -18,6 +18,7 @@ import {
   evmBlockchains,
   evmTx,
   EXECUTION_OPTIONS,
+  expectSdkError,
   httpClient,
   nameOf,
   onEthAndBsc,
@@ -28,6 +29,7 @@ import {
   settle,
   signsOf,
   statusResponse,
+  stubWindow,
   succeeded,
   swap,
   viewOf,
@@ -665,5 +667,88 @@ describe('the execution engine', () => {
 
     expect(loaded).toHaveBeenCalledTimes(1)
     expect(open).toHaveBeenCalledWith('queues-manager', expect.anything())
+  })
+
+  /*
+   * With `pauseOnStart`, core's Manager pauses as it is constructed, which needs `window.setInterval`: in Node, with
+   * no `window`, the build rejects. The failed attempt's Manager still opens its database once, so each build counts
+   * one `open('queues-manager')`.
+   */
+  test('a failed build is not kept: in Node with pauseOnStart and no window, pause() rejects, and after a window the next pause() builds again', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const open = vi.spyOn(factory, 'open')
+    const { client, all } = await createExecutionClient(
+      undefined,
+      evmBlockchains,
+      { pauseOnStart: true },
+    )
+
+    const error = await expectSdkError(client.pause())
+
+    expect(error).toMatchObject({
+      type: 'REQUEST_FAILED',
+      message: 'The request failed.',
+    })
+    expect(error).toHaveProperty('cause', expect.any(ReferenceError))
+    await settle()
+    expect(open).toHaveBeenCalledTimes(1)
+
+    stubWindow()
+    await expect(client.pause()).resolves.toBeUndefined()
+    await settle()
+
+    expect(open).toHaveBeenCalledTimes(2)
+    expect(open).toHaveBeenLastCalledWith('queues-manager', expect.anything())
+    expect(await client.history.getAll()).toEqual([])
+    expect(all.every(([name]) => name === 'loaded')).toBe(true)
+  })
+
+  test('calls made during a failing build all get its error, and the calls after it share one rebuild', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const open = vi.spyOn(factory, 'open')
+    const { client } = await createExecutionClient(undefined, evmBlockchains, {
+      pauseOnStart: true,
+    })
+
+    const failed = await Promise.all([
+      expectSdkError(client.pause()),
+      expectSdkError(client.history.getAll()),
+      expectSdkError(client.resume()),
+    ])
+
+    const [first] = failed
+    for (const error of failed) {
+      expect(error).toBe(first)
+    }
+    expect(first).toMatchObject({ type: 'REQUEST_FAILED' })
+    await settle()
+    expect(open).toHaveBeenCalledTimes(1)
+
+    stubWindow()
+    await Promise.all([
+      client.pause(),
+      client.history.getAll(),
+      client.history.get('request-1'),
+    ])
+    await settle()
+
+    expect(open).toHaveBeenCalledTimes(2)
+    expect(loaded).toHaveBeenCalledTimes(1)
+  })
+
+  test('execution calls after a successful build reuse it: core is loaded once and IndexedDB opened once', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    stubWindow()
+    const open = vi.spyOn(factory, 'open')
+    const { client } = await createExecutionClient()
+
+    await client.history.getAll()
+    await client.pause()
+    await client.resume()
+    await client.history.get('request-1')
+    await settle()
+
+    expect(loaded).toHaveBeenCalledTimes(1)
+    expect(open).toHaveBeenCalledTimes(1)
   })
 })

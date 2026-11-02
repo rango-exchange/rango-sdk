@@ -24,7 +24,7 @@ export async function createExecutionEngine(
   const { promise: firstLoadDone, resolve: resolveFirstLoad } =
     Promise.withResolvers<void>()
   // Core runs a queue's next task even while paused, so every task checks this first.
-  const isClientPaused = pauseOnStart === true
+  let isClientPaused = pauseOnStart === true
 
   /*
    * Read from the Manager on every call, since every status change and every paused load replaces core's queue object.
@@ -93,6 +93,7 @@ export async function createExecutionEngine(
     emit,
     signResponsesAwaitingWait: new Map(),
     isPaused: () => isClientPaused,
+    runController: new AbortController(),
     view,
     getQueueStatus: (requestId) => {
       const queue: StoredQueue | undefined = manager.get(requestId)
@@ -100,7 +101,10 @@ export async function createExecutionEngine(
     },
   }
 
-  // Core keeps this very object and reads its `current` at the start of each run, for that run's tasks.
+  /*
+   * Core keeps this very object and reads its `current` at the start of each run, for that run's tasks. `pause()`
+   * swaps the controller here, the way `beforeResume` swaps the wallet.
+   */
   const managerContext: { current: SdkContext } = { current: context }
 
   const manager: Manager = new Manager({
@@ -145,7 +149,24 @@ export async function createExecutionEngine(
     },
   })
 
+  // The flag is set first: `pause()` syncs on `window.setInterval`, which throws where there is no `window`.
+  const pause = (): void => {
+    isClientPaused = true
+    managerContext.current.runController.abort()
+    managerContext.current = {
+      ...managerContext.current,
+      runController: new AbortController(),
+    }
+    manager.pause()
+  }
+
+  // The flag is cleared first: `run()` reloads storage and resumes every `RUNNING` Execution.
+  const resume = (): void => {
+    isClientPaused = false
+    manager.run()
+  }
+
   // `firstLoadDone` resolves after the first load, also after a load error, and never rejects.
   await firstLoadDone
-  return { manager, context }
+  return { manager, context, pause, resume }
 }

@@ -140,6 +140,17 @@ describe('with no wallet', () => {
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
+  test('cancel() cancels a Blocked Execution, and delete() then removes it', async () => {
+    const { client } = await walletlessClient()
+    await start(client)
+
+    await client.cancel('request-1')
+    expect((await historyOf(client))?._queue.status).toBe('CANCELED')
+    await client.delete('request-1')
+
+    expect(await client.history.getAll()).toEqual([])
+  })
+
   test('a stored RUNNING Execution reloaded on a client with no wallet blocks NOT_CONNECTED at its next gated entry', async () => {
     httpClient.createTransaction.mockImplementation(hang)
     const { client } = await createExecutionClient()

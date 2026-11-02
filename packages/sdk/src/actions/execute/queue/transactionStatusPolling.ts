@@ -5,7 +5,7 @@ import { TransactionStatus, TransactionType } from 'rango-types'
 
 import { loadBlockchainMetaOf } from './blockchainMeta.js'
 import { POLL_INTERVAL_MS } from './constants.js'
-import { ErrorToReport } from './executionFailure.js'
+import { ErrorToReport, isCanceledOrPaused } from './executionFailure.js'
 import { replaceLastExplorerLinkWithReplacedHash } from './explorerLink.js'
 import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
 import { sleep } from './utils.js'
@@ -41,6 +41,9 @@ async function tryPollStepStatusUntilFinished(
       .checkStatus({ requestId, step, txId: hash })
       .then((statusAnswer) => statusAnswer || null)
       .catch(() => null)
+    if (isCanceledOrPaused(actions)) {
+      return []
+    }
     if (statusAnswer !== null) {
       const storage = actions.getStorage()
       const entry = storage.transactions[transactionId]
@@ -98,13 +101,16 @@ async function tryPollStepStatusUntilFinished(
         })
       }
     }
-    await sleep(POLL_INTERVAL_MS)
+    await sleep(POLL_INTERVAL_MS, actions.context.runController.signal)
+    if (isCanceledOrPaused(actions)) {
+      return []
+    }
   }
 }
 
 /*
  * The Blockchain list is read only to replace a stored link, before the write. A rejected `wait` still tells the
- * server the hash, with one status call that isn't awaited.
+ * server the hash, with one status call that isn't awaited. `null` once the Execution is canceled.
  */
 async function waitForFinalEvmHash(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
@@ -130,11 +136,16 @@ async function waitForFinalEvmHash(
   try {
     waitResult = await evm.wait({ hash, response: signResponse })
   } catch (error) {
-    const { step } = actions.getStorage().transactions[transactionId]
-    httpClient
-      .checkStatus({ requestId, step, txId: hash })
-      .catch(() => undefined)
+    if (!isCanceledOrPaused(actions)) {
+      const { step } = actions.getStorage().transactions[transactionId]
+      httpClient
+        .checkStatus({ requestId, step, txId: hash })
+        .catch(() => undefined)
+    }
     throw error
+  }
+  if (isCanceledOrPaused(actions)) {
+    return null
   }
   if (waitResult.hash !== hash) {
     const hasStoredExplorerLink =
@@ -143,6 +154,9 @@ async function waitForFinalEvmHash(
     const blockchainMeta = hasStoredExplorerLink
       ? await loadBlockchainMetaOf(actions, requiredWallet.blockchain)
       : null
+    if (isCanceledOrPaused(actions)) {
+      return null
+    }
     const freshStorage = actions.getStorage()
     const { result } = freshStorage.transactions[transactionId].execution
     result.walletResult = { hash: waitResult.hash }

@@ -23,7 +23,7 @@ import {
   PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE,
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
-import { ErrorToReport } from './executionFailure.js'
+import { ErrorToReport, isCanceledOrPaused } from './executionFailure.js'
 import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
 import {
   awaitSignResultAndBuildExplorerLink,
@@ -90,10 +90,16 @@ async function gateSignAndProveEvmApprove(
     actions,
     requiredWallet.blockchain,
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   const accountBlockReason = getAccountBlockReason(
     requiredWallet,
     await evm.getAccount().catch(() => null),
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   // The chain ID is looked up only once the account passes.
   const blockReason =
     accountBlockReason ??
@@ -109,6 +115,9 @@ async function gateSignAndProveEvmApprove(
           chain: buildEvmChainDescription(blockchainMeta),
         }),
     ))
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   if (blockReason !== null) {
     return { block: blockReason }
   }
@@ -164,6 +173,9 @@ async function gateSignAndProveTronApprove(
     requiredWallet,
     await tron.getAccount().catch(() => null),
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   if (blockReason !== null) {
     return { block: blockReason }
   }
@@ -172,6 +184,9 @@ async function gateSignAndProveTronApprove(
     actions,
     requiredWallet.blockchain,
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
     actions,
     transactionId,
@@ -223,6 +238,9 @@ async function gateSignAndProveXrplTrustline(
     requiredWallet,
     await xrpl.getAccount().catch(() => null),
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   if (blockReason !== null) {
     return { block: blockReason }
   }
@@ -231,6 +249,9 @@ async function gateSignAndProveXrplTrustline(
     actions,
     requiredWallet.blockchain,
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
     actions,
     transactionId,
@@ -285,6 +306,9 @@ async function gateAndSignStellarTrustline(
     requiredWallet,
     await stellar.getAccount().catch(() => null),
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   if (blockReason !== null) {
     return { block: blockReason }
   }
@@ -293,6 +317,9 @@ async function gateAndSignStellarTrustline(
     actions,
     requiredWallet.blockchain,
   )
+  if (isCanceledOrPaused(actions)) {
+    return []
+  }
   const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
     actions,
     transactionId,
@@ -315,7 +342,7 @@ async function gateAndSignStellarTrustline(
     : storeEntryCompletedAndEmitApprovalSucceeded(actions, transactionId, false)
 }
 
-// The signed hash, or `null` when the Prerequisite was already met.
+// The signed hash, or `null` when the Prerequisite was already met or once the Execution is canceled.
 async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   transactionId: string,
@@ -325,10 +352,21 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   buildPrerequisiteTx: () => Promise<PrerequisiteTx>,
   signPrerequisiteTx: (prerequisiteTx: PrerequisiteTx) => Promise<SignResult>,
 ): Promise<string | null> {
-  const grantedAmount = await tryRunPrerequisiteReadOrBuild(
-    readGrantedAmount,
-    PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE[prerequisite.type],
-  )
+  let grantedAmount: string | null
+  try {
+    grantedAmount = await tryRunPrerequisiteReadOrBuild(
+      readGrantedAmount,
+      PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE[prerequisite.type],
+    )
+  } catch (error) {
+    if (isCanceledOrPaused(actions)) {
+      return null
+    }
+    throw error
+  }
+  if (isCanceledOrPaused(actions)) {
+    return null
+  }
   const isAlreadyGranted = isGrantedAmountEnough(
     grantedAmount,
     getRequiredGrantAmount(prerequisite),
@@ -342,6 +380,9 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   }
 
   const prerequisiteTx = await buildPrerequisiteTx()
+  if (isCanceledOrPaused(actions)) {
+    return null
+  }
 
   const signedPrerequisite = await signEntryAndStoreSignedHash(
     actions,
@@ -410,8 +451,12 @@ async function tryRunPrerequisiteReadOrBuild<T>(
   }
 }
 
-// The timeout is wall-clock time from the first read, the time the reads take included.
+/*
+ * The timeout is wall-clock time from the first read, the time the reads take included. `false` once the Execution
+ * is canceled.
+ */
 async function tryWaitUntilAllowanceConfirmed(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   readGrantedAllowance: () => Promise<string | null>,
   requiredAmount: string,
 ): Promise<boolean> {
@@ -423,6 +468,9 @@ async function tryWaitUntilAllowanceConfirmed(
       grantedAmount = await readGrantedAllowance()
     } catch {
       grantedAmount = null
+    }
+    if (isCanceledOrPaused(actions)) {
+      return false
     }
     consecutiveSufficientReads = isGrantedAmountEnough(
       grantedAmount,
@@ -439,12 +487,19 @@ async function tryWaitUntilAllowanceConfirmed(
         'Insufficient approve, please try again.',
       )
     }
-    await sleep(ALLOWANCE_READ_INTERVAL_MS)
+    await sleep(
+      ALLOWANCE_READ_INTERVAL_MS,
+      actions.context.runController.signal,
+    )
+    if (isCanceledOrPaused(actions)) {
+      return false
+    }
   }
 }
 
-// A Prerequisite's on-chain proof.
+// A Prerequisite's on-chain proof. `false` once the Execution is canceled.
 async function tryWaitUntilProvedOnChain(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   readOnChainStatus: (hash: string) => Promise<OnChainTxStatus>,
   hash: string,
 ): Promise<boolean> {
@@ -452,6 +507,9 @@ async function tryWaitUntilProvedOnChain(
     const onChainStatus = await readOnChainStatus(hash).catch(
       (): 'pending' => 'pending',
     )
+    if (isCanceledOrPaused(actions)) {
+      return false
+    }
     if (onChainStatus === 'failed') {
       throw new ErrorToReport(
         'CLIENT_UNEXPECTED_BEHAVIOUR',
@@ -461,7 +519,10 @@ async function tryWaitUntilProvedOnChain(
     if (onChainStatus === 'success') {
       return true
     }
-    await sleep(POLL_INTERVAL_MS)
+    await sleep(POLL_INTERVAL_MS, actions.context.runController.signal)
+    if (isCanceledOrPaused(actions)) {
+      return false
+    }
   }
 }
 
@@ -499,12 +560,13 @@ async function proveEvmApproveOnChain(
   const readOnChainStatus = async (
     signedHash: string,
   ): Promise<OnChainTxStatus> => evm.getTransactionInfo({ hash: signedHash })
-  if (!(await tryWaitUntilProvedOnChain(readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   const readGrantedAllowance = async () => evm.getAllowance({ prerequisite })
   if (
     !(await tryWaitUntilAllowanceConfirmed(
+      actions,
       readGrantedAllowance,
       prerequisite.amount,
     ))
@@ -529,12 +591,13 @@ async function proveTronApproveOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     getTronTxStatus(await tron.getTransactionInfo({ hash: signedHash }))
-  if (!(await tryWaitUntilProvedOnChain(readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   const readGrantedAllowance = async () => tron.getAllowance({ prerequisite })
   if (
     !(await tryWaitUntilAllowanceConfirmed(
+      actions,
       readGrantedAllowance,
       prerequisite.amount,
     ))
@@ -558,7 +621,7 @@ async function proveXrplTrustlineOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     getXrplTxStatus(await xrpl.getTransactionInfo({ hash: signedHash }))
-  if (!(await tryWaitUntilProvedOnChain(readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   return storeEntryCompletedAndEmitApprovalSucceeded(

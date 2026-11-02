@@ -15,6 +15,7 @@ import {
   buildEvmChainDescription,
   loadBlockchainMetaOf,
 } from './blockchainMeta.js'
+import { isCanceledOrPaused } from './executionFailure.js'
 import { signPostAndLookUpHyperliquidHash } from './hyperliquid.js'
 import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
 import { buildMainTransactionSigner } from './sign.js'
@@ -25,6 +26,7 @@ import {
 } from './walletReadiness.js'
 
 /*
+ * No gate prompts once the Execution is canceled, so one cancel check after the gate is enough.
  * `buildMainTransactionSigner` reads the meta after the gate, a Cache read for an EVM entry; Hyperliquid reads it only
  * once its hash is found. No `sign` gets a chain ID, as the chain was checked first.
  */
@@ -100,6 +102,9 @@ export async function gateSignAndProveMainTransaction(
       throw new Error(
         'Unexpected Error: Cosmos transactions are no longer supported.',
       )
+  }
+  if (isCanceledOrPaused(actions)) {
+    return []
   }
   if (gated.blockReason !== null) {
     return { block: gated.blockReason }

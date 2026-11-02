@@ -4,6 +4,8 @@ export type {
   ConfirmReq,
   ConfirmResult,
 } from './confirm/mod.js'
+export { cancelExecution } from './cancel/mod.js'
+export { deleteExecution } from './delete/mod.js'
 export {
   createExecutionEngine,
   startOrUnblockExecution,
@@ -37,6 +39,7 @@ export type {
   XrplWallet,
 } from './execute/mod.js'
 export { getAllExecutions, getExecution } from './history/mod.js'
+export { pauseExecutions } from './pause/mod.js'
 export { fetchQuote } from './quote/mod.js'
 export type {
   QuoteRequest,
@@ -55,3 +58,4 @@ export type {
   QuotesReq,
   QuotesResult,
 } from './quotes/mod.js'
+export { resumeExecutions } from './resume/mod.js'

@@ -64,6 +64,7 @@ function actionsOn(
       },
       signResponsesAwaitingWait: new Map(),
       isPaused: () => false,
+      runController: new AbortController(),
       view: () => undefined,
       getQueueStatus: () => undefined,
     },
