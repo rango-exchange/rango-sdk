@@ -517,6 +517,28 @@ export function reloadOn(on: IDBFactory): void {
   globalThis.indexedDB = on
 }
 
+/*
+ * The client built again after a reload, with a recording port, its execution engine built by reading
+ * `history`, so every `RUNNING` Execution resumes; then every pending step runs.
+ */
+export async function resumeExecutions(
+  port?: undefined,
+  chains?: readonly Sdk.BlockchainMeta[],
+): Promise<ExecutionClient<ReturnType<typeof recordingNamespaces>>>
+export async function resumeExecutions<P extends NamespacePort>(
+  port: P,
+  chains?: readonly Sdk.BlockchainMeta[],
+): Promise<ExecutionClient<P>>
+export async function resumeExecutions(
+  port: NamespacePort = recordingNamespaces(),
+  chains: readonly Sdk.BlockchainMeta[] = evmBlockchains,
+) {
+  const execution = await createExecutionClient(port, chains)
+  await execution.client.history.getAll()
+  await settle()
+  return execution
+}
+
 // Core's paused Manager syncs storage on `window.setInterval`, which Node lacks: this `window` uses the global timer.
 export function stubWindow(): void {
   vi.stubGlobal('window', {
@@ -767,12 +789,37 @@ export async function createExecutionClient(
   return { client, ...port }
 }
 
+// The stored Execution, as `history` answers it.
+export async function historyOf(
+  client: Sdk.RangoClient,
+): Promise<Sdk.HistoryItem | undefined> {
+  return client.history.get('request-1')
+}
+
 // The parts of a failed Prerequisite's stored failure a test checks: its code and message, and its detail if given.
 export type PrerequisiteFailure = Pick<
   Sdk.ExecutionFailure,
   'reasonCode' | 'message'
 > &
   Partial<Pick<Sdk.ExecutionFailure, 'detail'>>
+
+/*
+ * What every failed Prerequisite leaves: the Execution `FAILED` with this failure, its main entry not started and step 1
+ * reported with the failure's reason code. Answers the `HistoryItem`, for a caller's own checks.
+ */
+export async function expectPrerequisiteFailed(
+  client: Sdk.RangoClient,
+  failure: PrerequisiteFailure,
+): Promise<Sdk.HistoryItem | undefined> {
+  const view = await historyOf(client)
+  expect(view?._queue.status).toBe('FAILED')
+  expect(view?._storage.failure).toMatchObject(failure)
+  expect(view?._storage.transactions.s1?.execution.status).toBe('not_started')
+  expect(httpClient.reportFailure).toHaveBeenCalledWith(
+    expect.objectContaining({ step: 1, eventType: failure.reasonCode }),
+  )
+  return view
+}
 
 // A distinct Wallet ID per blockchain, so a report tag with the wrong one shows.
 export const SELECTED_WALLETS = {
