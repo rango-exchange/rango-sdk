@@ -17,6 +17,7 @@ export type {
   ExecutionRecord,
   ExecutionTransaction,
   HistoryItem,
+  HyperliquidWallet,
   Quote,
   QuoteEntry,
   QuoteRequest,

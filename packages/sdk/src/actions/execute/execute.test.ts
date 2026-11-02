@@ -404,7 +404,7 @@ describe('the execution keys', () => {
     expectTypeOf<Sdk.ExecutionEvents['loaded']>().toEqualTypeOf<undefined>()
   })
 
-  test('types the WalletPort as nine optional namespaces, each with only the methods the SDK calls for it, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
+  test('types the WalletPort as ten optional namespaces, each with only the methods the SDK calls for it, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
     type TxOf<T extends TransactionType> = Extract<Transaction, { type: T }>
     type PrerequisiteOf<T extends TransactionPrerequisite['type']> = Extract<
       TransactionPrerequisite,
@@ -414,6 +414,7 @@ describe('the execution keys', () => {
 
     expectTypeOf<Sdk.WalletPort>().toEqualTypeOf<{
       evm?: Sdk.EvmWallet
+      hyperliquid?: Sdk.HyperliquidWallet
       tron?: Sdk.TronWallet
       xrpl?: Sdk.XrplWallet
       stellar?: Sdk.StellarWallet
@@ -459,6 +460,15 @@ describe('the execution keys', () => {
         blockchain: string
         hash: string
       }): Promise<'pending' | 'success' | 'failed'>
+    }>()
+    expectTypeOf<Sdk.HyperliquidWallet>().toEqualTypeOf<{
+      getAccounts(): Promise<string[] | null>
+      getChainId(): Promise<string | null>
+      switchChain(req: { chainId: string }): Promise<void>
+      signTypedData(req: {
+        typedData: unknown
+        chainId: string
+      }): Promise<string>
     }>()
     expectTypeOf<Sdk.TronWallet>().toEqualTypeOf<{
       getAccounts(): Promise<string[] | null>
@@ -519,11 +529,17 @@ describe('the execution keys', () => {
       getAccounts(): Promise<string[] | null>
       sign(req: { tx: TxOf<TransactionType.SUI> }): Promise<Sdk.SignResult>
     }>()
-    // Only wait is optional: switchChain is required on evm.
+    // Only wait is optional: switchChain is required on evm and hyperliquid.
     expectTypeOf<undefined>().toExtend<Sdk.EvmWallet['wait']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['switchChain']>()
+    expectTypeOf<undefined>().not.toExtend<
+      Sdk.HyperliquidWallet['switchChain']
+    >()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['sign']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['getAllowance']>()
+    expectTypeOf<undefined>().not.toExtend<
+      Sdk.HyperliquidWallet['signTypedData']
+    >()
     expectTypeOf<undefined>().not.toExtend<Sdk.TronWallet['buildTransaction']>()
     // @ts-expect-error WalletTarget is not exported: no request carries an address
     expectTypeOf<Sdk.WalletTarget>().not.toBeNever()

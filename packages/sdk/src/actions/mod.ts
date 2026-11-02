@@ -25,6 +25,7 @@ export type {
   ExecutionRecord,
   ExecutionTransaction,
   HistoryItem,
+  HyperliquidWallet,
   RouteEvent,
   SignResult,
   SolanaWallet,

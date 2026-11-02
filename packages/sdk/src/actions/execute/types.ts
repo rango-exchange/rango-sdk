@@ -260,6 +260,22 @@ export interface EvmWallet {
 }
 
 /**
+ * The Hyperliquid namespace, for Hyperliquid actions signed as EIP-712 typed data.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface HyperliquidWallet {
+  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
+  getAccounts(): Promise<string[] | null>
+  /** Answer the wallet's chain ID, hex or decimal, or `null` when it isn't ready. */
+  getChainId(): Promise<string | null>
+  /** Switch the wallet to `chainId`, or reject when it can't. */
+  switchChain(req: { chainId: string }): Promise<void>
+  /** Sign ethers' `{ domain, types, value }` on `chainId` and resolve with the `0x` signature. */
+  signTypedData(req: { typedData: unknown; chainId: string }): Promise<string>
+}
+
+/**
  * The TRON namespace.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
@@ -395,6 +411,8 @@ export interface SuiWallet {
 export type WalletPort = {
   /** EVM transactions and approves, on every EVM blockchain. */
   evm?: EvmWallet
+  /** Hyperliquid actions. */
+  hyperliquid?: HyperliquidWallet
   /** TRON transactions and approves. */
   tron?: TronWallet
   /** XRPL payments and trustlines. */
