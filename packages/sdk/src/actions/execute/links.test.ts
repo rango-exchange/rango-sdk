@@ -11,6 +11,7 @@ import {
   advance,
   approvingNamespaces,
   buildingNamespaces,
+  chain,
   confirmQuote,
   createExecutionClient,
   createTxResponse,
@@ -20,22 +21,30 @@ import {
   evmChain,
   evmTx,
   EXECUTION_OPTIONS,
+  expectNotReported,
+  explorerAnswer,
   hang,
   httpClient,
+  httpError,
+  HYPERLIQUID_EXPLORER_URL,
+  hyperliquidTx,
   linkedChain,
   nameOf,
   recordingNamespaces,
   resetHttpClient,
   settle,
+  SIGNATURE_CHAIN_ID,
   statusResponse,
   stellarChain,
   stellarTrustline,
   stellarTx,
+  stubHyperliquid,
   succeeded,
   TRON_INFO,
   tronApprove,
   tronChain,
   tronTx,
+  typedSigningNamespaces,
   viewOf,
   waitingNamespaces,
   XRPL_INFO,
@@ -47,12 +56,20 @@ import {
 
 const POLL_INTERVAL_MS = 5_000
 const ALLOWANCE_READ_INTERVAL_MS = 3_000
+const SERVICE_UNAVAILABLE = 503
 
 const SCAN = 'https://scan.test/tx'
+const HASH = '0xhyperhash'
 const SOURCE = [{ url: 'https://explorer/1', description: 'Source' }]
 
 // The Blockchain list with an explorer on ETH, the chain every main EVM entry is signed on.
 const linkedEvm = [linkedChain(evmChain('ETH', '0x1'), SCAN), evmBlockchains[1]]
+
+const hyperliquidChain = chain('HYPERLIQUID', ['^(0x)[0-9A-Fa-f]{40}$'])
+const linkedHyperliquid = [
+  ...evmBlockchains,
+  linkedChain(hyperliquidChain, SCAN),
+]
 
 let factory = new IDBFactory()
 
@@ -101,6 +118,13 @@ async function entriesOf(
   client: Sdk.RangoClient,
 ): Promise<Record<string, Sdk.ExecutionTransaction>> {
   return (await client.history.get('request-1'))?._storage.transactions ?? {}
+}
+
+// A port on `signatureChainId` with `signTypedData`, for a Hyperliquid action.
+function hyperliquidWallet() {
+  return typedSigningNamespaces(
+    waitingNamespaces({ HYPERLIQUID: SIGNATURE_CHAIN_ID }),
+  )
 }
 
 describe('transaction links', () => {
@@ -608,6 +632,98 @@ describe('transaction links', () => {
             diagnosisUrl: null,
           },
         })
+      },
+    )
+  })
+
+  describe('Hyperliquid', () => {
+    test('the entry has no checkResult until its hash is found, then stores the hash and its Swap link in one write', async () => {
+      stubHyperliquid({
+        explorer: [{ type: 'userDetails', txs: [] }, explorerAnswer(HASH)],
+      })
+      const { client, events } = await start(
+        hyperliquidWallet(),
+        hyperliquidTx(),
+        linkedHyperliquid,
+      )
+
+      expect((await entriesOf(client)).s1?.execution).toEqual({
+        status: 'signed',
+        result: { walletResult: null, checkResult: null },
+      })
+
+      await advance(POLL_INTERVAL_MS)
+      const hashed = events
+        .map((event) => viewOf(event)._storage.transactions.s1)
+        .find((entry) => entry && entry.execution.result.walletResult)
+      expect(hashed?.execution.result).toEqual({
+        walletResult: { hash: HASH },
+        checkResult: seeded(`${SCAN}/${HASH}`, 'Swap'),
+      })
+      const view = await client.history.get('request-1')
+      expect(view?._queue.status).toBe('SUCCESS')
+      expect(view?._storage.transactions.s1?.execution.result).toEqual({
+        walletResult: { hash: HASH },
+        checkResult: {
+          outputAmount: '2990',
+          explorerUrl: [{ url: `${SCAN}/${HASH}`, description: 'Swap' }],
+          diagnosisUrl: null,
+        },
+      })
+    })
+
+    const lists: [string, () => void, string][] = [
+      [
+        'a Blockchain list that fails to load',
+        () => {
+          httpClient.getBlockchains.mockReset()
+          httpClient.getBlockchains.mockRejectedValue(
+            httpError(SERVICE_UNAVAILABLE, { error: 'meta API down' }),
+          )
+        },
+        'meta API down',
+      ],
+      [
+        'a Blockchain list with no Hyperliquid chain',
+        () => {
+          httpClient.getBlockchains.mockResolvedValue([...evmBlockchains])
+        },
+        'Unexpected Error: HYPERLIQUID is not in the Blockchain list.',
+      ],
+    ]
+
+    test.each(lists)(
+      '%s when the hash is found after a reload fails the swap as a failed meta load does, with the hash not stored, and is not reported',
+      async (_name, breakList, message) => {
+        stubHyperliquid({ explorer: [{ type: 'userDetails', txs: [] }] })
+        await start(hyperliquidWallet(), hyperliquidTx(), linkedHyperliquid)
+
+        freshStart(factory)
+        const hyperliquid = stubHyperliquid()
+        const { client, events } = await createExecutionClient(
+          hyperliquidWallet(),
+          linkedHyperliquid,
+        )
+        breakList()
+        await client.history.getAll()
+        await settle()
+
+        expect(hyperliquid.posts.map(({ url }) => url)).toEqual([
+          HYPERLIQUID_EXPLORER_URL,
+        ])
+        expect(httpClient.checkStatus).not.toHaveBeenCalled()
+        const view = await client.history.get('request-1')
+        expect(view?._queue.status).toBe('FAILED')
+        expect(view?._storage.failure).toEqual({
+          reasonCode: 'CLIENT_UNEXPECTED_BEHAVIOUR',
+          message,
+          detail: null,
+        })
+        expect(view?._storage.transactions.s1?.execution.result).toEqual({
+          walletResult: null,
+          checkResult: null,
+        })
+        expectNotReported(events)
       },
     )
   })

@@ -15,6 +15,10 @@ import {
 } from './constants.js'
 import { ErrorToReport } from './execution-failure.js'
 import {
+  signPostAndLookUpHyperliquidHash,
+  waitForHyperliquidHashAndStoreIt,
+} from './hyperliquid.js'
+import {
   getRequiredGrantAmount,
   isGrantedAmountEnough,
   proveEvmApproveOnChain,
@@ -356,6 +360,21 @@ export async function executeTransaction(
   const mainTx = entry.data.value
   // No gate on a resume.
   const { walletResult: storedWalletResult } = entry.execution.result
+  const isPostedHyperliquidWithoutHash =
+    entry.execution.status === 'signed' &&
+    mainTx.type === TransactionType.HYPERLIQUID &&
+    storedWalletResult === null
+  if (isPostedHyperliquidWithoutHash) {
+    const hyperliquidHash = await waitForHyperliquidHashAndStoreIt(
+      actions,
+      transactionId,
+      getRequiredWallet(storage, mainTx),
+      mainTx.nonce,
+    )
+    return hyperliquidHash === null
+      ? []
+      : waitForHashThenPollStepStatus(actions, hyperliquidHash)
+  }
   const isSignedWithHash =
     entry.execution.status === 'signed' && storedWalletResult !== null
   if (isSignedWithHash) {
@@ -388,10 +407,26 @@ export async function executeTransaction(
   let signMainTransaction: () => Promise<SignedEntryResult | null>
   let blockReason: BlockReason | null
   switch (mainTx.type) {
-    case TransactionType.HYPERLIQUID:
-      throw new Error(
-        'Unexpected Error: Hyperliquid transactions are not supported yet.',
-      )
+    case TransactionType.HYPERLIQUID: {
+      const hyperliquid = context.wallet?.hyperliquid
+      if (hyperliquid === undefined) {
+        return notConnectedBlock
+      }
+      const activeAccount = await hyperliquid.getAccount().catch(() => null)
+      blockReason =
+        getAccountBlockReason(requiredWallet, activeAccount) ??
+        (await switchToRequiredChainOrGetBlockReason(
+          actions,
+          transactionId,
+          requiredWallet,
+          mainTx.action.signatureChainId,
+          async () => hyperliquid.getChainId(),
+          async (chainId) => hyperliquid.switchChain({ chainId }),
+        ))
+      signMainTransaction = async () =>
+        signPostAndLookUpHyperliquidHash(actions, hyperliquid, mainTx)
+      break
+    }
     case TransactionType.EVM: {
       const evm = context.wallet?.evm
       if (evm === undefined) {
