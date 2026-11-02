@@ -2,6 +2,7 @@ import type {
   ConfirmOptions,
   ConfirmResult,
   ExecutionEngine,
+  ExecutionHistory,
   ExecutionOptions,
   QuoteRequest,
   QuoteResult,
@@ -26,6 +27,8 @@ import {
   createExecutionEngine,
   fetchQuote,
   fetchQuotes,
+  getAllExecutions,
+  getExecution,
   startOrUnblockExecution,
 } from './actions/mod.js'
 import { Cache } from './cache/mod.js'
@@ -39,6 +42,21 @@ export class RangoClient {
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#clientcache
    */
   readonly cache: ReadonlyCache
+
+  /**
+   * The Executions stored in this browser, each as a `HistoryItem`.
+   *
+   * @returns `get()`: the Execution's `HistoryItem`, or `undefined` for an unknown request ID. `getAll()`: one
+   * `HistoryItem` per Execution the execution engine loaded.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * const item = await client.history.get(route.requestId) // a HistoryItem, or undefined
+   * const items = await client.history.getAll()
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history
+   */
+  readonly history: ExecutionHistory
 
   readonly #config: ResolvedConfig
   readonly #httpClient: LegacyClient
@@ -62,6 +80,10 @@ export class RangoClient {
     )
     this.#cache = new Cache()
     this.cache = { get: (key) => this.#cache.get(key) }
+    this.history = {
+      get: async (requestId) => getExecution(this.#state(), requestId),
+      getAll: async () => getAllExecutions(this.#state()),
+    }
   }
 
   /**

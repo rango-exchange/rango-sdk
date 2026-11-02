@@ -1,13 +1,16 @@
 export { RangoClient } from './client.js'
 export type {
+  BlockReason,
   ConfirmOptions,
   ConfirmReq,
   ConfirmResult,
   ExecutionConfig,
   ExecutionFailure,
+  ExecutionHistory,
   ExecutionOptions,
   ExecutionRecord,
   ExecutionTransaction,
+  HistoryItem,
   Quote,
   QuoteEntry,
   QuoteRequest,
