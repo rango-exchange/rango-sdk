@@ -53,6 +53,7 @@ export type ClientState = {
   cache: Cache<CacheSchema>
   /*
    * The client's execution engine, built on the first call and shared by every later one, once its first load is done.
+   * It is built with or without `execution.wallet`: a missing wallet or namespace Blocks `NOT_CONNECTED`, never throws.
    */
   executionEngine: () => Promise<ExecutionEngine>
 }

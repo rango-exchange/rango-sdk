@@ -6,6 +6,7 @@ import type {
   HistoryItem,
   RouteEvent,
   StepEvent,
+  WalletPort,
 } from '../mod.js'
 import type {
   ExecuterActions,
@@ -35,6 +36,8 @@ export type CheckResult = NonNullable<
 
 export type SdkContext = {
   httpClient: LegacyClient
+  // `undefined` until the host sets one: each gated entry Blocks `NOT_CONNECTED` meanwhile.
+  wallet: WalletPort | undefined
   // From the client's Cache, or with an HTTP call on a miss.
   loadBlockchainsMeta: () => Promise<readonly BlockchainMeta[]>
   emit: Emit
@@ -42,7 +45,7 @@ export type SdkContext = {
   signResponsesAwaitingWait: Map<string, unknown>
   // `true` while this client is paused by `pauseOnStart: true` or `pause()`.
   isPaused: () => boolean
-  // The one `HistoryItem` builder, for the events and `history`.
+  // The one `HistoryItem` builder, for the events, `history` and `delete()`.
   view: (requestId: string) => HistoryItem | undefined
   // Read without building a `HistoryItem`.
   getQueueStatus: (
