@@ -10,13 +10,18 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   activeAccounts,
+  advance,
+  approvingNamespaces,
   BSC_ASSET,
+  buildingNamespaces,
   cacheQuote,
+  callOf,
   chain,
   confirmQuote,
   confirmResponse,
   createExecutionClient,
   createTxResponse,
+  evmApprove,
   evmBlockchains,
   evmChain,
   evmTx,
@@ -37,10 +42,14 @@ import {
   succeeded,
   swap,
   transferTx,
+  tronApprove,
   tronChain,
+  tronTx,
+  UNLIMITED,
   waitingNamespaces,
 } from '../../../tests/support.js'
 
+const ALLOWANCE_READ_INTERVAL_MS = 3_000
 const SERVICE_UNAVAILABLE = 503
 const NOT_CONNECTED_EVENT = 'step1:waiting_for_wallet_connect'
 const TWO_STEPS = [swap(), swap({ from: BSC_ASSET, to: BSC_ASSET })]
@@ -239,6 +248,67 @@ describe('the WalletPort by namespace', () => {
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
+  test('a signed TRON approve reloaded on a port without tron Blocks NOT_CONNECTED, and resumes its proof with no gate once tron is added', async () => {
+    const tx = tronTx({ prerequisites: [tronApprove()] })
+    const built = tronTx({ txID: 'approve-tx', isApprovalTx: true })
+    const first = buildingNamespaces(approvingNamespaces(namespacesPort()), {
+      tron: [built],
+    })
+    first.wallet.tron.getTransactionInfo.mockImplementation(hang)
+    const { client } = await createExecutionClient(first, chains)
+    await start(client, tx)
+    expect(
+      (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+        .status,
+    ).toBe('signed')
+
+    reloadOn(factory)
+    httpClient.checkStatus.mockResolvedValue(succeeded)
+    httpClient.reportFailure.mockResolvedValue(undefined)
+    httpClient.createTransaction.mockResolvedValue(createTxResponse(tx))
+    const port = approvingNamespaces(namespacesPort(), { granted: [UNLIMITED] })
+    const connection: { wallet: Sdk.WalletPort } = {
+      wallet: { evm: port.wallet.evm },
+    }
+    const { client: loaded, events } = await connectingClient(
+      () => connection.wallet,
+    )
+    await loaded.history.getAll()
+    await settle()
+
+    const blocked = await historyOf(loaded)
+    expect(blocked?._queue.status).toBe('BLOCKED')
+    expect(blocked?._queue.blocked).toEqual({
+      reason: 'NOT_CONNECTED',
+      metadata: { blockchain: 'TRON', address: 'TXfrom' },
+    })
+    expect(blocked?._storage.failure).toBeNull()
+    expect(blocked?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'signed',
+    )
+    expect(events.map(nameOf).at(-1)).toBe(NOT_CONNECTED_EVENT)
+    expect(port.requests).toEqual([])
+
+    connection.wallet = { evm: port.wallet.evm, tron: port.wallet.tron }
+    await loaded.execute('request-1')
+    await settle()
+    expect(port.requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtrc20'])
+    expect(port.wallet.tron.getAccount).not.toHaveBeenCalled()
+    await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+    expect(port.requests.map(callOf)).toEqual([
+      'info:0xhash1',
+      'read:0xtrc20',
+      'read:0xtrc20',
+      'sign:main-tx',
+    ])
+    const view = await historyOf(loaded)
+    expect(view?._queue.status).toBe('SUCCESS')
+    expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'completed',
+    )
+  })
+
   describe('a signed EVM main entry reloaded', () => {
     // Signs the EVM main entry on a `wait` that never resolves, then reloads.
     async function signedThenReloaded() {
@@ -432,6 +502,86 @@ describe('the WalletPort by namespace', () => {
       expect(port.requests).toEqual([])
     })
 
+    describe('an EVM approve on BSC under an evm map', () => {
+      const approve = evmApprove({ blockChain: 'BSC', wallet: '0xto' })
+      const tx = evmTx({
+        blockChain: 'BSC',
+        from: '0xto',
+        prerequisites: [approve],
+      })
+
+      // An ETH and a BSC wallet on `port`, the BSC one granting nothing before the approve and UNLIMITED after it.
+      function approvingMap(port: ReturnType<typeof namespacesPort>) {
+        const mapped = onEthAndBsc(port)
+        mapped.bsc.getAllowance
+          .mockResolvedValueOnce(null)
+          .mockResolvedValue(UNLIMITED)
+        return { eth: mapped.eth, bsc: mapped.bsc, mapped }
+      }
+
+      // Every call any of `wallet`'s mocks got.
+      function callsOn(
+        wallet: ReturnType<ReturnType<typeof namespacesPort>['evmOn']>,
+      ) {
+        return Object.values(wallet).flatMap(
+          (method): readonly unknown[][] => method.mock.calls,
+        )
+      }
+
+      test('is gated, read, built, signed and proved on the BSC wallet, with no call on the ETH one', async () => {
+        const port = namespacesPort()
+        const { eth, bsc, mapped } = approvingMap(port)
+        const { client } = await createExecutionClient(mapped, chains)
+
+        await start(client, tx)
+        await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+        expect(bsc.getAllowance).toHaveBeenCalledWith({ prerequisite: approve })
+        expect(bsc.buildTransaction).toHaveBeenCalledWith({
+          prerequisite: approve,
+        })
+        expect(bsc.getTransactionInfo).toHaveBeenCalledWith({
+          hash: '0xhash1',
+        })
+        expect(bsc.sign).toHaveBeenCalledTimes(2)
+        expect(callsOn(eth)).toEqual([])
+        expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+      })
+
+      test('signed and reloaded, is proved on the BSC wallet, with no call on the ETH one', async () => {
+        const first = namespacesPort()
+        const signing = approvingMap(first)
+        signing.bsc.getTransactionInfo.mockImplementation(hang)
+        const { client } = await createExecutionClient(signing.mapped, chains)
+        await start(client, tx)
+        expect(
+          (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+            .status,
+        ).toBe('signed')
+
+        reloadOn(factory)
+        httpClient.checkStatus.mockResolvedValue(succeeded)
+        httpClient.reportFailure.mockResolvedValue(undefined)
+        httpClient.createTransaction.mockResolvedValue(createTxResponse(tx))
+        const port = namespacesPort()
+        const { eth, bsc, mapped } = approvingMap(port)
+        bsc.getAllowance.mockReset()
+        bsc.getAllowance.mockResolvedValue(UNLIMITED)
+        const { client: loaded } = await connectingClient(() => mapped.wallet)
+        await loaded.history.getAll()
+        await settle()
+        await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+        expect(bsc.getTransactionInfo.mock.calls).toEqual([
+          [{ hash: '0xhash1' }],
+        ])
+        expect(bsc.getAllowance).toHaveBeenCalledWith({ prerequisite: approve })
+        expect(bsc.sign.mock.calls).toEqual([[{ tx }]])
+        expect(callsOn(eth)).toEqual([])
+        expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
+      })
+    })
+
     test("an EVM entry under an evm map waits on the wallet that signed it, not on another blockchain's", async () => {
       const port = namespacesPort()
       const eth = { ...port.evmOn('ETH'), wait: passingWait() }
@@ -564,5 +714,70 @@ describe('the WalletPort by namespace', () => {
       expect(view?._storage.failure).toBeNull()
       expect(httpClient.getBlockchains).not.toHaveBeenCalled()
     })
+
+    test('an EVM approve on a port with no evm namespace Blocks NOT_CONNECTED while the list fails to load, and never fetches the list', async () => {
+      const port = namespacesPort()
+      const { client } = await connectingClient(() => ({
+        tron: port.wallet.tron,
+      }))
+      failListLoads()
+
+      await start(client, evmTx({ prerequisites: [evmApprove()] }))
+
+      const view = await historyOf(client)
+      expect(view?._queue.status).toBe('BLOCKED')
+      expect(view?._queue.blocked).toEqual({
+        reason: 'NOT_CONNECTED',
+        metadata: { blockchain: 'ETH', address: '0xfrom' },
+      })
+      expect(view?._storage.failure).toBeNull()
+      expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+        'not_started',
+      )
+      expect(httpClient.getBlockchains).not.toHaveBeenCalled()
+    })
+
+    const tronApproveBlocks: [
+      string,
+      () => Sdk.WalletPort,
+      Sdk.BlockReason['reason'],
+    ][] = [
+      [
+        'with no tron namespace',
+        () => ({ evm: namespacesPort().wallet.evm }),
+        'NOT_CONNECTED',
+      ],
+      [
+        'whose active account is another address',
+        () =>
+          recordingNamespaces(undefined, {
+            ...activeAccounts(),
+            TRON: 'TXother',
+          }).wallet,
+        'ACCOUNT_MISMATCH',
+      ],
+    ]
+
+    test.each(tronApproveBlocks)(
+      'a TRON approve %s Blocks while the list fails to load, with no failure stored',
+      async (_name, wallet, reason) => {
+        const connected = wallet()
+        const { client } = await connectingClient(() => connected)
+        failListLoads()
+
+        await start(client, tronTx({ prerequisites: [tronApprove()] }))
+
+        const view = await historyOf(client)
+        expect(view?._queue.status).toBe('BLOCKED')
+        expect(view?._queue.blocked).toEqual({
+          reason,
+          metadata: { blockchain: 'TRON', address: 'TXfrom' },
+        })
+        expect(view?._storage.failure).toBeNull()
+        expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+          'not_started',
+        )
+      },
+    )
   })
 })

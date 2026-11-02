@@ -1639,27 +1639,53 @@ export function approvingNamespaces<
 }
 
 /*
- * `port` with a `buildTransaction` on `tron` and `stellar`, the namespaces that have it, that records every request too,
- * copied, and answers from its namespace's script in order, repeating the last answer; an Error rejects, and so does a
- * namespace given no script. Replaceable per test.
+ * `port` with a `buildTransaction` that records every request too, copied, and answers from its namespace's script in
+ * order, repeating the last answer; an Error rejects. Given no script, `tron` and `stellar` reject, and `evm` and `xrpl`
+ * keep `port`'s build. Replaceable per test.
  */
 export function buildingNamespaces<
   Port extends { wallet: RecordingNamespaces; requests: NamespaceRequest[] },
 >(
   port: Port,
   builds: {
+    evm?: readonly (EvmTx | Error | Rejection)[]
     tron?: readonly (TronTx | Error | Rejection)[]
+    xrpl?: readonly (XrplTx | Error | Rejection)[]
     stellar?: readonly (StellarTx | Error | Rejection)[]
   },
 ) {
   const { wallet, requests } = port
   const unscripted = new Error('No build scripted for this namespace')
+  const nextEvm = builds.evm === undefined ? undefined : scripted(builds.evm)
   const nextTron = scripted(builds.tron ?? [unscripted])
+  const nextXrpl = builds.xrpl === undefined ? undefined : scripted(builds.xrpl)
   const nextStellar = scripted(builds.stellar ?? [unscripted])
   return {
     ...port,
     wallet: {
       ...wallet,
+      evm: {
+        ...wallet.evm,
+        buildTransaction: vi.fn(async (req: { prerequisite: EvmApprove }) => {
+          if (nextEvm === undefined) {
+            return wallet.evm.buildTransaction(req)
+          }
+          requests.push(['evm', 'buildTransaction', structuredClone(req)])
+          return nextEvm()
+        }),
+      },
+      xrpl: {
+        ...wallet.xrpl,
+        buildTransaction: vi.fn(
+          async (req: { prerequisite: XrplTrustline; limit: string }) => {
+            if (nextXrpl === undefined) {
+              return wallet.xrpl.buildTransaction(req)
+            }
+            requests.push(['xrpl', 'buildTransaction', structuredClone(req)])
+            return nextXrpl()
+          },
+        ),
+      },
       tron: {
         ...wallet.tron,
         buildTransaction: vi.fn(async (req: { prerequisite: TronApprove }) => {

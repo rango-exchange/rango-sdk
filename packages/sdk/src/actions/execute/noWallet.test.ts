@@ -7,10 +7,15 @@ import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
+  advance,
+  approvingNamespaces,
   callOf,
   confirmQuote,
   createExecutionClient,
+  createTxResponse,
+  evmApprove,
   evmBlockchains,
+  evmTx,
   EXECUTION_OPTIONS,
   hang,
   historyOf,
@@ -23,9 +28,11 @@ import {
   scriptCreateTransaction,
   settle,
   succeeded,
+  UNLIMITED,
   waitingNamespaces,
 } from '../../../tests/support.js'
 
+const ALLOWANCE_READ_INTERVAL_MS = 3_000
 const NOT_CONNECTED: Sdk.BlockReason = {
   reason: 'NOT_CONNECTED',
   metadata: { blockchain: 'ETH', address: '0xfrom' },
@@ -150,6 +157,64 @@ describe('with no wallet', () => {
     expect(view?._queue.blocked).toEqual(NOT_CONNECTED)
     expect(view?._storage.failure).toBeNull()
     expect(events.map(nameOf).at(-1)).toBe(NOT_CONNECTED_EVENT)
+  })
+
+  test('a signed EVM approve reloaded with no wallet blocks NOT_CONNECTED, and resumes its proof with no gate once a wallet is set', async () => {
+    httpClient.createTransaction.mockResolvedValue(
+      createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
+    )
+    const first = approvingNamespaces(recordingNamespaces())
+    first.wallet.evm.getTransactionInfo.mockImplementation(hang)
+    const { client } = await createExecutionClient(first)
+    await start(client)
+    expect(
+      (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+        .status,
+    ).toBe('signed')
+
+    reloadOn(factory)
+    scriptLegacy()
+    httpClient.createTransaction.mockResolvedValue(
+      createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
+    )
+    const connection: { wallet?: Sdk.WalletPort } = {}
+    const { client: loaded, events } = await walletlessClient(
+      () => connection.wallet,
+    )
+    await loaded.history.getAll()
+    await settle()
+
+    const blocked = await historyOf(loaded)
+    expect(blocked?._queue.status).toBe('BLOCKED')
+    expect(blocked?._queue.blocked).toEqual(NOT_CONNECTED)
+    expect(blocked?._storage.failure).toBeNull()
+    expect(blocked?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'signed',
+    )
+    expect(events.map(nameOf).at(-1)).toBe(NOT_CONNECTED_EVENT)
+
+    const port = approvingNamespaces(recordingNamespaces(), {
+      granted: [UNLIMITED],
+    })
+    connection.wallet = port.wallet
+    await loaded.execute('request-1')
+    await settle()
+    expect(port.requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtoken'])
+    expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
+    await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+    expect(port.requests.map(callOf)).toEqual([
+      'info:0xhash1',
+      'read:0xtoken',
+      'read:0xtoken',
+      'getChainId',
+      'sign:0xcontract',
+    ])
+    const view = await historyOf(loaded)
+    expect(view?._queue.status).toBe('SUCCESS')
+    expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'completed',
+    )
   })
 
   test('a signed EVM main entry reloaded with no wallet skips wait and is polled to SUCCESS', async () => {

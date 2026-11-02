@@ -2,6 +2,7 @@ import type { SdkActions, TaskResult } from './types.js'
 
 import { ErrorToReport } from './executionFailure.js'
 import { gateSignAndProveMainTransaction } from './mainTransaction.js'
+import { gateSignAndProvePrerequisite } from './prerequisite.js'
 import { waitForHashThenPollStepStatus } from './transactionStatusPolling.js'
 
 export async function executeTransaction(
@@ -16,7 +17,11 @@ export async function executeTransaction(
     return []
   }
   if (entry.data.type === 'prerequisite') {
-    throw new Error('Unexpected Error: Prerequisites are not supported yet.')
+    return gateSignAndProvePrerequisite(
+      actions,
+      transactionId,
+      entry.data.value,
+    )
   }
   const mainTx = entry.data.value
   // No gate on a resume.
