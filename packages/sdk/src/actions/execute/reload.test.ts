@@ -8,11 +8,15 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   advance,
+  approvingNamespaces,
   BSC_ASSET,
   callOf,
   confirmQuote,
   createExecutionClient,
+  createTxResponse,
   done,
+  evmApprove,
+  evmTx,
   EXECUTION_OPTIONS,
   expectNotReported,
   hang,
@@ -29,10 +33,12 @@ import {
   succeeded,
   swap,
   switchingNamespaces,
+  UNLIMITED,
   viewOf,
 } from '../../../tests/support.js'
 
 const POLL_INTERVAL_MS = 5_000
+const ALLOWANCE_READ_INTERVAL_MS = 3_000
 const TWO_STEPS = [swap(), swap({ from: BSC_ASSET, to: BSC_ASSET })]
 
 let factory = new IDBFactory()
@@ -350,6 +356,83 @@ describe('after a reload', () => {
       step: 1,
       txId: '0xhash1',
     })
+    expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
+  })
+
+  test('a signed EVM approve resumes at its status poll and allowance confirmation, with no gate, no build and no sign', async () => {
+    httpClient.createTransaction.mockResolvedValue(
+      createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
+    )
+    const first = approvingNamespaces(recordingNamespaces())
+    first.wallet.evm.getTransactionInfo.mockImplementation(hang)
+    const { client } = await createExecutionClient(first)
+    await start(client)
+    expect(
+      (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+        .status,
+    ).toBe('signed')
+
+    reloadOn(factory)
+    scriptLegacy()
+    httpClient.createTransaction.mockResolvedValue(
+      createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
+    )
+    const port = approvingNamespaces(recordingNamespaces(), {
+      granted: [UNLIMITED],
+    })
+    const { client: loaded, requests } = await resumeExecutions(port)
+    expect(requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtoken'])
+    expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
+
+    await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+    expect(port.wallet.evm.getAccount.mock.calls).toEqual([
+      [{ blockchain: 'ETH' }],
+    ])
+
+    expect(requests.map(callOf)).toEqual([
+      'info:0xhash1',
+      'read:0xtoken',
+      'read:0xtoken',
+      'getChainId',
+      'sign:0xcontract',
+    ])
+    expect(port.wallet.evm.buildTransaction).not.toHaveBeenCalled()
+    expect(httpClient.createTransaction).not.toHaveBeenCalled()
+    const view = await historyOf(loaded)
+    expect(view?._queue.status).toBe('SUCCESS')
+    expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'completed',
+    )
+  })
+
+  test('a completed Prerequisite is skipped: no getAllowance, no sign for it', async () => {
+    httpClient.createTransaction.mockResolvedValue(
+      createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
+    )
+    // The approve's gate answers; the main entry's hangs, so the queue stays RUNNING after the approve completed.
+    const first = approvingNamespaces(recordingNamespaces())
+    first.wallet.evm.getChainId
+      .mockImplementationOnce(async () => '0x1')
+      .mockImplementation(hang)
+    const { client } = await createExecutionClient(first)
+    await start(client)
+    await advance(ALLOWANCE_READ_INTERVAL_MS)
+    expect(
+      (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+        .status,
+    ).toBe('completed')
+    // As if the page closed after the approve was stored completed but before its task finished.
+    await rewindTo(factory, 'SDK_EXECUTE_TRANSACTION', {
+      transactionId: 's1.p0',
+    })
+
+    reloadOn(factory)
+    scriptLegacy()
+    const port = approvingNamespaces(recordingNamespaces())
+    const { client: loaded, requests } = await resumeExecutions(port)
+
+    expect(requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
     expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
   })
 
