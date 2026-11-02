@@ -334,6 +334,38 @@ export function evmApprove(overrides: Partial<EvmApprove> = {}): EvmApprove {
   }
 }
 
+// The approve the fake port builds: an approval transaction on `to`, the token, from the selected wallet.
+export function evmApproveTx(
+  overrides: Partial<LegacySdk.EvmTransaction> = {},
+): LegacySdk.EvmTransaction {
+  return evmTx({
+    to: '0xtoken',
+    data: '0xapprove',
+    isApprovalTx: true,
+    ...overrides,
+  })
+}
+
+// A TRANSFER of BTC from `bc1from` to `bc1to`.
+export function transferTx(
+  overrides: Partial<LegacySdk.Transfer> = {},
+): LegacySdk.Transfer {
+  return {
+    type: LegacySdk.TransactionType.TRANSFER,
+    blockChain: 'BTC',
+    prerequisites: [],
+    method: 'transfer',
+    asset: { blockchain: 'BTC', symbol: 'BTC', address: null, ticker: 'BTC' },
+    amount: '100000',
+    decimals: 8,
+    fromWalletAddress: 'bc1from',
+    recipientAddress: 'bc1to',
+    memo: null,
+    psbt: null,
+    ...overrides,
+  }
+}
+
 // An allowance far above any approve amount.
 export const UNLIMITED = '1000000000000000000000000000000000000000'
 
@@ -505,6 +537,20 @@ export async function advance(ms: number): Promise<void> {
 
 export const evmBlockchains = [evmChain('ETH', '0x1'), evmChain('BSC', '0x38')]
 
+// The ETH chain description an EVM switch carries, from the default Blockchain list.
+export const DEFAULT_ETH_CHAIN_DESCRIPTION: Sdk.EvmChainDescription = {
+  chainName: 'ETH',
+  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+  rpcUrls: [],
+  blockExplorerUrls: [],
+}
+// What a Blockchain list may describe beyond the default ETH.
+export const MAINNET_ETH_CHAIN_DESCRIPTION = {
+  chainName: 'Ethereum Mainnet',
+  rpcUrls: ['https://rpc.example'],
+  blockExplorerUrls: ['https://explorer.example'],
+}
+
 // `meta` with an explorer: this `info.transactionUrl`, the template a stored hash's link is built from.
 export function linkedChain(
   meta: Sdk.BlockchainMeta,
@@ -515,6 +561,18 @@ export function linkedChain(
     linked.info.transactionUrl = transactionUrl
   }
   return linked
+}
+
+// `meta` whose EVM chain info holds this `description`, the chain an EVM switch describes.
+export function describedChain(
+  meta: Sdk.BlockchainMeta,
+  description: Partial<Sdk.EvmChainDescription>,
+): Sdk.BlockchainMeta {
+  const described = structuredClone(meta)
+  if (described.type === LegacySdk.TransactionType.EVM) {
+    described.info = { ...described.info, ...description }
+  }
+  return described
 }
 
 // A promise that never settles: a port or legacy call left hanging, so its client writes nothing more.
@@ -673,6 +731,25 @@ export function xrplTx(overrides: Partial<XrplTx> = {}): XrplTx {
   }
 }
 
+// The `TrustSet` the fake port builds, from the selected XRPL wallet.
+export function xrplTrustSetTx(overrides: Partial<XrplTx> = {}): XrplTx {
+  return {
+    type: LegacySdk.TransactionType.XRPL,
+    blockChain: 'XRPL',
+    prerequisites: [],
+    data: {
+      TransactionType: 'TrustSet',
+      Account: 'rXRPLfrom',
+      LimitAmount: {
+        currency: 'USD',
+        issuer: 'rIssuer',
+        value: '10000000000000',
+      },
+    },
+    ...overrides,
+  }
+}
+
 export type XrplTrustline = Extract<
   Sdk.TransactionPrerequisite,
   { type: 'XRPL_CHANGE_TRUSTLINE' }
@@ -793,6 +870,7 @@ export type ExecutionClientOptions = {
   // The emitter in place of the recording one, or `null` to build with no emitter.
   emitter?: Sdk.Emitter<Sdk.ExecutionEvents> | null
   pauseOnStart?: boolean
+  beforeResume?: Sdk.BeforeResume
 }
 
 type ExecutionClient<P extends NamespacePort> = {
@@ -802,9 +880,10 @@ type ExecutionClient<P extends NamespacePort> = {
 } & P
 
 /*
- * A client with a namespace port, by default a recording one, and a recording emitter unless `options` replaces it,
- * with these `options` (such as `pauseOnStart`), whose blockchain list holds these blockchains. The port is returned as
- * given, so its mocks keep their types; `events` and `all` stay empty when the emitter is replaced.
+ * A client with `execution.wallet` set to this namespace port, by default a recording one, and a
+ * recording emitter unless `options` replaces it, with these `options` (such as `pauseOnStart`), whose blockchain list
+ * holds these blockchains. The port is returned as given, so its mocks keep their types; `events` and `all` stay empty
+ * when the emitter is replaced. The only way the tests build a client with a wallet.
  */
 export async function createExecutionClient(
   port?: undefined,
@@ -827,6 +906,7 @@ export async function createExecutionClient(
   const client = new RangoClient({
     apiKey: 'test-key',
     execution: {
+      wallet: port.wallet,
       ...(emitter === null ? {} : { emitter: emitter ?? recording.emitter }),
       ...options,
     },
@@ -1130,6 +1210,7 @@ export type EvmNamespace = {
   sign(req: { tx: EvmTx }): Promise<SignResult>
   wait?(req: { hash: string; response?: unknown }): Promise<WaitResult>
   getAllowance(req: { prerequisite: EvmApprove }): Promise<string | null>
+  buildTransaction(req: { prerequisite: EvmApprove }): Promise<EvmTx>
   getTransactionInfo(req: { hash: string }): Promise<EvmInfo>
   signTypedData?(req: { typedData: unknown; chainId: string }): Promise<string>
 }
@@ -1144,6 +1225,10 @@ export type XrplNamespace = {
   getAccount(): Promise<string | null>
   sign(req: { tx: XrplTx }): Promise<SignResult>
   getTrustline(req: { prerequisite: XrplTrustline }): Promise<string | null>
+  buildTransaction(req: {
+    prerequisite: XrplTrustline
+    limit: string
+  }): Promise<XrplTx>
   getTransactionInfo(req: { hash: string }): Promise<XrplInfo>
 }
 export type StellarNamespace = {
@@ -1211,8 +1296,9 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
  * across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, `BTC` on `bip122`, the
  * namespace's own otherwise, such as `TRON`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
- * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` rejects,
- * as no build is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
+ * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
+ * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron` and `stellar`, as no build
+ * is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
  * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet`.
  * `evmOn` and `bip122On` build another such wallet on a blockchain, sharing the requests and the hashes, for a map.
  */
@@ -1246,6 +1332,12 @@ export function recordingNamespaces(
       async (req: { prerequisite: EvmApprove }): Promise<string | null> => {
         requests.push(['evm', 'getAllowance', structuredClone(req)])
         return null
+      },
+    ),
+    buildTransaction: vi.fn(
+      async (req: { prerequisite: EvmApprove }): Promise<EvmTx> => {
+        requests.push(['evm', 'buildTransaction', structuredClone(req)])
+        return evmApproveTx({ to: req.prerequisite.token })
       },
     ),
     getTransactionInfo: vi.fn(
@@ -1312,6 +1404,15 @@ export function recordingNamespaces(
         ): Promise<string | null> => {
           requests.push(['xrpl', 'getTrustline', structuredClone(req)])
           return null
+        },
+      ),
+      buildTransaction: vi.fn(
+        async (req: {
+          prerequisite: XrplTrustline
+          limit: string
+        }): Promise<XrplTx> => {
+          requests.push(['xrpl', 'buildTransaction', structuredClone(req)])
+          return xrplTrustSetTx()
         },
       ),
       getTransactionInfo: vi.fn(
@@ -1383,6 +1484,26 @@ export function recordingNamespaces(
 }
 
 type RecordingNamespaces = ReturnType<typeof recordingNamespaces>['wallet']
+
+/*
+ * `port` with `evm` as a map: its own wallet on `ETH`, and another from `evmOn` on `BSC`, for a Route that crosses
+ * both, as each answers its own blockchain's account and chain. Both are returned too, so a test can script either.
+ */
+export function onEthAndBsc<
+  Port extends {
+    wallet: RecordingNamespaces
+    evmOn: (blockchain: string) => RecordingNamespaces['evm']
+  },
+>(port: Port) {
+  const eth = port.wallet.evm
+  const bsc = port.evmOn('BSC')
+  return {
+    ...port,
+    eth,
+    bsc,
+    wallet: { ...port.wallet, evm: { ETH: eth, BSC: bsc } },
+  }
+}
 
 /*
  * `recordingNamespaces` with a `switchChain` on `evm` and `hyperliquid` that records the request and also moves its

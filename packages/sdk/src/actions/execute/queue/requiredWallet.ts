@@ -1,6 +1,11 @@
 import type { RequiredWallet } from './types.js'
 import type { SelectedWallet } from '../../quote/mod.js'
-import type { ExecutionRecord, ExecutionTransaction } from '../mod.js'
+import type {
+  Bip122Wallet,
+  EvmWallet,
+  ExecutionRecord,
+  ExecutionTransaction,
+} from '../mod.js'
 import type { Transaction } from 'rango-sdk'
 import type { TransactionPrerequisite } from 'rango-types'
 
@@ -26,6 +31,19 @@ export function getRequiredWallet(
   }
 }
 
+export function getWalletOnBlockchain<Wallet extends EvmWallet | Bip122Wallet>(
+  namespace:
+    | Wallet
+    | { [blockchain: string]: Wallet | undefined; default?: Wallet }
+    | undefined,
+  blockchain: string,
+): Wallet | undefined {
+  if (namespace === undefined || isOneWallet(namespace)) {
+    return namespace
+  }
+  return namespace[blockchain] ?? namespace.default
+}
+
 export function getCurrentStepWalletIdForReport(
   storage: ExecutionRecord,
 ): string | undefined {
@@ -43,4 +61,11 @@ export function getCurrentStepWalletIdForReport(
   const selectedWallet: SelectedWallet | undefined =
     storage.data.selectedWallets[blockchain]
   return selectedWallet?.walletId
+}
+
+// A map's `getAccount` is a key, which holds a wallet or nothing.
+function isOneWallet<Wallet extends EvmWallet | Bip122Wallet>(
+  namespace: Wallet | { [blockchain: string]: unknown },
+): namespace is Wallet {
+  return typeof namespace.getAccount === 'function'
 }

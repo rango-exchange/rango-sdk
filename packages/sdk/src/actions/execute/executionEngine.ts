@@ -20,7 +20,7 @@ export async function createExecutionEngine(
 ): Promise<ExecutionEngine> {
   // A dynamic import, so apps that never execute don't bundle core.
   const { Manager } = await import('@rango-dev/queue-manager-core')
-  const { emitter, pauseOnStart } = config ?? {}
+  const { wallet, emitter, pauseOnStart, beforeResume } = config ?? {}
   const { promise: firstLoadDone, resolve: resolveFirstLoad } =
     Promise.withResolvers<void>()
   // Core runs a queue's next task even while paused, so every task checks this first.
@@ -88,6 +88,7 @@ export async function createExecutionEngine(
 
   const context: SdkContext = {
     httpClient,
+    wallet,
     loadBlockchainsMeta: async () => loadBlockchains(httpClient, cache),
     emit,
     signResponsesAwaitingWait: new Map(),
@@ -106,6 +107,29 @@ export async function createExecutionEngine(
     queuesDefs: [queueDefinition],
     isPaused: isClientPaused,
     context: managerContext,
+    /*
+     * Core calls this before it reads the context for a run, and passes `current`, not the object, so `setContext`
+     * writes the object the Manager was given, replacing only its wallet. No `try`: a throw is a Host bug.
+     */
+    ...(beforeResume === undefined
+      ? {}
+      : {
+          beforeResume: (_: unknown, queue: { id: string }) => {
+            const historyItem = view(queue.id)
+            if (historyItem !== undefined) {
+              beforeResume(
+                { wallet: managerContext.current.wallet },
+                (next) => {
+                  managerContext.current = {
+                    ...managerContext.current,
+                    wallet: next.wallet,
+                  }
+                },
+                historyItem,
+              )
+            }
+          },
+        }),
     events: {
       onStorageUpdate: (requestId) => {
         emit.changed(requestId)

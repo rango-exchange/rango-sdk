@@ -1,10 +1,14 @@
 export { RangoClient } from './client.js'
 export type {
+  BeforeResume,
+  Bip122Wallet,
   BlockReason,
   ConfirmOptions,
   ConfirmReq,
   ConfirmResult,
   Emitter,
+  EvmChainDescription,
+  EvmWallet,
   ExecutionConfig,
   ExecutionEvents,
   ExecutionFailure,
@@ -26,7 +30,16 @@ export type {
   RouteResponse,
   SelectedWallet,
   SelectedWallets,
+  SignResult,
+  SolanaWallet,
+  StarknetWallet,
+  StellarWallet,
   StepEvent,
+  SuiWallet,
+  TonWallet,
+  TronWallet,
+  WalletPort,
+  XrplWallet,
 } from './actions/mod.js'
 export type { RangoClientConfig } from './configs.js'
 export { SdkError } from './errors/mod.js'
@@ -66,5 +79,5 @@ export type {
   SwapResult,
   Transaction,
 } from 'rango-sdk'
-export { TransactionType } from 'rango-types'
+export { SignerError, SignerErrorCode, TransactionType } from 'rango-types'
 export type { APIErrorCode, TransactionPrerequisite } from 'rango-types'

@@ -42,7 +42,8 @@ export type BridgeLimitMetadata = {
  * The input field that fails a check, and why. `quote()` and `quotes()` check `to` (`SAME_ASSET` as `from`) and
  * `amount` (`NOT_A_NUMBER` or `NOT_POSITIVE`). `quote()` and `confirm()` check a set `destination`
  * against the blockchain list (`NO_ADDRESS_PATTERNS` or `PATTERN_MISMATCH`). `confirm()` checks `requestId`
- * (`NOT_FOUND` when no cached Quote has it). `execute()` checks `requestId` (`NOT_FOUND` when no confirmed Route kept by `confirm()` and no stored Execution
+ * (`NOT_FOUND` when no cached Quote has it). A missing `execution.wallet` is never an input error: each gated entry
+ * Blocks `NOT_CONNECTED` until one is set. `execute()` checks `requestId` (`NOT_FOUND` when no confirmed Route kept by `confirm()` and no stored Execution
  * has it), and, for a new Execution, `options` (`MISSING`).
  */
 export type InvalidInputMetadata =

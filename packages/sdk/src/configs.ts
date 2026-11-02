@@ -8,7 +8,7 @@ export type RangoClientConfig = {
   apiKey: string
   /** Defaults to `https://api.rango.exchange`. */
   baseUrl?: string
-  /** The execution settings: how `execute()` runs. */
+  /** The execution settings: the `wallet` that `execute()` and the other execution methods need, and how they run. */
   execution?: ExecutionConfig
 }
 
