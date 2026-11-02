@@ -9,9 +9,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   advance,
+  approvingNamespaces,
+  buildingNamespaces,
   confirmQuote,
   createExecutionClient,
   createTxResponse,
+  EVM_INFO,
+  evmApprove,
   evmBlockchains,
   evmChain,
   evmTx,
@@ -24,12 +28,24 @@ import {
   resetHttpClient,
   settle,
   statusResponse,
+  stellarChain,
+  stellarTrustline,
+  stellarTx,
   succeeded,
+  TRON_INFO,
+  tronApprove,
+  tronChain,
+  tronTx,
   viewOf,
   waitingNamespaces,
+  XRPL_INFO,
+  xrplChain,
+  xrplTrustline,
+  xrplTx,
 } from '../../../tests/support.js'
 
 const POLL_INTERVAL_MS = 5_000
+const ALLOWANCE_READ_INTERVAL_MS = 3_000
 
 const SCAN = 'https://scan.test/tx'
 const SOURCE = [{ url: 'https://explorer/1', description: 'Source' }]
@@ -505,5 +521,94 @@ describe('transaction links', () => {
       })
       expect(view?._storage.transactions.s1?.execution.result).toEqual(stored)
     })
+  })
+
+  describe('Prerequisites', () => {
+    const kinds: [
+      string,
+      () => {
+        port: ReturnType<typeof recordingNamespaces>
+        tx: LegacySdk.Transaction
+        chains: Sdk.BlockchainMeta[]
+      },
+    ][] = [
+      [
+        'an EVM approve',
+        () => ({
+          port: approvingNamespaces(recordingNamespaces()),
+          tx: evmTx({ prerequisites: [evmApprove()] }),
+          chains: linkedEvm,
+        }),
+      ],
+      [
+        'a TRON approve',
+        () => ({
+          port: buildingNamespaces(approvingNamespaces(recordingNamespaces()), {
+            tron: [tronTx({ txID: 'approve-tx', isApprovalTx: true })],
+          }),
+          tx: tronTx({ prerequisites: [tronApprove()] }),
+          chains: [...evmBlockchains, linkedChain(tronChain(), SCAN)],
+        }),
+      ],
+      [
+        'an XRPL trustline',
+        () => ({
+          // v14 has no XRPL build: the SDK builds the TrustSet, so no namespace is given a build.
+          port: buildingNamespaces(
+            approvingNamespaces(recordingNamespaces(), { granted: [null] }),
+            {},
+          ),
+          tx: xrplTx({ prerequisites: [xrplTrustline()] }),
+          chains: [...evmBlockchains, linkedChain(xrplChain(), SCAN)],
+        }),
+      ],
+      [
+        'a Stellar trustline',
+        () => ({
+          port: buildingNamespaces(
+            approvingNamespaces(recordingNamespaces(), {
+              granted: [null],
+              infos: {
+                evm: [EVM_INFO.failed],
+                tron: [TRON_INFO.failed],
+                xrpl: [XRPL_INFO.failed],
+              },
+            }),
+            { stellar: [stellarTx('change-trust-op')] },
+          ),
+          tx: stellarTx('payment-op', {
+            prerequisites: [stellarTrustline()],
+          }),
+          chains: [...evmBlockchains, linkedChain(stellarChain(), SCAN)],
+        }),
+      ],
+    ]
+
+    test.each(kinds)(
+      '%s stores one Approve link with its hash, kept after the step ends, and the main entry its Swap link',
+      async (_name, setup) => {
+        const { port, tx, chains } = setup()
+        const { client } = await start(port, tx, chains)
+        await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+        const view = await client.history.get('request-1')
+        expect(view?._queue.status).toBe('SUCCESS')
+        expect(view?._storage.transactions['s1.p0']?.execution).toEqual({
+          status: 'completed',
+          result: {
+            walletResult: { hash: '0xhash1' },
+            checkResult: seeded(`${SCAN}/0xhash1`, 'Approve'),
+          },
+        })
+        expect(view?._storage.transactions.s1?.execution.result).toEqual({
+          walletResult: { hash: '0xhash2' },
+          checkResult: {
+            outputAmount: '2990',
+            explorerUrl: [{ url: `${SCAN}/0xhash2`, description: 'Swap' }],
+            diagnosisUrl: null,
+          },
+        })
+      },
+    )
   })
 })

@@ -8,7 +8,11 @@ import * as LegacySdk from 'rango-sdk'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
+  advance,
+  approvingNamespaces,
+  buildingNamespaces,
   cacheQuote,
+  callOf,
   chain,
   confirmQuote,
   confirmResponse,
@@ -31,10 +35,14 @@ import {
   SELECTED_WALLETS,
   settle,
   succeeded,
+  tronApprove,
   tronChain,
+  tronTx,
+  UNLIMITED,
   waitingNamespaces,
 } from '../../../tests/support.js'
 
+const ALLOWANCE_READ_INTERVAL_MS = 3_000
 const SERVICE_UNAVAILABLE = 503
 const NOT_CONNECTED_EVENT = 'step1:waiting_for_wallet_connect'
 
@@ -232,6 +240,67 @@ describe('the WalletPort by namespace', () => {
     expect(port.wallet.solana.getAccounts).toHaveBeenCalledTimes(1)
     expect(port.requests).toEqual([['solana', 'sign', { tx: solanaTx }]])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+  })
+
+  test('a signed TRON approve reloaded on a port without tron Blocks NOT_CONNECTED, and resumes its proof with no gate once tron is added', async () => {
+    const tx = tronTx({ prerequisites: [tronApprove()] })
+    const built = tronTx({ txID: 'approve-tx', isApprovalTx: true })
+    const first = buildingNamespaces(approvingNamespaces(namespacesPort()), {
+      tron: [built],
+    })
+    first.wallet.tron.getTransactionInfo.mockImplementation(hang)
+    const { client } = await createExecutionClient(first, chains)
+    await start(client, tx)
+    expect(
+      (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+        .status,
+    ).toBe('signed')
+
+    reloadOn(factory)
+    httpClient.checkStatus.mockResolvedValue(succeeded)
+    httpClient.reportFailure.mockResolvedValue(undefined)
+    httpClient.createTransaction.mockResolvedValue(createTxResponse(tx))
+    const port = approvingNamespaces(namespacesPort(), { granted: [UNLIMITED] })
+    const connection: { wallet: Sdk.WalletPort } = {
+      wallet: { evm: port.wallet.evm },
+    }
+    const { client: loaded, events } = await connectingClient(
+      () => connection.wallet,
+    )
+    await loaded.history.getAll()
+    await settle()
+
+    const blocked = await historyOf(loaded)
+    expect(blocked?._queue.status).toBe('BLOCKED')
+    expect(blocked?._queue.blocked).toEqual({
+      reason: 'NOT_CONNECTED',
+      metadata: { blockchain: 'TRON', address: 'TXfrom' },
+    })
+    expect(blocked?._storage.failure).toBeNull()
+    expect(blocked?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'signed',
+    )
+    expect(events.map(nameOf).at(-1)).toBe(NOT_CONNECTED_EVENT)
+    expect(port.requests).toEqual([])
+
+    connection.wallet = { evm: port.wallet.evm, tron: port.wallet.tron }
+    await loaded.execute('request-1')
+    await settle()
+    expect(port.requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtrc20'])
+    expect(port.wallet.tron.getAccounts).not.toHaveBeenCalled()
+    await advance(ALLOWANCE_READ_INTERVAL_MS)
+
+    expect(port.requests.map(callOf)).toEqual([
+      'info:0xhash1',
+      'read:0xtrc20',
+      'read:0xtrc20',
+      'sign:main-tx',
+    ])
+    const view = await historyOf(loaded)
+    expect(view?._queue.status).toBe('SUCCESS')
+    expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'completed',
+    )
   })
 
   describe('a signed EVM main entry reloaded', () => {

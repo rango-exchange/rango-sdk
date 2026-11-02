@@ -5,7 +5,24 @@ import { SignerErrorCode, TransactionType } from 'rango-types'
 
 export const QUEUE_NAME = 'sdk-swap'
 
+export const HEX = 16
+
 export const POLL_INTERVAL_MS = 5_000
+
+export const ALLOWANCE_CONSECUTIVE_SUFFICIENT_READS = 2
+
+export const ALLOWANCE_READ_INTERVAL_MS = 3_000
+
+export const ALLOWANCE_TIMEOUT_MS = 30_000
+
+// The trustline limit the SDK sets, and a trustline's need in the met test, per blockchain.
+export const TRUSTLINE_LIMIT_BY_BLOCKCHAIN: Readonly<{
+  XRPL: string
+  STELLAR: string
+}> = {
+  XRPL: '10000000000000',
+  STELLAR: '922337203685.4775807',
+}
 
 export const BLOCKED_EVENT_STATUS_BY_BLOCK_REASON: Readonly<
   Record<
@@ -28,6 +45,15 @@ export const REASON_CODE_BY_SIGNER_ERROR_CODE: Readonly<
   [SignerErrorCode.NOT_IMPLEMENTED]: 'CLIENT_UNEXPECTED_BEHAVIOUR',
   [SignerErrorCode.OPERATION_UNSUPPORTED]: 'CLIENT_UNEXPECTED_BEHAVIOUR',
   [SignerErrorCode.UNEXPECTED_BEHAVIOUR]: 'CLIENT_UNEXPECTED_BEHAVIOUR',
+}
+
+export const PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE: Readonly<
+  Record<TransactionPrerequisiteType, string>
+> = {
+  EVM_APPROVE: 'Could not read the current allowance from the node.',
+  TRON_APPROVE: 'Could not read the current allowance from the node.',
+  XRPL_CHANGE_TRUSTLINE: 'Could not get account lines from XRPL.',
+  STELLAR_CHANGE_TRUSTLINE: 'Could not get account lines from Stellar.',
 }
 
 // A Prerequisite type that isn't a key is refused.
