@@ -23,12 +23,16 @@ import type { Asset } from 'rango-sdk'
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
 import {
+  cancelExecution,
   confirmQuote,
   createExecutionEngine,
+  deleteExecution,
   fetchQuote,
   fetchQuotes,
   getAllExecutions,
   getExecution,
+  pauseExecutions,
+  resumeExecutions,
   startOrUnblockExecution,
 } from './actions/mod.js'
 import { Cache } from './cache/mod.js'
@@ -192,6 +196,68 @@ export class RangoClient {
    */
   async execute(requestId: string, options?: ExecutionOptions): Promise<void> {
     return startOrUnblockExecution(this.#state(), requestId, options)
+  }
+
+  /**
+   * Ends a `PENDING`, `RUNNING` or `BLOCKED` Execution `CANCELED`, with a `USER_CANCEL` failure.
+   *
+   * @returns Once the cancel is stored.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await client.cancel(route.requestId)
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#cancel
+   */
+  async cancel(requestId: string): Promise<void> {
+    return cancelExecution(this.#state(), requestId)
+  }
+
+  /**
+   * Removes an ended Execution (`SUCCESS`, `FAILED` or `CANCELED`) from storage.
+   *
+   * @returns Once it's gone from `history`.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await client.delete(route.requestId)
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#delete
+   */
+  async delete(requestId: string): Promise<void> {
+    return deleteExecution(this.#state(), requestId)
+  }
+
+  /**
+   * Pauses this client's Executions, in a tab that isn't the active tab.
+   *
+   * @returns Once the execution engine is built and paused.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await (isActiveTab ? client.resume() : client.pause()) // at mount
+   * onElectionChange((isActive) => (isActive ? client.resume() : client.pause()))
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#pause-and-resume
+   */
+  async pause(): Promise<void> {
+    return pauseExecutions(this.#state())
+  }
+
+  /**
+   * Resumes this client's Executions, in the active tab.
+   *
+   * @returns Once the execution engine is built and resumed.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await (isActiveTab ? client.resume() : client.pause()) // at mount
+   * onElectionChange((isActive) => (isActive ? client.resume() : client.pause()))
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#pause-and-resume
+   */
+  async resume(): Promise<void> {
+    return resumeExecutions(this.#state())
   }
 
   #state(): ClientState {

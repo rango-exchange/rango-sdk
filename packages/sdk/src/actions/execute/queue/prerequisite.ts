@@ -15,7 +15,7 @@ import {
   POLL_INTERVAL_MS,
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
-import { ErrorToReport } from './execution-failure.js'
+import { ErrorToReport, isCanceled } from './execution-failure.js'
 import { sleep } from './utils.js'
 
 type OnChainTxStatus = 'pending' | 'success' | 'failed'
@@ -74,8 +74,12 @@ export async function tryRunPrerequisiteReadOrBuild<T>(
   }
 }
 
-// The timeout is wall-clock time from the first read, the time the reads take included.
+/*
+ * The timeout is wall-clock time from the first read, the time the reads take included. `false` once the Execution
+ * is canceled.
+ */
 async function tryWaitUntilAllowanceConfirmed(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   readGrantedAllowance: () => Promise<string | null>,
   requiredAmount: string,
 ): Promise<boolean> {
@@ -87,6 +91,9 @@ async function tryWaitUntilAllowanceConfirmed(
       grantedAmount = await readGrantedAllowance()
     } catch {
       grantedAmount = null
+    }
+    if (isCanceled(actions)) {
+      return false
     }
     consecutiveSufficientReads = isGrantedAmountEnough(
       grantedAmount,
@@ -104,11 +111,15 @@ async function tryWaitUntilAllowanceConfirmed(
       )
     }
     await sleep(ALLOWANCE_READ_INTERVAL_MS)
+    if (isCanceled(actions)) {
+      return false
+    }
   }
 }
 
-// A Prerequisite's on-chain proof.
+// A Prerequisite's on-chain proof. `false` once the Execution is canceled.
 async function tryWaitUntilProvedOnChain(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   readOnChainStatus: (hash: string) => Promise<OnChainTxStatus>,
   hash: string,
 ): Promise<boolean> {
@@ -116,6 +127,9 @@ async function tryWaitUntilProvedOnChain(
     const onChainStatus = await readOnChainStatus(hash).catch(
       (): 'pending' => 'pending',
     )
+    if (isCanceled(actions)) {
+      return false
+    }
     if (onChainStatus === 'failed') {
       throw new ErrorToReport(
         'CLIENT_UNEXPECTED_BEHAVIOUR',
@@ -126,6 +140,9 @@ async function tryWaitUntilProvedOnChain(
       return true
     }
     await sleep(POLL_INTERVAL_MS)
+    if (isCanceled(actions)) {
+      return false
+    }
   }
 }
 
@@ -165,13 +182,14 @@ export async function proveEvmApproveOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     evm.getTransactionInfo({ blockchain, hash: signedHash })
-  if (!(await tryWaitUntilProvedOnChain(readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   const readGrantedAllowance = async () =>
     evm.getAllowance({ blockchain, prerequisite })
   if (
     !(await tryWaitUntilAllowanceConfirmed(
+      actions,
       readGrantedAllowance,
       prerequisite.amount,
     ))
@@ -196,12 +214,13 @@ export async function proveTronApproveOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     getTronTxStatus(await tron.getTransactionInfo({ hash: signedHash }))
-  if (!(await tryWaitUntilProvedOnChain(readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   const readGrantedAllowance = async () => tron.getAllowance({ prerequisite })
   if (
     !(await tryWaitUntilAllowanceConfirmed(
+      actions,
       readGrantedAllowance,
       prerequisite.amount,
     ))
@@ -225,7 +244,7 @@ export async function proveXrplTrustlineOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     getXrplTxStatus(await xrpl.getTransactionInfo({ hash: signedHash }))
-  if (!(await tryWaitUntilProvedOnChain(readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   return storeEntryCompletedAndEmitApprovalSucceeded(

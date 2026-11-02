@@ -1,4 +1,9 @@
-import type { FailedCheck, SdkActions, SdkContext } from './types.js'
+import type {
+  FailedCheck,
+  SdkActions,
+  SdkContext,
+  StorageAccess,
+} from './types.js'
 import type { LegacyClient } from '../../../types.js'
 import type { ExecutionFailure, ExecutionRecord } from '../mod.js'
 import type { APIErrorCode } from 'rango-types'
@@ -68,6 +73,10 @@ function convertErrorToExecutionFailure(error: unknown): ExecutionFailure {
   }
 }
 
+export function isCanceled(actions: SdkActions): boolean {
+  return actions.getStorage().failure?.reasonCode === 'USER_CANCEL'
+}
+
 function getFailureReportReason(
   error: unknown,
   failure: ExecutionFailure,
@@ -112,7 +121,7 @@ function reportFailureToRango(
 
 // One write. The failing entry keeps its status.
 export function storeExecutionFailure(
-  storageAccess: SdkActions,
+  storageAccess: StorageAccess,
   failure: ExecutionFailure,
   failedCheck: FailedCheck | null = null,
 ): void {

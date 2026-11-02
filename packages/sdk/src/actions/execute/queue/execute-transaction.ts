@@ -13,7 +13,7 @@ import {
   PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE,
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
-import { ErrorToReport } from './execution-failure.js'
+import { ErrorToReport, isCanceled } from './execution-failure.js'
 import {
   signPostAndLookUpHyperliquidHash,
   waitForHyperliquidHashAndStoreIt,
@@ -39,7 +39,7 @@ import {
   switchToRequiredChainOrGetBlockReason,
 } from './wallet-readiness.js'
 
-// The signed hash, or `null` when the Prerequisite was already met.
+// The signed hash, or `null` when the Prerequisite was already met or once the Execution is canceled.
 async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   transactionId: string,
@@ -49,10 +49,21 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   buildPrerequisiteTx: () => Promise<PrerequisiteTx>,
   signPrerequisiteTx: (prerequisiteTx: PrerequisiteTx) => Promise<SignResult>,
 ): Promise<string | null> {
-  const grantedAmount = await tryRunPrerequisiteReadOrBuild(
-    readGrantedAmount,
-    PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE[prerequisite.type],
-  )
+  let grantedAmount: string | null
+  try {
+    grantedAmount = await tryRunPrerequisiteReadOrBuild(
+      readGrantedAmount,
+      PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE[prerequisite.type],
+    )
+  } catch (error) {
+    if (isCanceled(actions)) {
+      return null
+    }
+    throw error
+  }
+  if (isCanceled(actions)) {
+    return null
+  }
   const isAlreadyGranted = isGrantedAmountEnough(
     grantedAmount,
     getRequiredGrantAmount(prerequisite),
@@ -66,6 +77,9 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   }
 
   const prerequisiteTx = await buildPrerequisiteTx()
+  if (isCanceled(actions)) {
+    return null
+  }
 
   const signedPrerequisite = await signEntryAndStoreSignedHash(
     actions,
@@ -122,6 +136,9 @@ async function gateSignAndProvePrerequisite(
           requiredWallet.blockchain,
         ),
       }
+  if (isCanceled(actions)) {
+    return []
+  }
   const isResumingSignedPrerequisite =
     'hashToResumeProving' in resumedHashOrBlockchainMeta
 
@@ -143,6 +160,9 @@ async function gateSignAndProvePrerequisite(
       const activeAccount = await evm
         .getAccount({ blockchain: requiredWallet.blockchain })
         .catch(() => null)
+      if (isCanceled(actions)) {
+        return []
+      }
       // The chain ID is looked up only once the account passes.
       const blockReason =
         getAccountBlockReason(requiredWallet, activeAccount) ??
@@ -161,6 +181,9 @@ async function gateSignAndProvePrerequisite(
               ),
             }),
         ))
+      if (isCanceled(actions)) {
+        return []
+      }
       if (blockReason !== null) {
         return { block: blockReason }
       }
@@ -217,6 +240,9 @@ async function gateSignAndProvePrerequisite(
         requiredWallet,
         await tron.getAccount().catch(() => null),
       )
+      if (isCanceled(actions)) {
+        return []
+      }
       if (blockReason !== null) {
         return { block: blockReason }
       }
@@ -260,6 +286,9 @@ async function gateSignAndProvePrerequisite(
         requiredWallet,
         await xrpl.getAccount().catch(() => null),
       )
+      if (isCanceled(actions)) {
+        return []
+      }
       if (blockReason !== null) {
         return { block: blockReason }
       }
@@ -306,6 +335,9 @@ async function gateSignAndProvePrerequisite(
         requiredWallet,
         await stellar.getAccount().catch(() => null),
       )
+      if (isCanceled(actions)) {
+        return []
+      }
       if (blockReason !== null) {
         return { block: blockReason }
       }
@@ -413,6 +445,9 @@ export async function executeTransaction(
         return notConnectedBlock
       }
       const activeAccount = await hyperliquid.getAccount().catch(() => null)
+      if (isCanceled(actions)) {
+        return []
+      }
       blockReason =
         getAccountBlockReason(requiredWallet, activeAccount) ??
         (await switchToRequiredChainOrGetBlockReason(
@@ -437,9 +472,15 @@ export async function executeTransaction(
         actions,
         requiredWallet.blockchain,
       )
+      if (isCanceled(actions)) {
+        return []
+      }
       const activeAccount = await evm
         .getAccount({ blockchain: requiredWallet.blockchain })
         .catch(() => null)
+      if (isCanceled(actions)) {
+        return []
+      }
       // The chain ID is looked up only once the account passes.
       blockReason =
         getAccountBlockReason(requiredWallet, activeAccount) ??
@@ -577,6 +618,9 @@ export async function executeTransaction(
       throw new Error(
         'Unexpected Error: Cosmos transactions are no longer supported.',
       )
+  }
+  if (isCanceled(actions)) {
+    return []
   }
   if (blockReason !== null) {
     return { block: blockReason }

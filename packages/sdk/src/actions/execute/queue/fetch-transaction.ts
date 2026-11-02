@@ -14,7 +14,7 @@ import {
   SUPPORTED_HYPERLIQUID_ACTION_TYPES,
   TX_TYPE_BY_PREREQUISITE_TYPE,
 } from './constants.js'
-import { ErrorToReport } from './execution-failure.js'
+import { ErrorToReport, isCanceled } from './execution-failure.js'
 
 const CREATE_TX_FAILED_MESSAGE = 'Create transaction failed in Rango Server'
 const KNOWN_TRANSACTION_TYPES: ReadonlySet<string> = new Set(
@@ -124,6 +124,9 @@ export async function fetchTransaction(
         getResponseErrorMessage(error) ?? CREATE_TX_FAILED_MESSAGE,
       )
     })
+  if (isCanceled(actions)) {
+    return []
+  }
   const tx = createTransactionResponse.transaction
   if (!createTransactionResponse.ok || !tx) {
     throw new ErrorToReport(

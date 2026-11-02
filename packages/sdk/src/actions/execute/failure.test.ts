@@ -15,10 +15,15 @@ import {
   confirmQuote,
   createExecutionClient,
   createTxResponse,
+  done,
+  evmApprove,
   evmBlockchains,
+  evmTx,
   EXECUTION_OPTIONS,
   httpClient,
+  isObject,
   nameOf,
+  openQueues,
   recordingNamespaces,
   resetHttpClient,
   scriptCreateTransaction,
@@ -26,6 +31,7 @@ import {
   signerError,
   succeeded,
   swap,
+  switchingNamespaces,
   viewOf,
   WALLET_TYPES,
 } from '../../../tests/support.js'
@@ -425,5 +431,87 @@ describe("the failure report's wallet tag", () => {
       'step1:failed',
       'route:failed',
     ])
+  })
+
+  describe('a cancel of a step blocked on its Prerequisite', () => {
+    // A main entry on BSC behind an ETH approve, blocked on the approve with the wallet on the wrong chain.
+    async function blockOnApprove() {
+      const port = switchingNamespaces({ ETH: '0x38', BSC: '0x38' })
+      port.wallet.evm.switchChain.mockImplementation(async () => undefined)
+      const execution = await createExecutionClient(port)
+      await startWith(
+        execution.client,
+        evmTx({
+          blockChain: 'BSC',
+          from: '0xto',
+          prerequisites: [evmApprove()],
+        }),
+      )
+      const view = await execution.client.history.get('request-1')
+      expect(view?._queue.status).toBe('BLOCKED')
+      expect(view?._queue.blocked?.metadata.blockchain).toBe('ETH')
+      return execution
+    }
+
+    test("reports the main entry's wallet type while the step has one", async () => {
+      const { client } = await blockOnApprove()
+
+      await client.cancel('request-1')
+      await settle()
+
+      expect(httpClient.reportFailure).toHaveBeenCalledWith({
+        ...reported('USER_CANCEL', { wallet: WALLET_TYPES.BSC }),
+        reason: 'Swap canceled by user.',
+      })
+    })
+
+    test("reports the Prerequisite's wallet type when only the Prerequisite is stored", async () => {
+      await blockOnApprove()
+      const source = await openQueues(factory)
+      const records: unknown[] = await done(
+        source.transaction('queues').objectStore('queues').getAll(),
+      )
+      source.close()
+      const [record] = records
+      if (
+        !isObject(record) ||
+        !isObject(record.storage) ||
+        !isObject(record.storage.transactions)
+      ) {
+        throw new Error('No stored queue')
+      }
+      // As a stored record with no main entry for the step would be.
+      const { s1: _main, ...prerequisites } = record.storage.transactions
+      expect(Object.keys(prerequisites)).toEqual(['s1.p0'])
+      freshStart()
+      const target = await openQueues(factory)
+      await done(
+        target
+          .transaction('queues', 'readwrite')
+          .objectStore('queues')
+          .put({
+            ...record,
+            storage: { ...record.storage, transactions: prerequisites },
+          }),
+      )
+      target.close()
+
+      const { client, events } = await createExecutionClient()
+      await client.cancel('request-1')
+      await settle()
+
+      expect((await client.history.get('request-1'))?._queue.status).toBe(
+        'CANCELED',
+      )
+      expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
+      expect(httpClient.reportFailure).toHaveBeenCalledWith({
+        ...reported('USER_CANCEL', { wallet: WALLET_TYPES.ETH }),
+        reason: 'Swap canceled by user.',
+      })
+      expect(events.map(nameOf).slice(-FAILED_TAIL)).toEqual([
+        'step1:failed',
+        'route:failed',
+      ])
+    })
   })
 })

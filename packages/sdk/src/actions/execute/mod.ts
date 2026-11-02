@@ -1,5 +1,10 @@
+export { ENDED_QUEUE_STATUSES } from './constants.js'
 export { startOrUnblockExecution } from './execute.js'
 export { createExecutionEngine } from './execution-engine.js'
+export {
+  reportAndEmitExecutionFailure,
+  storeExecutionFailure,
+} from './queue/mod.js'
 export type { StoredQueue } from './queue/mod.js'
 export type {
   BeforeResume,

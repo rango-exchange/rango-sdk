@@ -3,10 +3,11 @@ import type { SignResult } from '../mod.js'
 import type { BlockchainMeta } from 'rango-sdk'
 
 import { loadBlockchainMetaOf } from './blockchain-meta.js'
+import { isCanceled } from './execution-failure.js'
 import { buildCheckResultWithExplorerLink } from './explorer-link.js'
 import { getRequiredWallet } from './required-wallet.js'
 
-// What `signWithWallet` resolved with, or `null` when it did.
+// What `signWithWallet` resolved with, or `null` when it did or once the Execution is canceled.
 export async function signEntryAndStoreSignedHash<
   SignedEntry extends {
     walletResult: { hash: string } | null
@@ -30,7 +31,7 @@ export async function signEntryAndStoreSignedHash<
   })
 
   const signResult = await signWithWallet()
-  if (signResult === null) {
+  if (signResult === null || isCanceled(actions)) {
     return null
   }
   const storageAfterSign = actions.getStorage()
@@ -71,7 +72,7 @@ export async function awaitSignResultAndBuildExplorerLink(
 
 /*
  * The Blockchain list is read after the gate and before `sign_requested` is stored, so a failed load fails the swap
- * with nothing signed.
+ * with nothing signed. `null` once the Execution is canceled during the read.
  */
 export function buildMainTransactionSigner(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
@@ -97,6 +98,9 @@ export function buildMainTransactionSigner(
       actions,
       requiredBlockchain,
     )
+    if (isCanceled(actions)) {
+      return null
+    }
     return signEntryAndStoreSignedHash(actions, transactionId, async () =>
       awaitSignResultAndBuildExplorerLink(
         signWithNamespaceWallet(),

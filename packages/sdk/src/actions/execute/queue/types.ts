@@ -69,6 +69,7 @@ export type StoredQueue = Omit<QueueInfo, 'status' | 'list' | 'actions'> & {
   }
   actions: {
     run: () => void
+    cancel: () => void
     setStorage: SetStorage<ExecutionRecord>
     getStorage: () => ExecutionRecord
   }
@@ -100,6 +101,9 @@ export type TaskResult =
 
 // An entry's new `checkResult`, stored in the same write as the failure.
 export type FailedCheck = { transactionId: string; checkResult: CheckResult }
+
+// What a failure is written through: a task's actions, or a stored queue's for `cancel()`.
+export type StorageAccess = Pick<SdkActions, 'getStorage' | 'setStorage'>
 
 export type HyperliquidTransaction = Extract<
   Transaction,

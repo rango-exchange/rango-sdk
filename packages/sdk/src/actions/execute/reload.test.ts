@@ -16,6 +16,8 @@ import {
   createTxResponse,
   done,
   evmApprove,
+  evmBlockchains,
+  evmChain,
   evmTx,
   EXECUTION_OPTIONS,
   expectNotReported,
@@ -23,8 +25,10 @@ import {
   historyOf,
   httpClient,
   isObject,
+  linkedChain,
   nameOf,
   openQueues,
+  recordingEmitter,
   recordingNamespaces,
   reloadOn,
   resumeExecutions,
@@ -35,6 +39,7 @@ import {
   switchingNamespaces,
   UNLIMITED,
   viewOf,
+  waitingNamespaces,
 } from '../../../tests/support.js'
 
 const POLL_INTERVAL_MS = 5_000
@@ -464,6 +469,113 @@ describe('after a reload', () => {
       detail: null,
     })
     expectNotReported(events)
+  })
+
+  test('a resumed wait loads no Blockchain list: one that fails to load does not fail a swap wait answers with the same hash', async () => {
+    httpClient.checkStatus.mockReset()
+    httpClient.checkStatus.mockImplementation(hang)
+    const { client } = await createExecutionClient(recordingNamespaces())
+    await start(client)
+
+    reloadOn(factory)
+    scriptLegacy()
+    const port = waitingNamespaces()
+    const { client: loaded, requests } = await createExecutionClient(port)
+    httpClient.getBlockchains.mockReset()
+    httpClient.getBlockchains.mockRejectedValue(new Error('meta API down'))
+    await loaded.resume()
+    await settle()
+
+    expect(httpClient.getBlockchains).not.toHaveBeenCalled()
+    expect(requests).toEqual([
+      [
+        'evm',
+        'wait',
+        { blockchain: 'ETH', hash: '0xhash1', response: undefined },
+      ],
+    ])
+    expect(httpClient.checkStatus).toHaveBeenLastCalledWith({
+      requestId: 'request-1',
+      step: 1,
+      txId: '0xhash1',
+    })
+    expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
+  })
+
+  test('a Blockchain list that fails to load for a hash a resumed wait replaced, with a stored link, fails the swap with its message, with the new hash not stored, no report and no retry', async () => {
+    httpClient.checkStatus.mockReset()
+    httpClient.checkStatus.mockImplementation(hang)
+    const { client } = await createExecutionClient(recordingNamespaces(), [
+      linkedChain(evmChain('ETH', '0x1'), 'https://scan.test/tx'),
+      evmBlockchains[1],
+    ])
+    await start(client)
+    const stored = (await historyOf(client))?._storage.transactions.s1
+      ?.execution.result
+    expect(stored?.checkResult?.explorerUrl).toHaveLength(1)
+
+    reloadOn(factory)
+    scriptLegacy()
+    const port = waitingNamespaces()
+    port.wallet.evm.wait.mockResolvedValueOnce({ hash: '0xreplaced' })
+    const { client: loaded, events } = await createExecutionClient(port)
+    httpClient.getBlockchains.mockReset()
+    httpClient.getBlockchains.mockRejectedValue(new Error('meta API down'))
+    await loaded.resume()
+    await settle()
+    await advance(POLL_INTERVAL_MS * 2)
+
+    expect(port.wallet.evm.wait).toHaveBeenCalledTimes(1)
+    expect(httpClient.getBlockchains).toHaveBeenCalledTimes(1)
+    const view = await historyOf(loaded)
+    expect(view?._queue.status).toBe('FAILED')
+    expect(view?._storage.failure).toEqual({
+      reasonCode: 'CLIENT_UNEXPECTED_BEHAVIOUR',
+      message: 'The request failed.',
+      detail: null,
+    })
+    expect(view?._storage.transactions.s1?.execution.result).toEqual(stored)
+    expectNotReported(events)
+  })
+
+  test('a reload with stored Executions emits one loaded, with no payload, once history.getAll() returns them, and no changed per ID', async () => {
+    httpClient.createTransaction.mockImplementation(hang)
+    const { client } = await createExecutionClient(recordingNamespaces())
+    for (const requestId of ['request-1', 'request-2']) {
+      await confirmQuote(client, requestId)
+      await client.execute(requestId, EXECUTION_OPTIONS)
+      await client.cancel(requestId)
+    }
+    await settle()
+
+    reloadOn(factory)
+    scriptLegacy()
+    const { emitter, all } = recordingEmitter()
+    // What `history.getAll()` answers when `loaded` arrives, as an app reads it on the event.
+    const readOnLoaded: Promise<Sdk.HistoryItem[]>[] = []
+    const { client: loaded } = await createExecutionClient(
+      recordingNamespaces(),
+      evmBlockchains,
+      {
+        emitter: {
+          emit(type, event) {
+            emitter.emit(type, event)
+            if (type === 'loaded') {
+              readOnLoaded.push(loaded.history.getAll())
+            }
+          },
+        },
+      },
+    )
+    const views = await loaded.history.getAll()
+    await settle()
+
+    expect(all).toEqual([['loaded', undefined]])
+    expect(views.map(({ _queue }) => [_queue.id, _queue.status])).toEqual([
+      ['request-1', 'CANCELED'],
+      ['request-2', 'CANCELED'],
+    ])
+    expect(await Promise.all(readOnLoaded)).toEqual([views])
   })
 
   test('a task that runs again emits its events again', async () => {

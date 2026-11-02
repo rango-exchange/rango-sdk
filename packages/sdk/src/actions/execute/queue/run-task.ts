@@ -6,7 +6,7 @@ import type {
 } from './types.js'
 
 import { BLOCKED_EVENT_STATUS_BY_BLOCK_REASON } from './constants.js'
-import { failExecution } from './execution-failure.js'
+import { failExecution, isCanceled } from './execution-failure.js'
 
 // The only caller of `schedule`, `next`, `block` and `failed`. No task calls `retry()`.
 export async function runTask<K extends ActionName>(
@@ -28,10 +28,15 @@ export async function runTask<K extends ActionName>(
   try {
     taskResult = await task(actions)
   } catch (error) {
-    failExecution(actions, error, transactionId)
+    if (!isCanceled(actions)) {
+      failExecution(actions, error, transactionId)
+    }
     return
   }
 
+  if (isCanceled(actions)) {
+    return
+  }
   // Core stores the reason and sets `BLOCKED`; `execute()` unblocks.
   if (!Array.isArray(taskResult)) {
     actions.block(taskResult.block)
