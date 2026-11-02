@@ -2,9 +2,13 @@ export { startOrUnblockExecution } from './execute.js'
 export { createExecutionEngine } from './execution-engine.js'
 export type { StoredQueue } from './queue/mod.js'
 export type {
+  BeforeResume,
+  Bip122Wallet,
   BlockReason,
   Emitter,
   ExecutionEngine,
+  EvmChainDescription,
+  EvmWallet,
   ExecutionConfig,
   ExecutionEvents,
   ExecutionFailure,
@@ -14,5 +18,14 @@ export type {
   ExecutionTransaction,
   HistoryItem,
   RouteEvent,
+  SignResult,
+  SolanaWallet,
+  StarknetWallet,
+  StellarWallet,
   StepEvent,
+  SuiWallet,
+  TonWallet,
+  TronWallet,
+  WalletPort,
+  XrplWallet,
 } from './types.js'

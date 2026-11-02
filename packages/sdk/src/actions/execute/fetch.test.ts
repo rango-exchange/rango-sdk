@@ -8,8 +8,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   BAD_REQUEST,
+  BSC_ASSET,
   confirmQuote,
   createExecutionClient,
+  createTxResponse,
   evmTx,
   EXECUTION_OPTIONS,
   httpClient,
@@ -20,6 +22,7 @@ import {
   scriptCreateTransaction,
   settle,
   succeeded,
+  swap,
 } from '../../../tests/support.js'
 
 const CREATE_TX_FAILED_MESSAGE = 'Create transaction failed in Rango Server'
@@ -286,4 +289,42 @@ describe('a refused transaction', () => {
       })
     },
   )
+
+  test('a refusal at step 2 keeps step 1 completed and reports step 2', async () => {
+    const port = recordingNamespaces()
+    const { client, events } = await createExecutionClient(port)
+    httpClient.createTransaction
+      .mockResolvedValueOnce(createTxResponse())
+      .mockResolvedValueOnce({ ok: true, error: null, transaction: cosmosTx() })
+    await confirmQuote(client, 'request-1', [
+      swap(),
+      swap({ from: BSC_ASSET, to: BSC_ASSET }),
+    ])
+
+    await client.execute('request-1', EXECUTION_OPTIONS)
+    await settle()
+
+    const view = await client.history.get('request-1')
+    expect(view?._queue.status).toBe('FAILED')
+    expect(view?._storage.finishedSwapSteps).toBe(1)
+    expect(view?._storage.transactions.s1?.execution.status).toBe('completed')
+    expect(view?._storage.transactions.s2).toBeUndefined()
+    expect(view?._storage.failure).toEqual({
+      reasonCode: 'FETCH_TX_FAILED',
+      message: 'Cosmos transactions are no longer supported.',
+      detail: null,
+    })
+    expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
+    expect(httpClient.reportFailure).toHaveBeenCalledWith({
+      requestId: 'request-1',
+      step: 2,
+      eventType: 'FETCH_TX_FAILED',
+      reason: '',
+      tags: undefined,
+    })
+    expect(events.map(nameOf).slice(-FAILURE_TAIL)).toEqual([
+      'step2:failed',
+      'route:failed',
+    ])
+  })
 })

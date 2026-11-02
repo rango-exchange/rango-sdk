@@ -505,6 +505,20 @@ export async function advance(ms: number): Promise<void> {
 
 export const evmBlockchains = [evmChain('ETH', '0x1'), evmChain('BSC', '0x38')]
 
+// The ETH chain description an EVM switch carries, from the default Blockchain list.
+export const DEFAULT_ETH_CHAIN_DESCRIPTION: Sdk.EvmChainDescription = {
+  chainName: 'ETH',
+  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+  rpcUrls: [],
+  blockExplorerUrls: [],
+}
+// What a Blockchain list may describe beyond the default ETH.
+export const MAINNET_ETH_CHAIN_DESCRIPTION = {
+  chainName: 'Ethereum Mainnet',
+  rpcUrls: ['https://rpc.example'],
+  blockExplorerUrls: ['https://explorer.example'],
+}
+
 // `meta` with an explorer: this `info.transactionUrl`, the template a stored hash's link is built from.
 export function linkedChain(
   meta: Sdk.BlockchainMeta,
@@ -515,6 +529,18 @@ export function linkedChain(
     linked.info.transactionUrl = transactionUrl
   }
   return linked
+}
+
+// `meta` whose EVM chain info holds this `description`, the chain an EVM switch describes.
+export function describedChain(
+  meta: Sdk.BlockchainMeta,
+  description: Partial<Sdk.EvmChainDescription>,
+): Sdk.BlockchainMeta {
+  const described = structuredClone(meta)
+  if (described.type === LegacySdk.TransactionType.EVM) {
+    described.info = { ...described.info, ...description }
+  }
+  return described
 }
 
 // A promise that never settles: a port or legacy call left hanging, so its client writes nothing more.
@@ -785,6 +811,7 @@ export type ExecutionClientOptions = {
   // The emitter in place of the recording one, or `null` to build with no emitter.
   emitter?: Sdk.Emitter<Sdk.ExecutionEvents> | null
   pauseOnStart?: boolean
+  beforeResume?: Sdk.BeforeResume
 }
 
 type ExecutionClient<P extends NamespacePort> = {
@@ -794,9 +821,10 @@ type ExecutionClient<P extends NamespacePort> = {
 } & P
 
 /*
- * A client with a namespace port, by default a recording one, and a recording emitter unless `options` replaces it,
- * with these `options` (such as `pauseOnStart`), whose blockchain list holds these blockchains. The port is returned as
- * given, so its mocks keep their types; `events` and `all` stay empty when the emitter is replaced.
+ * A client with `execution.wallet` set to this namespace port, by default a recording one, and a
+ * recording emitter unless `options` replaces it, with these `options` (such as `pauseOnStart`), whose blockchain list
+ * holds these blockchains. The port is returned as given, so its mocks keep their types; `events` and `all` stay empty
+ * when the emitter is replaced. The only way the tests build a client with a wallet.
  */
 export async function createExecutionClient(
   port?: undefined,
@@ -819,6 +847,7 @@ export async function createExecutionClient(
   const client = new RangoClient({
     apiKey: 'test-key',
     execution: {
+      wallet: port.wallet,
       ...(emitter === null ? {} : { emitter: emitter ?? recording.emitter }),
       ...options,
     },

@@ -1,3 +1,4 @@
+import type { EvmInfo, EvmNamespace } from '../../../tests/support.js'
 import type * as Sdk from '../../mod.js'
 import type { Transaction } from 'rango-sdk'
 import type {
@@ -8,6 +9,7 @@ import type {
 
 import * as FakeIndexedDB from 'fake-indexeddb'
 import * as LegacySdk from 'rango-sdk'
+import * as RangoTypes from 'rango-types'
 import {
   afterEach,
   beforeEach,
@@ -56,6 +58,18 @@ const routeResult = {
   walletNotSupportingFromBlockchain: false,
 }
 
+// An `evm` namespace with only its required methods.
+function minimalWallet() {
+  return {
+    sign: vi.fn(async () => ({ hash: '0xhash' })),
+    getAccount: vi.fn(async () => '0xfrom'),
+    getChainId: vi.fn(async () => '0x1'),
+    switchChain: vi.fn(async () => undefined),
+    getAllowance: vi.fn(async () => null),
+    getTransactionInfo: vi.fn(async (): Promise<EvmInfo> => 'pending'),
+  } satisfies EvmNamespace
+}
+
 /*
  * A fresh fake IndexedDB, with the `IDB*` classes core's `idb` checks results against, as `fake-indexeddb/auto` sets
  * them: imported here, it would break the tests that check Node has no IndexedDB. `vi.unstubAllGlobals()` removes it.
@@ -78,7 +92,7 @@ const calls: [
   [
     'execute() with options',
     async (client) => client.execute('request-1', EXECUTION_OPTIONS),
-    'RUNNING',
+    'BLOCKED',
   ],
   [
     'history.get()',
@@ -88,11 +102,11 @@ const calls: [
   ['history.getAll()', async (client) => client.history.getAll(), undefined],
 ]
 
-// A client with no `execution`, and one whose `execution` has every key.
+// A client with no `execution`, and one whose `execution` has every key but `wallet`.
 const builds: [string, () => Promise<Sdk.RangoClient>][] = [
   ['without execution', async () => createClient(evmBlockchains)],
   [
-    'with an execution',
+    'with an execution without wallet',
     async () => {
       const { RangoClient } = await loadSdk()
       httpClient.getBlockchains.mockResolvedValue([...evmBlockchains])
@@ -101,6 +115,7 @@ const builds: [string, () => Promise<Sdk.RangoClient>][] = [
         execution: {
           emitter: { emit: vi.fn() },
           pauseOnStart: false,
+          beforeResume: vi.fn(),
         },
       })
     },
@@ -193,7 +208,7 @@ describe('the execution keys', () => {
     expect('indexedDB' in globalThis).toBe(false)
     // Core logs its failed load.
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
-    const { client } = await createExecutionClient()
+    const { client, requests } = await createExecutionClient()
     await cacheQuote(client)
     await client.confirm('request-1', SELECTED_WALLETS)
 
@@ -208,6 +223,7 @@ describe('the execution keys', () => {
     expect(error).toHaveProperty('cause', expect.any(Error))
     expect(error).toHaveProperty('cause.message', "Couldn't load idb.")
     expect(httpClient.createTransaction).not.toHaveBeenCalled()
+    expect(requests).toEqual([])
 
     const { requestId } = await cacheQuote(client)
     const confirmed = await client.confirm(requestId, SELECTED_WALLETS)
@@ -220,6 +236,59 @@ describe('the execution keys', () => {
     expect(confirmed.data.requestId).toBe('request-1')
     expect(quoted.data.requestId).toBe('request-1')
     log.mockRestore()
+  })
+
+  test('builds with a port that has only the required methods of an evm namespace, calling no port method and touching no IndexedDB', async () => {
+    const { RangoClient } = await loadSdk()
+    const indexedDB = vi.fn(() => undefined)
+    Object.defineProperty(globalThis, 'indexedDB', {
+      configurable: true,
+      get: indexedDB,
+    })
+    const wallet = minimalWallet()
+
+    const { client } = await createExecutionClient(
+      { wallet: { evm: wallet }, requests: [] },
+      evmBlockchains,
+      {
+        emitter: null,
+      },
+    )
+
+    expect(client).toBeInstanceOf(RangoClient)
+    expect(wallet.sign).not.toHaveBeenCalled()
+    expect(wallet.getAccount).not.toHaveBeenCalled()
+    expect(wallet.getChainId).not.toHaveBeenCalled()
+    expect(indexedDB).not.toHaveBeenCalled()
+  })
+
+  test('with an execution of wallet, emitter and pauseOnStart, quote(), quotes() and confirm() still work, calling no port method and emitting nothing', async () => {
+    const wallet = minimalWallet()
+    const emitter = { emit: vi.fn() }
+    const { client } = await createExecutionClient(
+      { wallet: { evm: wallet }, requests: [] },
+      [],
+      {
+        emitter,
+        pauseOnStart: true,
+      },
+    )
+
+    const { requestId } = await cacheQuote(client)
+    const confirmed = await client.confirm(requestId, SELECTED_WALLETS)
+    const quoted = await client.quote({
+      from: ETH,
+      to: USDC,
+      amount: '1',
+      selectedWallets: SELECTED_WALLETS,
+    })
+
+    expect(confirmed.data.requestId).toBe('request-1')
+    expect(quoted.data.requestId).toBe('request-1')
+    expect(wallet.sign).not.toHaveBeenCalled()
+    expect(wallet.getAccount).not.toHaveBeenCalled()
+    expect(wallet.getChainId).not.toHaveBeenCalled()
+    expect(emitter.emit).not.toHaveBeenCalled()
   })
 
   test('types the execution methods', async () => {
@@ -244,8 +313,10 @@ describe('the execution keys', () => {
       Sdk.ExecutionConfig | undefined
     >()
     expectTypeOf<Sdk.ExecutionConfig>().toEqualTypeOf<{
+      wallet?: Sdk.WalletPort
       emitter?: Sdk.Emitter<Sdk.ExecutionEvents>
       pauseOnStart?: boolean
+      beforeResume?: Sdk.BeforeResume
     }>()
     expectTypeOf<Sdk.ExecutionOptions>().toEqualTypeOf<{
       transactionOptions: {
@@ -267,10 +338,18 @@ describe('the execution keys', () => {
     expectTypeOf<Sdk.CreateTransactionOptions>().not.toBeNever()
   })
 
-  test('exports the execution types, and TransactionType as a value', async () => {
+  test('exports the execution types, and TransactionType, SignerError and SignerErrorCode as values', async () => {
     const sdk = await loadSdk()
 
     expect(sdk.TransactionType.EVM).toBe('EVM')
+    // A fresh module graph per test: the entry's rango-types is another copy, so these compare by behaviour.
+    expect(sdk.SignerErrorCode).toEqual(RangoTypes.SignerErrorCode)
+    const error = new sdk.SignerError(sdk.SignerErrorCode.SIGN_TX_ERROR)
+    expect(error).toBeInstanceOf(sdk.SignerError)
+    expect(RangoTypes.SignerError.isSignerError(error)).toBe(true)
+    expect(error.getErrorDetail().message).toBe('Error signing the transaction')
+    expectTypeOf<Sdk.SignerError>().toEqualTypeOf<RangoTypes.SignerError>()
+    expectTypeOf<Sdk.SignerErrorCode>().toEqualTypeOf<RangoTypes.SignerErrorCode>()
     expectTypeOf<Sdk.Transaction>().toEqualTypeOf<Transaction>()
     expectTypeOf<Sdk.TransactionType>().toEqualTypeOf<TransactionType>()
     expectTypeOf<Sdk.TransactionPrerequisite>().toEqualTypeOf<TransactionPrerequisite>()
@@ -323,6 +402,133 @@ describe('the execution keys', () => {
       'routeEvent' | 'stepEvent' | 'changed' | 'loaded'
     >()
     expectTypeOf<Sdk.ExecutionEvents['loaded']>().toEqualTypeOf<undefined>()
+  })
+
+  test('types the WalletPort as nine optional namespaces, each with only the methods the SDK calls for it, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
+    type TxOf<T extends TransactionType> = Extract<Transaction, { type: T }>
+    type PrerequisiteOf<T extends TransactionPrerequisite['type']> = Extract<
+      TransactionPrerequisite,
+      { type: T }
+    >
+    type OnChain = { blockchain: string }
+
+    expectTypeOf<Sdk.WalletPort>().toEqualTypeOf<{
+      evm?: Sdk.EvmWallet
+      tron?: Sdk.TronWallet
+      xrpl?: Sdk.XrplWallet
+      stellar?: Sdk.StellarWallet
+      bip122?: Sdk.Bip122Wallet
+      solana?: Sdk.SolanaWallet
+      starknet?: Sdk.StarknetWallet
+      ton?: Sdk.TonWallet
+      sui?: Sdk.SuiWallet
+    }>()
+    expectTypeOf<Sdk.SignResult>().toEqualTypeOf<{
+      hash: string
+      response?: unknown
+      hashRequiringUpdate?: boolean
+    }>()
+    expectTypeOf<Sdk.EvmChainDescription>().toEqualTypeOf<{
+      chainName: string
+      nativeCurrency: { name: string; symbol: string; decimals: number }
+      rpcUrls: string[]
+      blockExplorerUrls: string[]
+    }>()
+    expectTypeOf<Sdk.EvmWallet>().toEqualTypeOf<{
+      getAccount(req: OnChain): Promise<string | null>
+      getChainId(req: OnChain): Promise<string | null>
+      switchChain(req: {
+        blockchain: string
+        chainId: string
+        chain?: Sdk.EvmChainDescription
+      }): Promise<void>
+      sign(req: {
+        blockchain: string
+        tx: TxOf<TransactionType.EVM>
+      }): Promise<Sdk.SignResult>
+      wait?(req: {
+        blockchain: string
+        hash: string
+        response?: unknown
+      }): Promise<{ hash: string; response?: unknown }>
+      getAllowance(req: {
+        blockchain: string
+        prerequisite: PrerequisiteOf<'EVM_APPROVE'>
+      }): Promise<string | null>
+      getTransactionInfo(req: {
+        blockchain: string
+        hash: string
+      }): Promise<'pending' | 'success' | 'failed'>
+    }>()
+    expectTypeOf<Sdk.TronWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.TRON> }): Promise<Sdk.SignResult>
+      getAllowance(req: {
+        prerequisite: PrerequisiteOf<'TRON_APPROVE'>
+      }): Promise<string | null>
+      buildTransaction(req: {
+        prerequisite: PrerequisiteOf<'TRON_APPROVE'>
+      }): Promise<TxOf<TransactionType.TRON>>
+      getTransactionInfo(req: { hash: string }): Promise<{
+        blockNumber?: number
+        receipt?: { result?: string }
+      }>
+    }>()
+    expectTypeOf<Sdk.XrplWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.XRPL> }): Promise<Sdk.SignResult>
+      getTrustline(req: {
+        prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
+      }): Promise<string | null>
+      getTransactionInfo(req: { hash: string }): Promise<{
+        validated: boolean
+        meta?: { TransactionResult: string }
+      }>
+    }>()
+    expectTypeOf<Sdk.StellarWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.STELLAR> }): Promise<Sdk.SignResult>
+      getTrustline(req: {
+        prerequisite: PrerequisiteOf<'STELLAR_CHANGE_TRUSTLINE'>
+      }): Promise<string | null>
+      buildTransaction(req: {
+        prerequisite: PrerequisiteOf<'STELLAR_CHANGE_TRUSTLINE'>
+        limit: string
+      }): Promise<TxOf<TransactionType.STELLAR>>
+    }>()
+    expectTypeOf<Sdk.Bip122Wallet>().toEqualTypeOf<{
+      getAccount(req: OnChain): Promise<string | null>
+      sign(req: {
+        blockchain: string
+        tx: TxOf<TransactionType.TRANSFER>
+      }): Promise<Sdk.SignResult>
+    }>()
+    expectTypeOf<Sdk.SolanaWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.SOLANA> }): Promise<Sdk.SignResult>
+    }>()
+    expectTypeOf<Sdk.StarknetWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.STARKNET> }): Promise<Sdk.SignResult>
+    }>()
+    expectTypeOf<Sdk.TonWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.TON> }): Promise<Sdk.SignResult>
+    }>()
+    expectTypeOf<Sdk.SuiWallet>().toEqualTypeOf<{
+      getAccount(): Promise<string | null>
+      sign(req: { tx: TxOf<TransactionType.SUI> }): Promise<Sdk.SignResult>
+    }>()
+    // Only wait is optional: switchChain is required on evm.
+    expectTypeOf<undefined>().toExtend<Sdk.EvmWallet['wait']>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['switchChain']>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['sign']>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['getAllowance']>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.TronWallet['buildTransaction']>()
+    // @ts-expect-error WalletTarget is not exported: no request carries an address
+    expectTypeOf<Sdk.WalletTarget>().not.toBeNever()
+    // @ts-expect-error there is no cosmos namespace
+    expectTypeOf<Sdk.WalletPort['cosmos']>().not.toBeNever()
   })
 
   test('narrows an INVALID_INPUT error on options or walletTypes to MISSING, on a client with no wallet', async () => {
