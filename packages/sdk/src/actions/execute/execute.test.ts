@@ -98,7 +98,10 @@ const builds: [string, () => Promise<Sdk.RangoClient>][] = [
       httpClient.getBlockchains.mockResolvedValue([...evmBlockchains])
       return new RangoClient({
         apiKey: 'test-key',
-        execution: { pauseOnStart: false },
+        execution: {
+          emitter: { emit: vi.fn() },
+          pauseOnStart: false,
+        },
       })
     },
   ],
@@ -241,6 +244,7 @@ describe('the execution keys', () => {
       Sdk.ExecutionConfig | undefined
     >()
     expectTypeOf<Sdk.ExecutionConfig>().toEqualTypeOf<{
+      emitter?: Sdk.Emitter<Sdk.ExecutionEvents>
       pauseOnStart?: boolean
     }>()
     expectTypeOf<Sdk.ExecutionOptions>().toEqualTypeOf<{
@@ -299,6 +303,26 @@ describe('the execution keys', () => {
     >()
     // @ts-expect-error: there is no stored activity, so no ExecutionActivity export.
     expectTypeOf<Sdk.ExecutionActivity>().toBeNever()
+    expectTypeOf<Sdk.ExecutionEvents['routeEvent']>().toEqualTypeOf<{
+      event: Sdk.RouteEvent
+      view: Sdk.HistoryItem
+    }>()
+    expectTypeOf<Sdk.ExecutionEvents['stepEvent']>().toEqualTypeOf<{
+      event: Sdk.StepEvent
+      step: number
+      transactionId: string | null
+      view: Sdk.HistoryItem
+    }>()
+    expectTypeOf<
+      Sdk.ExecutionEvents['changed']
+    >().toEqualTypeOf<Sdk.HistoryItem>()
+    expectTypeOf<
+      Sdk.ExecutionEvents['stepEvent']['event']
+    >().toEqualTypeOf<Sdk.StepEvent>()
+    expectTypeOf<keyof Sdk.ExecutionEvents>().toEqualTypeOf<
+      'routeEvent' | 'stepEvent' | 'changed' | 'loaded'
+    >()
+    expectTypeOf<Sdk.ExecutionEvents['loaded']>().toEqualTypeOf<undefined>()
   })
 
   test('narrows an INVALID_INPUT error on options or walletTypes to MISSING, on a client with no wallet', async () => {

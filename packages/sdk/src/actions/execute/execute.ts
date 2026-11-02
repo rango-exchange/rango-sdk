@@ -14,7 +14,7 @@ export async function startOrUnblockExecution(
 ): Promise<void> {
   const { manager, context } = await state.executionEngine()
 
-  // Unblocking only reruns the gate.
+  // Unblocking only reruns the gate, and core's queue update for it emits `changed`.
   const storedQueue: StoredQueue | undefined = manager.get(requestId)
   if (storedQueue !== undefined) {
     if (storedQueue.status === 'BLOCKED' && !context.isPaused()) {
