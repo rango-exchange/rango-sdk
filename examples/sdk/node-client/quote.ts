@@ -1,4 +1,4 @@
-import type { QuoteRequest } from '@rango-dev/sdk'
+import type { QuoteRequest, SelectedWallets } from '@rango-dev/sdk'
 
 import { SdkError } from '@rango-dev/sdk'
 
@@ -10,9 +10,15 @@ import { printWarnings } from './warnings.js'
 const TIMEOUT_MS = 30_000
 
 // Set these to wallets you own; the server checks their balances.
-export const selectedWallets = {
-  BSC: '0x0000000000000000000000000000000000000001',
-  AVAX_CCHAIN: '0x0000000000000000000000000000000000000001',
+export const selectedWallets: SelectedWallets = {
+  BSC: {
+    address: '0x0000000000000000000000000000000000000001',
+    walletId: 'metamask',
+  },
+  AVAX_CCHAIN: {
+    address: '0x0000000000000000000000000000000000000001',
+    walletId: 'metamask',
+  },
 }
 
 const request: QuoteRequest = {

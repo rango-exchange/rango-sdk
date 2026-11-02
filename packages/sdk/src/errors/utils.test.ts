@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { SdkError } from './implementation.js'
-import { throwRequestError } from './utils.js'
+import { throwRequestError, throwSdkError } from './utils.js'
 
 function getThrown(run: () => unknown): unknown {
   try {
@@ -101,5 +101,34 @@ describe('throwRequestError', () => {
       message: 'The request failed.',
       cause,
     })
+  })
+})
+
+describe('throwSdkError', () => {
+  test('rethrows an SdkError as the same object', () => {
+    const error = new SdkError('UNKNOWN_SLIPPAGE', 'slippage')
+
+    expect(getThrown(() => throwSdkError(error))).toBe(error)
+  })
+
+  test.each([
+    ['a plain Error', new Error('underlying')],
+    [
+      'an Error with a 400 response',
+      Object.assign(new Error('bad'), {
+        response: { status: 400, data: { error: 'Bad input' } },
+      }),
+    ],
+    ['a string', 'failed'],
+    ['undefined', undefined],
+  ])('throws %s as REQUEST_FAILED with it as cause', (_, cause) => {
+    const error = getThrown(() => throwSdkError(cause))
+
+    expect(error).toBeInstanceOf(SdkError)
+    expect(error).toMatchObject({
+      type: 'REQUEST_FAILED',
+      message: 'The request failed.',
+    })
+    expect(error).toHaveProperty('cause', cause)
   })
 })

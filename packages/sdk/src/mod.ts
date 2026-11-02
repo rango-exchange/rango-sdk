@@ -3,6 +3,11 @@ export type {
   ConfirmOptions,
   ConfirmReq,
   ConfirmResult,
+  ExecutionConfig,
+  ExecutionFailure,
+  ExecutionOptions,
+  ExecutionRecord,
+  ExecutionTransaction,
   Quote,
   QuoteEntry,
   QuoteRequest,
@@ -13,6 +18,7 @@ export type {
   QuotesResult,
   Route,
   RouteResponse,
+  SelectedWallet,
   SelectedWallets,
 } from './actions/mod.js'
 export type { RangoClientConfig } from './configs.js'
@@ -51,4 +57,7 @@ export type {
   ConfirmRouteResponse,
   MultiRouteResponse,
   SwapResult,
+  Transaction,
 } from 'rango-sdk'
+export { TransactionType } from 'rango-types'
+export type { APIErrorCode, TransactionPrerequisite } from 'rango-types'

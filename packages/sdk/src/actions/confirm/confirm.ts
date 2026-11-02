@@ -1,5 +1,6 @@
-import type { ConfirmOptions, ConfirmResult, SelectedWallets } from './types.js'
+import type { ConfirmOptions, ConfirmResult } from './types.js'
 import type { ClientState } from '../../types.js'
+import type { SelectedWallets } from '../quote/mod.js'
 
 import { throwRequestError } from '../../errors/mod.js'
 import { getBlockchainsAndValidateDestination } from '../quote/mod.js'

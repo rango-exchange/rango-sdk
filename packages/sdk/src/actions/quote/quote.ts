@@ -5,6 +5,7 @@ import { throwRequestError } from '../../errors/mod.js'
 
 import { checkErrors, checkWarnings, generateResult } from './helpers.js'
 import {
+  buildSelectedWalletAddresses,
   getBlockchainsAndValidateDestination,
   validateSwapRequest,
 } from './utils.js'
@@ -26,7 +27,11 @@ export async function fetchQuote(
 
   return httpClient
     .getBestRoute(
-      { ...request, checkPrerequisites: request.checkPrerequisites ?? true },
+      {
+        ...request,
+        selectedWallets: buildSelectedWalletAddresses(request.selectedWallets),
+        checkPrerequisites: request.checkPrerequisites ?? true,
+      },
       { signal: opts.signal },
     )
     .then(checkErrors)

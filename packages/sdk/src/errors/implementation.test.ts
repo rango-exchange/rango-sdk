@@ -94,6 +94,14 @@ describe('SdkError', () => {
         expectTypeOf(caught.metadata).toEqualTypeOf<undefined>()
         break
       case 'INVALID_INPUT':
+        expectTypeOf(caught.metadata.field).toEqualTypeOf<
+          | 'requestId'
+          | 'to'
+          | 'amount'
+          | 'destination'
+          | 'options'
+          | 'execution'
+        >()
         switch (caught.metadata.field) {
           case 'requestId':
             expectTypeOf(caught.metadata.reason).toEqualTypeOf<'NOT_FOUND'>()
@@ -110,6 +118,12 @@ describe('SdkError', () => {
             expectTypeOf(caught.metadata.reason).toEqualTypeOf<
               'NO_ADDRESS_PATTERNS' | 'PATTERN_MISMATCH'
             >()
+            break
+          case 'options':
+            expectTypeOf(caught.metadata.reason).toEqualTypeOf<'MISSING'>()
+            break
+          case 'execution':
+            expectTypeOf(caught.metadata.reason).toEqualTypeOf<'MISSING'>()
         }
     }
     expect(caught.type).toBe('NO_RESULT')

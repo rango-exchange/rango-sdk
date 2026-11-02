@@ -1,0 +1,20 @@
+import type { ActionName, SdkContext, SdkPayloads } from './types.js'
+import type { ExecutionRecord } from '../mod.js'
+import type { QueueDef } from '@rango-dev/queue-manager-core'
+
+import { QUEUE_NAME } from './constants.js'
+
+export const queueDefinition: QueueDef<
+  ExecutionRecord,
+  ActionName,
+  SdkContext,
+  SdkPayloads
+> = {
+  name: QUEUE_NAME,
+  actions: {
+    SDK_FETCH_TRANSACTION: async () => {},
+    SDK_EXECUTE_TRANSACTION: async () => {},
+    SDK_STEP_FINISHED: async () => {},
+  },
+  run: ['SDK_FETCH_TRANSACTION'],
+}
