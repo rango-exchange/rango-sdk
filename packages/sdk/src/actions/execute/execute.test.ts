@@ -94,12 +94,16 @@ const calls: [
     async (client) => client.execute('request-1', EXECUTION_OPTIONS),
     'BLOCKED',
   ],
+  ['cancel()', async (client) => client.cancel('request-1'), undefined],
   [
     'history.get()',
     async (client) => client.history.get('request-1'),
     undefined,
   ],
   ['history.getAll()', async (client) => client.history.getAll(), undefined],
+  ['delete()', async (client) => client.delete('request-1'), undefined],
+  ['pause()', async (client) => client.pause(), undefined],
+  ['resume()', async (client) => client.resume(), undefined],
 ]
 
 // A client with no `execution`, and one whose `execution` has every key but `wallet`.
@@ -298,6 +302,14 @@ describe('the execution keys', () => {
       [string, (Sdk.ExecutionOptions | undefined)?]
     >()
     expectTypeOf(client.execute).returns.toEqualTypeOf<Promise<void>>()
+    expectTypeOf(client.cancel).toEqualTypeOf<
+      (requestId: string) => Promise<void>
+    >()
+    expectTypeOf(client.delete).toEqualTypeOf<
+      (requestId: string) => Promise<void>
+    >()
+    expectTypeOf(client.pause).toEqualTypeOf<() => Promise<void>>()
+    expectTypeOf(client.resume).toEqualTypeOf<() => Promise<void>>()
     expectTypeOf(client).not.toHaveProperty('setActive')
     expectTypeOf(client.history).toEqualTypeOf<Sdk.ExecutionHistory>()
     expectTypeOf(client.history.get).returns.toEqualTypeOf<

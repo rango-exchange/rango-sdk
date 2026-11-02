@@ -27,11 +27,13 @@ import {
   MAINNET_ETH_CHAIN_DESCRIPTION,
   nameOf,
   recordingNamespaces,
+  reloadOn,
   resetHttpClient,
   scriptCreateTransaction,
   settle,
   signerError,
   statusResponse,
+  stubWindow,
   succeeded,
   switchingNamespaces,
   viewOf,
@@ -789,6 +791,86 @@ describe('execute() on a stored Execution', () => {
   )
 })
 
+describe('execute() on a BLOCKED Execution in a paused tab', () => {
+  beforeEach(() => {
+    factory = new IDBFactory()
+    reloadOn(factory)
+    scriptCreateTransaction()
+    httpClient.checkStatus.mockResolvedValue(succeeded)
+    httpClient.reportFailure.mockResolvedValue(undefined)
+    stubWindow()
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  // A page that stored a BLOCKED Execution, then reloaded as a paused tab with a wallet now on the chain.
+  async function pausedTab() {
+    const { client: blocking } = await createExecutionClient(stuckWallet())
+    await start(blocking)
+    expect((await blocking.history.get('request-1'))?._queue.blocked).toEqual(
+      MISMATCH,
+    )
+    reloadOn(factory)
+    scriptCreateTransaction()
+    httpClient.checkStatus.mockResolvedValue(succeeded)
+    httpClient.reportFailure.mockResolvedValue(undefined)
+    const port = switchingNamespaces()
+    const paused = await createExecutionClient(port, evmBlockchains, {
+      pauseOnStart: true,
+    })
+    await settle()
+    return paused
+  }
+
+  test('resolves with no error, emits nothing, and leaves it BLOCKED with its blocked', async () => {
+    const { client, all, requests } = await pausedTab()
+    const before = await client.history.get('request-1')
+    expect(before?._queue.status).toBe('BLOCKED')
+    const eventCount = all.length
+
+    await expect(client.execute('request-1')).resolves.toBeUndefined()
+    await settle()
+
+    expect(all).toHaveLength(eventCount)
+    expect(requests).toEqual([])
+    expect(httpClient.createTransaction).not.toHaveBeenCalled()
+    const view = await client.history.get('request-1')
+    expect(view).toEqual(before)
+    expect(view?._queue.blocked).toEqual(MISMATCH)
+  })
+
+  test('resume() alone leaves it BLOCKED, and a later execute() in the Active tab continues it', async () => {
+    const { client, requests } = await pausedTab()
+    await client.execute('request-1')
+    await settle()
+
+    await client.resume()
+    await settle()
+
+    expect(requests).toEqual([])
+    expect((await client.history.get('request-1'))?._queue.blocked).toEqual(
+      MISMATCH,
+    )
+
+    await client.execute('request-1')
+    await settle()
+
+    expect(requests).toEqual([
+      ['evm', 'getChainId', TARGET],
+      ['evm', 'sign', { ...TARGET, tx: evmTx() }],
+    ])
+    const view = await client.history.get('request-1')
+    expect(view?._queue.status).toBe('SUCCESS')
+    expect(view?._queue.blocked).toBeNull()
+  })
+})
+
 describe('the connection and account gate', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -1046,5 +1128,56 @@ describe('the connection and account gate', () => {
     expect(view?._queue.blocked).toBeNull()
     expect(view?._storage.failure).toBeNull()
     expect(httpClient.reportFailure).not.toHaveBeenCalled()
+  })
+
+  test('a cancel while getAccounts is pending stores no block and asks the port nothing more', async () => {
+    const port = switchingNamespaces(undefined, { ETH: [] })
+    const pending = Promise.withResolvers<string[] | null>()
+    port.wallet.evm.getAccounts.mockImplementationOnce(
+      async () => pending.promise,
+    )
+    const { client, events } = await createExecutionClient(port)
+    await start(client)
+    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+
+    await client.cancel('request-1')
+    await settle()
+    pending.resolve([])
+    await settle()
+
+    const view = await client.history.get('request-1')
+    expect(view?._queue.status).toBe('CANCELED')
+    expect(view?._queue.blocked).toBeNull()
+    expect(view?._storage.failure?.reasonCode).toBe('USER_CANCEL')
+    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.requests).toEqual([])
+    expect(events.map(nameOf)).not.toContain(NOT_CONNECTED_EVENT)
+  })
+
+  test('a cancel while getAccounts is pending, which then rejects, stores no block and asks the port nothing more', async () => {
+    const port = switchingNamespaces()
+    const pending = Promise.withResolvers<string[] | null>()
+    port.wallet.evm.getAccounts.mockImplementationOnce(
+      async () => pending.promise,
+    )
+    const { client, events } = await createExecutionClient(port)
+    await start(client)
+    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+
+    await client.cancel('request-1')
+    await settle()
+    const settled = events.length
+    const reports = httpClient.reportFailure.mock.calls.length
+    pending.reject(new Error('no provider'))
+    await settle()
+
+    const view = await client.history.get('request-1')
+    expect(view?._queue.status).toBe('CANCELED')
+    expect(view?._queue.blocked).toBeNull()
+    expect(view?._storage.failure?.reasonCode).toBe('USER_CANCEL')
+    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.requests).toEqual([])
+    expect(events).toHaveLength(settled)
+    expect(httpClient.reportFailure).toHaveBeenCalledTimes(reports)
   })
 })

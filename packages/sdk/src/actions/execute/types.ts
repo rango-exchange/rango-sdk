@@ -513,4 +513,8 @@ export type ExecutionEngine = {
   manager: Manager
   // The context every task gets, for what an execution method does outside a task.
   context: SdkContext
+  // Core's `pause()`, a no-op when the execution engine is already paused.
+  pause: () => void
+  // Core's `run()`, a no-op when the execution engine isn't paused.
+  resume: () => void
 }

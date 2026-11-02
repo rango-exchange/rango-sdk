@@ -24,7 +24,7 @@ export async function createExecutionEngine(
   const { promise: firstLoadDone, resolve: resolveFirstLoad } =
     Promise.withResolvers<void>()
   // Core runs a queue's next task even while paused, so every task checks this first.
-  const isClientPaused = pauseOnStart === true
+  let isClientPaused = pauseOnStart === true
 
   /*
    * Read from the Manager on every call, since every status change and every paused load replaces core's queue object.
@@ -142,7 +142,19 @@ export async function createExecutionEngine(
     },
   })
 
+  // The flag is set first: `pause()` syncs on `window.setInterval`, which throws where there is no `window`.
+  const pause = (): void => {
+    isClientPaused = true
+    manager.pause()
+  }
+
+  // The flag is cleared first: `run()` reloads storage and resumes every `RUNNING` Execution.
+  const resume = (): void => {
+    isClientPaused = false
+    manager.run()
+  }
+
   // `firstLoadDone` resolves after the first load, also after a load error, and never rejects.
   await firstLoadDone
-  return { manager, context }
+  return { manager, context, pause, resume }
 }

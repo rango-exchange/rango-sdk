@@ -13,7 +13,7 @@ import {
   POLL_INTERVAL_MS,
   SUPPORTED_HYPERLIQUID_ACTION_TYPES,
 } from './constants.js'
-import { ErrorToReport } from './execution-failure.js'
+import { ErrorToReport, isCanceled } from './execution-failure.js'
 import { buildCheckResultWithExplorerLink } from './explorer-link.js'
 import { getRequiredWallet } from './required-wallet.js'
 import { signEntryAndStoreSignedHash } from './sign.js'
@@ -84,9 +84,10 @@ function splitSignature(signature: string): {
 
 /*
  * The sign for a Hyperliquid entry. Its hash isn't known until the explorer lists it, so it resolves with a `null`
- * `walletResult`.
+ * `walletResult`, or `null` once the Execution is canceled: nothing is posted after a cancel.
  */
 async function signAndPostHyperliquidAction(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   hyperliquid: HyperliquidWallet,
   tx: HyperliquidTransaction,
 ): Promise<{ walletResult: null } | null> {
@@ -94,11 +95,17 @@ async function signAndPostHyperliquidAction(
     typedData: parseHyperliquidTypedData(tx.message),
     chainId: tx.action.signatureChainId,
   })
+  if (isCanceled(actions)) {
+    return null
+  }
   const exchangeResponse = await postJson(HYPERLIQUID_EXCHANGE_URL, {
     action: tx.action,
     signature: splitSignature(signature),
     nonce: tx.nonce,
   }).catch(() => null)
+  if (isCanceled(actions)) {
+    return null
+  }
   if (!isRecord(exchangeResponse) || exchangeResponse.status !== 'ok') {
     throw new ErrorToReport(
       'CLIENT_UNEXPECTED_BEHAVIOUR',
@@ -133,7 +140,7 @@ function findHashOfActionByNonce(
 
 /*
  * The entry's first Blockchain list read is here, so a failed load fails the swap though the action is posted. It
- * answers the hash once stored.
+ * answers the hash once stored, or `null` once the Execution is canceled, without storing it.
  */
 export async function waitForHyperliquidHashAndStoreIt(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
@@ -146,12 +153,18 @@ export async function waitForHyperliquidHashAndStoreIt(
       type: 'userDetails',
       user: requiredWallet.address,
     }).catch(() => null)
+    if (isCanceled(actions)) {
+      return null
+    }
     const hyperliquidHash = findHashOfActionByNonce(explorerResponse, nonce)
     if (hyperliquidHash !== null) {
       const blockchainMeta = await loadBlockchainMetaOf(
         actions,
         requiredWallet.blockchain,
       )
+      if (isCanceled(actions)) {
+        return null
+      }
       const storage = actions.getStorage()
       const { result } = storage.transactions[transactionId].execution
       result.walletResult = { hash: hyperliquidHash }
@@ -165,11 +178,15 @@ export async function waitForHyperliquidHashAndStoreIt(
       return hyperliquidHash
     }
     await sleep(POLL_INTERVAL_MS)
+    if (isCanceled(actions)) {
+      return null
+    }
   }
 }
 
 /*
- * Stored `signed` right after the post, so a resume during the lookup isn't read as expired. The hash it found.
+ * Stored `signed` right after the post, so a resume during the lookup isn't read as expired. The hash it found, or
+ * `null` once the Execution is canceled.
  */
 export async function signPostAndLookUpHyperliquidHash(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
@@ -180,7 +197,7 @@ export async function signPostAndLookUpHyperliquidHash(
   const postResult = await signEntryAndStoreSignedHash(
     actions,
     transactionId,
-    async () => signAndPostHyperliquidAction(hyperliquid, tx),
+    async () => signAndPostHyperliquidAction(actions, hyperliquid, tx),
   )
   if (postResult === null) {
     return null
