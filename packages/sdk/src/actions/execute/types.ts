@@ -11,6 +11,12 @@ import type { APIErrorCode, TransactionPrerequisite } from 'rango-types'
  */
 export type ExecutionConfig = {
   /**
+   * Receives the events of every Execution.
+   *
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#events
+   */
+  emitter?: Emitter<ExecutionEvents>
+  /**
    * `true` builds the client paused, for an app in several tabs; defaults to `false`.
    *
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#pause-and-resume
@@ -50,7 +56,7 @@ export type ExecutionHistory = {
 }
 
 /**
- * A stored Execution as `history` returns it, in a provisional shape the underscores mark.
+ * A stored Execution as `history` and the events return it, in a provisional shape the underscores mark.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history
  */
@@ -162,6 +168,71 @@ export type ExecutionTransaction = {
     }
   }
 }
+
+/**
+ * Receives the execution events; a mitt emitter fits as it is.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#events
+ */
+export interface Emitter<Events extends Record<string, unknown>> {
+  /** Called with each event's name and payload. */
+  emit<K extends keyof Events>(type: K, event: Events[K]): void
+}
+
+/**
+ * The events the `emitter` receives.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#events
+ */
+export type ExecutionEvents = {
+  /** An Execution started, succeeded or failed. */
+  routeEvent: { event: RouteEvent; view: HistoryItem }
+  /** A Step's progress, with the entry's ID as `transactionId`, or `null` when none is involved yet. */
+  stepEvent: {
+    event: StepEvent
+    step: number
+    transactionId: string | null
+    view: HistoryItem
+  }
+  /** A fresh `HistoryItem` after every stored change. */
+  changed: HistoryItem
+  /** Storage was loaded: read `history.getAll()` again. */
+  loaded: undefined
+}
+
+/**
+ * What a `routeEvent` reports.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#events
+ */
+export type RouteEvent = { type: 'started' | 'succeeded' | 'failed' }
+
+/**
+ * What a `stepEvent` reports.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#events
+ */
+export type StepEvent =
+  | {
+      type:
+        | 'started'
+        | 'succeeded'
+        | 'failed'
+        | 'check_status'
+        | 'output_revealed'
+        | 'approval_tx_succeeded'
+    }
+  | {
+      type: 'tx_execution'
+      status: 'create_tx' | 'switch_network' | 'send_tx' | 'tx_sent'
+    }
+  | {
+      type: 'tx_execution_blocked'
+      status:
+        | 'waiting_for_wallet_connect'
+        | 'waiting_for_change_wallet_account'
+        | 'waiting_for_network_change'
+    }
 
 export type ExecutionEngine = {
   // Its first load is done, also after a load error.

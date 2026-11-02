@@ -28,7 +28,7 @@ export function buildInitialExecutionRecord(
   }
 }
 
-// Unblocking only reruns the gate.
+// Unblocking only reruns the gate, and core's queue update for it emits `changed`.
 export function unblockExecution(
   storedQueue: StoredQueue,
   context: SdkContext,
