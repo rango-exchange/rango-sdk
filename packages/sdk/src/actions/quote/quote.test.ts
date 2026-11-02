@@ -25,11 +25,17 @@ const request: Sdk.QuoteRequest = {
   from: ETH,
   to: USDC,
   amount: '1',
-  selectedWallets: { ETH: '0xfrom', BSC: '0xto' },
+  selectedWallets: {
+    ETH: { address: '0xfrom', walletId: 'metamask' },
+    BSC: { address: '0xto', walletId: 'trust' },
+  },
   destination: DESTINATION,
   slippage: '1.5',
   swappers: ['Across'],
 }
+// What `getBestRoute` gets for `request`: the addresses, with no Wallet IDs.
+const SENT_SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
+const sentRequest = { ...request, selectedWallets: SENT_SELECTED_WALLETS }
 
 function response(overrides: Partial<LegacySdk.BestRouteResponse> = {}) {
   return {
@@ -73,7 +79,11 @@ describe('quote', () => {
     await client.quote(withAffiliate, { signal: controller.signal })
 
     expect(httpClient.getBestRoute.mock.lastCall).toEqual([
-      { ...withAffiliate, checkPrerequisites: true },
+      {
+        ...withAffiliate,
+        selectedWallets: SENT_SELECTED_WALLETS,
+        checkPrerequisites: true,
+      },
       { signal: controller.signal },
     ])
   })
@@ -84,7 +94,7 @@ describe('quote', () => {
     await client.quote(request)
 
     expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
-      ...request,
+      ...sentRequest,
       checkPrerequisites: true,
     })
   })
@@ -100,7 +110,7 @@ describe('quote', () => {
     await client.quote({ ...request, affiliateRef: 'NEW' })
 
     expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
-      ...request,
+      ...sentRequest,
       affiliateRef: 'NEW',
       checkPrerequisites: true,
     })
@@ -114,7 +124,7 @@ describe('quote', () => {
       await client.quote({ ...request, checkPrerequisites })
 
       expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
-        ...request,
+        ...sentRequest,
         checkPrerequisites,
       })
     },
@@ -131,15 +141,27 @@ describe('quote', () => {
       await client.quote(quoteRequest)
 
       expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
-        ...request,
+        ...sentRequest,
         checkPrerequisites: true,
       })
     },
   )
 
-  test('takes the best-route request as it is', () => {
-    expectTypeOf<Omit<Sdk.QuoteRequest, 'checkPrerequisites'>>().toEqualTypeOf<
-      Omit<LegacySdk.BestRouteRequest, 'checkPrerequisites'>
+  test('takes the best-route request as it is, with a Wallet ID in each selected wallet', () => {
+    expectTypeOf<
+      Omit<Sdk.QuoteRequest, 'checkPrerequisites' | 'selectedWallets'>
+    >().toEqualTypeOf<
+      Omit<LegacySdk.BestRouteRequest, 'checkPrerequisites' | 'selectedWallets'>
+    >()
+    expectTypeOf<
+      Sdk.QuoteRequest['selectedWallets']
+    >().toEqualTypeOf<Sdk.SelectedWallets>()
+    expectTypeOf<Sdk.SelectedWallets[string]>().toEqualTypeOf<{
+      address: string
+      walletId: string
+    }>()
+    expectTypeOf<Sdk.SelectedWallet>().toEqualTypeOf<
+      Sdk.SelectedWallets[string]
     >()
     expectTypeOf<Sdk.QuoteRequest['checkPrerequisites']>().toEqualTypeOf<
       LegacySdk.BestRouteRequest['checkPrerequisites']
@@ -166,7 +188,7 @@ describe('quote', () => {
         validationStatus,
         missingBlockchains: [],
         walletNotSupportingFromBlockchain: false,
-        selectedWallets: { ETH: '0xfrom', BSC: '0xto' },
+        selectedWallets: request.selectedWallets,
         slippage: '1.5',
       },
       warnings: [],
@@ -175,6 +197,9 @@ describe('quote', () => {
     expect(quoted._response).toBe(success)
     expect(quoted).not.toHaveProperty('error')
     expect(quoted.data.selectedWallets).not.toBe(request.selectedWallets)
+    expect(quoted.data.selectedWallets.ETH).not.toBe(
+      request.selectedWallets.ETH,
+    )
     expectTypeOf(quoted.data).toEqualTypeOf<Sdk.Route>()
   })
 
@@ -412,6 +437,7 @@ describe('quote', () => {
     expect(httpClient.getBestRoute.mock.lastCall?.[0]).toStrictEqual({
       checkPrerequisites: true,
       ...sent,
+      selectedWallets: SENT_SELECTED_WALLETS,
     })
     expect(httpClient.getBlockchains).not.toHaveBeenCalled()
     expect(client.cache.get('blockchains')).toBeUndefined()

@@ -6,6 +6,7 @@ import {
   clientArgsOf,
   httpClient,
   loadSdk,
+  recordingNamespaces,
   resetHttpClient,
 } from '../tests/support.js'
 
@@ -64,13 +65,13 @@ describe('client', () => {
 
     expect('setAffiliate' in client).toBe(false)
     expectTypeOf<keyof Sdk.RangoClientConfig>().toEqualTypeOf<
-      'apiKey' | 'baseUrl'
+      'apiKey' | 'baseUrl' | 'execution'
     >()
     // @ts-expect-error The Affiliate type is no longer exported.
     expectTypeOf<Sdk.Affiliate>()
   })
 
-  test('takes only an API key and an optional base URL', async () => {
+  test('takes only an API key, an optional base URL and an optional execution config', async () => {
     const { RangoClient } = await loadSdk()
 
     expect(new RangoClient({ apiKey: 'test-key' })).toBeInstanceOf(RangoClient)
@@ -80,7 +81,16 @@ describe('client', () => {
     expectTypeOf<Sdk.RangoClientConfig>().toEqualTypeOf<{
       apiKey: string
       baseUrl?: string
+      execution?: Sdk.ExecutionConfig
     }>()
+    expect(
+      new RangoClient({ apiKey: 'test-key', execution: {} }),
+    ).toBeInstanceOf(RangoClient)
+    const { wallet } = recordingNamespaces()
+    // @ts-expect-error the execution settings are under execution: the config has no top-level wallet
+    void new RangoClient({ apiKey: 'test-key', wallet })
+    // @ts-expect-error the execution settings are under execution: the config has no top-level pauseOnStart
+    void new RangoClient({ apiKey: 'test-key', pauseOnStart: true })
     // @ts-expect-error the config takes no meta: the client fetches the blockchains itself
     void new RangoClient({ apiKey: 'test-key', meta: { blockchains: [] } })
   })

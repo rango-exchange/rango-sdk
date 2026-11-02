@@ -42,13 +42,15 @@ export type BridgeLimitMetadata = {
  * The input field that fails a check, and why. `quote()` and `quotes()` check `to` (`SAME_ASSET` as `from`) and
  * `amount` (`NOT_A_NUMBER` or `NOT_POSITIVE`). `quote()` and `confirm()` check a set `destination`
  * against the blockchain list (`NO_ADDRESS_PATTERNS` or `PATTERN_MISMATCH`). `confirm()` checks `requestId`
- * (`NOT_FOUND` when no cached Quote has it). The slippage isn't checked.
+ * (`NOT_FOUND` when no cached Quote has it). `execute()` checks `requestId` (`NOT_FOUND` when no confirmed Route kept by `confirm()` and no stored Execution
+ * has it), and, for a new Execution, `options` (`MISSING`).
  */
 export type InvalidInputMetadata =
   | { field: 'requestId'; reason: 'NOT_FOUND' }
   | { field: 'to'; reason: 'SAME_ASSET' }
   | { field: 'amount'; reason: 'NOT_A_NUMBER' | 'NOT_POSITIVE' }
   | { field: 'destination'; reason: 'NO_ADDRESS_PATTERNS' | 'PATTERN_MISMATCH' }
+  | { field: 'options'; reason: 'MISSING' }
 
 export type SdkErrorMetadata = {
   NO_RESULT: NoResultMetadata
