@@ -40,6 +40,65 @@ export type ExecutionOptions = {
 }
 
 /**
+ * Reads the stored Executions, each as a `HistoryItem`.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history
+ */
+export type ExecutionHistory = {
+  /** The Execution with this request ID, or `undefined` when none is stored. */
+  get(requestId: string): Promise<HistoryItem | undefined>
+  /** Every stored Execution. */
+  getAll(): Promise<HistoryItem[]>
+}
+
+/**
+ * A stored Execution as `history` returns it, in a provisional shape the underscores mark.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history
+ */
+export type HistoryItem = {
+  /** A copy of the stored record, which you can keep or change. */
+  _storage: ExecutionRecord
+  /** The queue's state. */
+  _queue: {
+    /** The Route's request ID, which is also the Execution's ID. */
+    id: string
+    /** When the Execution was stored, in milliseconds since the epoch. */
+    createdAt: number
+    /** The Execution's status. */
+    status:
+      | 'PENDING'
+      | 'RUNNING'
+      | 'BLOCKED'
+      | 'SUCCESS'
+      | 'FAILED'
+      | 'CANCELED'
+    /** Why the Execution waits while `status` is `BLOCKED`, else `null`. */
+    blocked: BlockReason | null
+  }
+}
+
+/**
+ * Why an Execution is `BLOCKED`: the wallet of `blockchain` isn't connected, doesn't hold `address`, or isn't on
+ * `requiredChainId`.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history
+ */
+export type BlockReason =
+  | {
+      reason: 'NOT_CONNECTED'
+      metadata: { blockchain: string; address: string }
+    }
+  | {
+      reason: 'ACCOUNT_MISMATCH'
+      metadata: { blockchain: string; address: string }
+    }
+  | {
+      reason: 'NETWORK_MISMATCH'
+      metadata: { blockchain: string; address: string; requiredChainId: string }
+    }
+
+/**
  * What is stored for an Execution.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history

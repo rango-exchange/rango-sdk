@@ -69,12 +69,23 @@ function stubIndexedDB(): void {
   }
 }
 
-// Each execution method, called on a client with no wallet.
-const calls: [string, (client: Sdk.RangoClient) => Promise<unknown>][] = [
+// Each execution method, and what `history.get('request-1')` answers after it on a client with no wallet.
+const calls: [
+  string,
+  (client: Sdk.RangoClient) => Promise<unknown>,
+  Sdk.HistoryItem['_queue']['status'] | undefined,
+][] = [
   [
     'execute() with options',
     async (client) => client.execute('request-1', EXECUTION_OPTIONS),
+    'RUNNING',
   ],
+  [
+    'history.get()',
+    async (client) => client.history.get('request-1'),
+    undefined,
+  ],
+  ['history.getAll()', async (client) => client.history.getAll(), undefined],
 ]
 
 // A client with no `execution`, and one whose `execution` has every key.
@@ -97,9 +108,18 @@ type WithoutWallet = [
   string,
   () => Promise<Sdk.RangoClient>,
   (client: Sdk.RangoClient) => Promise<unknown>,
+  Sdk.HistoryItem['_queue']['status'] | undefined,
 ]
 const withoutWallet = builds.flatMap(([build, create]) =>
-  calls.map(([name, call]): WithoutWallet => [build, name, create, call]),
+  calls.map(
+    ([name, call, status]): WithoutWallet => [
+      build,
+      name,
+      create,
+      call,
+      status,
+    ],
+  ),
 )
 
 describe('the execution keys', () => {
@@ -129,7 +149,7 @@ describe('the execution keys', () => {
 
   test.each(withoutWallet)(
     '%s, %s throws nothing',
-    async (_, __, build, call) => {
+    async (_, __, build, call, status) => {
       stubIndexedDB()
       stubWindow()
       vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
@@ -140,6 +160,10 @@ describe('the execution keys', () => {
 
       await call(client)
       await settle()
+
+      expect((await client.history.get('request-1'))?._queue.status).toBe(
+        status,
+      )
     },
   )
 
@@ -203,6 +227,13 @@ describe('the execution keys', () => {
     >()
     expectTypeOf(client.execute).returns.toEqualTypeOf<Promise<void>>()
     expectTypeOf(client).not.toHaveProperty('setActive')
+    expectTypeOf(client.history).toEqualTypeOf<Sdk.ExecutionHistory>()
+    expectTypeOf(client.history.get).returns.toEqualTypeOf<
+      Promise<Sdk.HistoryItem | undefined>
+    >()
+    expectTypeOf(client.history.getAll).returns.toEqualTypeOf<
+      Promise<Sdk.HistoryItem[]>
+    >()
   })
 
   test('types ExecutionConfig, the client config’s execution key and ExecutionOptions, and exports no ExecuteOptions, UserOptions or CreateTransactionOptions', () => {
@@ -240,6 +271,23 @@ describe('the execution keys', () => {
     expectTypeOf<Sdk.TransactionType>().toEqualTypeOf<TransactionType>()
     expectTypeOf<Sdk.TransactionPrerequisite>().toEqualTypeOf<TransactionPrerequisite>()
     expectTypeOf<Sdk.APIErrorCode>().toEqualTypeOf<APIErrorCode>()
+    expectTypeOf<Sdk.HistoryItem>().toEqualTypeOf<{
+      _storage: Sdk.ExecutionRecord
+      _queue: {
+        id: string
+        createdAt: number
+        status:
+          | 'PENDING'
+          | 'RUNNING'
+          | 'BLOCKED'
+          | 'SUCCESS'
+          | 'FAILED'
+          | 'CANCELED'
+        blocked: Sdk.BlockReason | null
+      }
+    }>()
+    // @ts-expect-error ExecutionView is not exported: HistoryItem replaces it
+    expectTypeOf<Sdk.ExecutionView>().not.toBeNever()
     expectTypeOf<
       Sdk.ExecutionRecord['transactions'][string]
     >().toEqualTypeOf<Sdk.ExecutionTransaction>()

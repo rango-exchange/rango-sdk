@@ -1,5 +1,10 @@
 import type { SdkContext, StoredQueue } from './queue/mod.js'
-import type { ExecutionConfig, ExecutionEngine } from './types.js'
+import type {
+  BlockReason,
+  ExecutionConfig,
+  ExecutionEngine,
+  HistoryItem,
+} from './types.js'
 import type { Cache } from '../../cache/mod.js'
 import type { CacheSchema, LegacyClient } from '../../types.js'
 import type { Manager } from '@rango-dev/queue-manager-core'
@@ -21,11 +26,42 @@ export async function createExecutionEngine(
   // Core runs a queue's next task even while paused, so every task checks this first.
   const isClientPaused = pauseOnStart === true
 
+  /*
+   * Read from the Manager on every call, since every status change and every paused load replaces core's queue object.
+   * The clones keep a change to the item from reaching the stored record and block reason.
+   */
+  const view = (requestId: string): HistoryItem | undefined => {
+    const queue: StoredQueue | undefined = manager.get(requestId)
+    if (queue === undefined) {
+      return undefined
+    }
+    const { status, list } = queue
+    // Typed with `undefined`, since an array index and an index signature return a value for any key.
+    const activeTask: { id: string } | undefined =
+      list.tasks[list.state.activeTaskIndex]
+    const activeTaskState: { blockedFor: BlockReason | null } | undefined =
+      activeTask === undefined ? undefined : list.state.tasks[activeTask.id]
+    return {
+      _storage: structuredClone(queue.actions.getStorage()),
+      _queue: {
+        id: requestId,
+        createdAt: queue.createdAt,
+        status,
+        // Read only while `BLOCKED`, since core never clears a task's block reason.
+        blocked:
+          status === 'BLOCKED'
+            ? structuredClone(activeTaskState?.blockedFor ?? null)
+            : null,
+      },
+    }
+  }
+
   const context: SdkContext = {
     httpClient,
     loadBlockchainsMeta: async () => loadBlockchains(httpClient, cache),
     signResponsesAwaitingWait: new Map(),
     isPaused: () => isClientPaused,
+    view,
     getQueueStatus: (requestId) => {
       const queue: StoredQueue | undefined = manager.get(requestId)
       return queue?.status

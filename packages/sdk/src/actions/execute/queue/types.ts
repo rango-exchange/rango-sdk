@@ -1,5 +1,10 @@
 import type { LegacyClient } from '../../../types.js'
-import type { ExecutionRecord, ExecutionTransaction } from '../mod.js'
+import type {
+  BlockReason,
+  ExecutionRecord,
+  ExecutionTransaction,
+  HistoryItem,
+} from '../mod.js'
 import type {
   ExecuterActions,
   PayloadArg,
@@ -21,17 +26,26 @@ export type SdkContext = {
   signResponsesAwaitingWait: Map<string, unknown>
   // `true` while this client is paused by `pauseOnStart: true` or `pause()`.
   isPaused: () => boolean
-  // The status of the Execution's queue.
-  getQueueStatus: (requestId: string) => StoredQueue['status'] | undefined
+  // The one `HistoryItem` builder, for `history`.
+  view: (requestId: string) => HistoryItem | undefined
+  // Read without building a `HistoryItem`.
+  getQueueStatus: (
+    requestId: string,
+  ) => HistoryItem['_queue']['status'] | undefined
 }
 
 /*
- * Core keeps the stored record as given (its fields are `any`), so a `QueueInfo` is assigned to this without a cast or
- * a shape check. `list` is only the part of core's queue we read.
+ * Core keeps the stored record and the block reason as given (its fields are `any`), so a `QueueInfo` is assigned to
+ * this without a cast or a shape check. `list` is only the part of core's queue we read.
  */
 export type StoredQueue = Omit<QueueInfo, 'status' | 'list' | 'actions'> & {
-  status: 'PENDING' | 'RUNNING' | 'BLOCKED' | 'SUCCESS' | 'FAILED' | 'CANCELED'
+  status: HistoryItem['_queue']['status']
   list: {
+    tasks: { id: string }[]
+    state: {
+      activeTaskIndex: number
+      tasks: Record<string, { blockedFor: BlockReason | null }>
+    }
     unblock: () => void
   }
   actions: {
@@ -61,9 +75,9 @@ export type SdkActions<K extends ActionName = ActionName> = ExecuterActions<
   K
 >
 
-export type TaskResult = Array<
-  { [N in ActionName]: [N, ...PayloadArg<SdkPayloads[N]>] }[ActionName]
->
+export type TaskResult =
+  | Array<{ [N in ActionName]: [N, ...PayloadArg<SdkPayloads[N]>] }[ActionName]>
+  | { block: BlockReason }
 
 // An entry's new `checkResult`, stored in the same write as the failure.
 export type FailedCheck = { transactionId: string; checkResult: CheckResult }
