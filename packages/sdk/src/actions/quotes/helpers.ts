@@ -8,6 +8,7 @@ import type { Cache } from '../../cache/mod.js'
 import type { CacheSchema } from '../../types.js'
 import type { MultiRouteResponse } from 'rango-sdk'
 
+import { withNewest } from '../../cache/mod.js'
 import { NO_RESULT_MESSAGE, SdkError } from '../../errors/mod.js'
 import {
   getQuoteWarnings,
@@ -95,16 +96,15 @@ export function cacheAndReturnResult(cache: Cache<CacheSchema>) {
     for (const { data } of result.data.quotes) {
       quotes.set(data.requestId, structuredClone(data))
     }
-    const routes = new Map(cache.get('quotes'))
-    // Maps keep insertion order, so keys() yields the oldest first. Deleting before set moves a repeated route ID to newest.
-    routes.delete(result.data.routeId)
-    routes.set(result.data.routeId, quotes)
-    // Each call adds at most one route, so at most the oldest one needs evicting.
-    if (routes.size > MAX_CACHED_ROUTES) {
-      const [oldestRouteId] = routes.keys()
-      routes.delete(oldestRouteId)
-    }
-    cache.set('quotes', routes)
+    cache.set(
+      'quotes',
+      withNewest(
+        cache.get('quotes'),
+        result.data.routeId,
+        quotes,
+        MAX_CACHED_ROUTES,
+      ),
+    )
     return result
   }
 }

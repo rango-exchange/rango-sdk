@@ -1,11 +1,6 @@
 import type { QuotesOptions, QuotesResult } from './types.js'
-import type { Cache } from '../../cache/mod.js'
-import type { CacheSchema } from '../../types.js'
-import type {
-  Asset,
-  RangoClient as LegacyRangoClient,
-  MultiRouteRequest,
-} from 'rango-sdk'
+import type { ClientState } from '../../types.js'
+import type { Asset, MultiRouteRequest } from 'rango-sdk'
 
 import { throwRequestError } from '../../errors/mod.js'
 import { validateSwapRequest } from '../quote/mod.js'
@@ -18,13 +13,13 @@ import {
 } from './helpers.js'
 
 export async function fetchQuotes(
-  httpClient: LegacyRangoClient,
-  cache: Cache<CacheSchema>,
+  state: ClientState,
   from: Asset,
   to: Asset,
   amount: string,
   options: QuotesOptions = {},
 ): Promise<QuotesResult> {
+  const { httpClient, cache } = state
   const request: MultiRouteRequest = { ...options.req, from, to, amount }
   validateSwapRequest(request)
   return httpClient

@@ -3,70 +3,23 @@ import type * as Sdk from '../../mod.js'
 import * as LegacySdk from 'rango-sdk'
 import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
 
-const legacy = vi.hoisted(() => ({
-  getBestRoute: vi.fn(),
-  getBlockchains: vi.fn(),
-}))
-
-vi.mock('rango-sdk', async (importOriginal) => ({
-  ...(await importOriginal<typeof LegacySdk>()),
-  RangoClient: class {
-    getBestRoute = legacy.getBestRoute
-    getBlockchains = legacy.getBlockchains
-  },
-}))
-
-async function loadSdk(): Promise<typeof Sdk> {
-  return import('../../mod.js')
-}
-
-const ETH = { blockchain: 'ETH', symbol: 'ETH', address: null }
-const USDC = {
-  blockchain: 'BSC',
-  symbol: 'USDC',
-  address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-}
-
-const DESTINATION = '0x000000000000000000000000000000000000dead'
-
-function chain(name: string, addressPatterns: string[]): Sdk.BlockchainMeta {
-  return {
-    type: LegacySdk.TransactionType.TRANSFER,
-    name,
-    shortName: name,
-    displayName: name,
-    defaultDecimals: 18,
-    feeAssets: [],
-    addressPatterns,
-    logo: '',
-    color: '',
-    sort: 0,
-    enabled: true,
-    chainId: null,
-    info: {
-      infoType: 'TransferMetaInfo',
-      blockExplorerUrls: [],
-      addressUrl: '',
-      transactionUrl: '',
-      tokenUrl: null,
-    },
-  }
-}
-
-const blockchains = [
-  chain('ETH', ['^(0x)[0-9A-Fa-f]{40}$']),
-  chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
-  chain('ARBITRUM', ['^(0x)[0-9A-Fa-f]{40}$']),
-]
-
-// A client whose blockchain list, once fetched, holds these blockchains.
-async function createClient(
-  chains: readonly Sdk.BlockchainMeta[] = blockchains,
-): Promise<Sdk.RangoClient> {
-  const { RangoClient } = await loadSdk()
-  legacy.getBlockchains.mockResolvedValue([...chains])
-  return new RangoClient({ apiKey: 'test-key' })
-}
+import {
+  BAD_REQUEST,
+  blockchains,
+  chain,
+  createClient,
+  DESTINATION,
+  ETH,
+  httpClient,
+  httpError,
+  loadSdk,
+  expectSdkError as quoteError,
+  resetHttpClient,
+  SERVER_ERROR,
+  swap,
+  USDC,
+  validationStatus,
+} from '../../../tests/support.js'
 
 const request: Sdk.QuoteRequest = {
   from: ETH,
@@ -77,56 +30,6 @@ const request: Sdk.QuoteRequest = {
   slippage: '1.5',
   swappers: ['Across'],
 }
-
-function swap(overrides: Partial<Sdk.SwapResult> = {}): Sdk.SwapResult {
-  const asset = {
-    blockchain: 'ETH',
-    address: null,
-    symbol: 'ETH',
-    logo: '',
-    blockchainLogo: '',
-    decimals: 18,
-    usdPrice: 3000,
-  }
-  return {
-    swapperId: 'Across',
-    swapperLogo: '',
-    swapperType: 'BRIDGE',
-    swapChainType: 'INTER_CHAIN',
-    from: asset,
-    to: { ...asset, blockchain: 'BSC', symbol: 'USDC', usdPrice: 1 },
-    toAmount: '3000',
-    fromAmount: '1',
-    fromAmountMaxValue: '10',
-    fromAmountMinValue: '0.1',
-    fromAmountPrecision: null,
-    fromAmountRestrictionType: 'EXCLUSIVE',
-    routes: null,
-    internalSwaps: null,
-    fee: [],
-    estimatedTimeInSeconds: 60,
-    timeStat: null,
-    includesDestinationTx: false,
-    maxRequiredSign: 1,
-    recommendedSlippage: { error: false, slippage: '0.5' },
-    warnings: [],
-    ...overrides,
-  }
-}
-
-const validationStatus: Sdk.BlockchainValidationStatus[] = [
-  {
-    blockchain: 'ETH',
-    wallets: [
-      {
-        address: '0xfrom',
-        addressIsValid: true,
-        requiredAssets: [],
-        validResult: true,
-      },
-    ],
-  },
-]
 
 function response(overrides: Partial<LegacySdk.BestRouteResponse> = {}) {
   return {
@@ -150,30 +53,11 @@ function response(overrides: Partial<LegacySdk.BestRouteResponse> = {}) {
   } satisfies LegacySdk.BestRouteResponse
 }
 
-const BAD_REQUEST = 400
-const SERVER_ERROR = 500
-
-function httpError(status: number, data: unknown) {
-  return Object.assign(new Error(`Request failed with ${status}`), {
-    response: { status, data },
-  })
-}
-
-async function quoteError(promise: Promise<unknown>) {
-  const { SdkError } = await loadSdk()
-  const error = await promise.catch((e: unknown) => e)
-  expect(error).toBeInstanceOf(SdkError)
-  expect(error).toBeInstanceOf(Error)
-  expect(error).toHaveProperty('name', 'SdkError')
-  return error
-}
-
 describe('quote', () => {
   beforeEach(() => {
     vi.resetModules()
-    legacy.getBestRoute.mockReset()
-    legacy.getBlockchains.mockReset()
-    legacy.getBestRoute.mockResolvedValue(response())
+    resetHttpClient()
+    httpClient.getBestRoute.mockResolvedValue(response())
   })
 
   test('sends the request with the affiliate fields as given and the signal', async () => {
@@ -188,7 +72,7 @@ describe('quote', () => {
 
     await client.quote(withAffiliate, { signal: controller.signal })
 
-    expect(legacy.getBestRoute.mock.lastCall).toEqual([
+    expect(httpClient.getBestRoute.mock.lastCall).toEqual([
       { ...withAffiliate, checkPrerequisites: true },
       { signal: controller.signal },
     ])
@@ -199,7 +83,7 @@ describe('quote', () => {
 
     await client.quote(request)
 
-    expect(legacy.getBestRoute.mock.lastCall?.[0]).toEqual({
+    expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
       ...request,
       checkPrerequisites: true,
     })
@@ -215,7 +99,7 @@ describe('quote', () => {
     })
     await client.quote({ ...request, affiliateRef: 'NEW' })
 
-    expect(legacy.getBestRoute.mock.lastCall?.[0]).toEqual({
+    expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
       ...request,
       affiliateRef: 'NEW',
       checkPrerequisites: true,
@@ -229,7 +113,7 @@ describe('quote', () => {
 
       await client.quote({ ...request, checkPrerequisites })
 
-      expect(legacy.getBestRoute.mock.lastCall?.[0]).toEqual({
+      expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
         ...request,
         checkPrerequisites,
       })
@@ -246,7 +130,7 @@ describe('quote', () => {
 
       await client.quote(quoteRequest)
 
-      expect(legacy.getBestRoute.mock.lastCall?.[0]).toEqual({
+      expect(httpClient.getBestRoute.mock.lastCall?.[0]).toEqual({
         ...request,
         checkPrerequisites: true,
       })
@@ -268,7 +152,7 @@ describe('quote', () => {
       diagnosisMessages: ['Some swappers are down'],
       traceId: 12,
     })
-    legacy.getBestRoute.mockResolvedValue(success)
+    httpClient.getBestRoute.mockResolvedValue(success)
 
     const quoted = await client.quote(request)
 
@@ -325,7 +209,7 @@ describe('quote', () => {
       requestAmount: _amount,
       ...partial
     } = response()
-    legacy.getBestRoute.mockResolvedValue(partial)
+    httpClient.getBestRoute.mockResolvedValue(partial)
 
     const { data: route } = await client.quote(request)
 
@@ -346,7 +230,7 @@ describe('quote', () => {
       ok: false,
       reason: 'FEE_AND_INPUT_ASSET' as const,
     }
-    legacy.getBestRoute.mockResolvedValue(
+    httpClient.getBestRoute.mockResolvedValue(
       response({
         result: {
           outputAmount: '2400',
@@ -447,7 +331,7 @@ describe('quote', () => {
       price: 3,
       meta: null,
     }
-    legacy.getBestRoute.mockResolvedValue(
+    httpClient.getBestRoute.mockResolvedValue(
       response({
         result: {
           outputAmount: '3000',
@@ -506,7 +390,7 @@ describe('quote', () => {
         type: 'INVALID_INPUT',
         metadata: { field, reason },
       })
-      expect(legacy.getBestRoute).not.toHaveBeenCalled()
+      expect(httpClient.getBestRoute).not.toHaveBeenCalled()
     },
   )
 
@@ -525,11 +409,11 @@ describe('quote', () => {
 
     await client.quote(sent)
 
-    expect(legacy.getBestRoute.mock.lastCall?.[0]).toStrictEqual({
+    expect(httpClient.getBestRoute.mock.lastCall?.[0]).toStrictEqual({
       checkPrerequisites: true,
       ...sent,
     })
-    expect(legacy.getBlockchains).not.toHaveBeenCalled()
+    expect(httpClient.getBlockchains).not.toHaveBeenCalled()
     expect(client.cache.get('blockchains')).toBeUndefined()
   })
 
@@ -570,7 +454,7 @@ describe('quote', () => {
         type: 'INVALID_INPUT',
         metadata: { field: 'destination', reason },
       })
-      expect(legacy.getBestRoute).not.toHaveBeenCalled()
+      expect(httpClient.getBestRoute).not.toHaveBeenCalled()
     },
   )
 
@@ -580,11 +464,11 @@ describe('quote', () => {
     expect(client.cache.get('blockchains')).toBeUndefined()
     await client.quote(request)
 
-    expect(legacy.getBlockchains.mock.calls).toStrictEqual([
+    expect(httpClient.getBlockchains.mock.calls).toStrictEqual([
       [{ signal: undefined }],
     ])
     expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
-    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+    expect(httpClient.getBestRoute).toHaveBeenCalledOnce()
   })
 
   test("doesn't fetch the blockchain list again once it is cached", async () => {
@@ -594,8 +478,8 @@ describe('quote', () => {
     await client.quote(request)
     await quoteError(client.quote({ ...request, destination: '0x123' }))
 
-    expect(legacy.getBlockchains).toHaveBeenCalledOnce()
-    expect(legacy.getBestRoute).toHaveBeenCalledTimes(2)
+    expect(httpClient.getBlockchains).toHaveBeenCalledOnce()
+    expect(httpClient.getBestRoute).toHaveBeenCalledTimes(2)
   })
 
   test('keeps a cached empty blockchain list', async () => {
@@ -611,7 +495,7 @@ describe('quote', () => {
       })
     }
     expect(client.cache.get('blockchains')).toStrictEqual([])
-    expect(legacy.getBlockchains).toHaveBeenCalledOnce()
+    expect(httpClient.getBlockchains).toHaveBeenCalledOnce()
   })
 
   test('sends the signal with the blockchain list fetch', async () => {
@@ -620,14 +504,14 @@ describe('quote', () => {
 
     await client.quote(request, { signal: controller.signal })
 
-    expect(legacy.getBlockchains.mock.lastCall).toStrictEqual([
+    expect(httpClient.getBlockchains.mock.lastCall).toStrictEqual([
       { signal: controller.signal },
     ])
   })
 
   test('throws an SdkError typed by HTTP status when the blockchain list fetch fails, caching nothing, and fetches again on the next call', async () => {
     const client = await createClient()
-    legacy.getBlockchains.mockRejectedValueOnce(
+    httpClient.getBlockchains.mockRejectedValueOnce(
       httpError(SERVER_ERROR, { error: 'Server is down' }),
     )
 
@@ -638,19 +522,19 @@ describe('quote', () => {
       message: 'Server is down',
     })
     expect(client.cache.get('blockchains')).toBeUndefined()
-    expect(legacy.getBestRoute).not.toHaveBeenCalled()
+    expect(httpClient.getBestRoute).not.toHaveBeenCalled()
 
     await client.quote(request)
 
-    expect(legacy.getBlockchains).toHaveBeenCalledTimes(2)
+    expect(httpClient.getBlockchains).toHaveBeenCalledTimes(2)
     expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
-    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+    expect(httpClient.getBestRoute).toHaveBeenCalledOnce()
   })
 
   test('throws REQUEST_CANCELED when the signal aborts the blockchain list fetch, caching nothing', async () => {
     const client = await createClient()
     const controller = new AbortController()
-    legacy.getBlockchains.mockImplementationOnce(async () => {
+    httpClient.getBlockchains.mockImplementationOnce(async () => {
       controller.abort()
       throw new TypeError('aborted')
     })
@@ -661,7 +545,7 @@ describe('quote', () => {
 
     expect(error).toHaveProperty('type', 'REQUEST_CANCELED')
     expect(client.cache.get('blockchains')).toBeUndefined()
-    expect(legacy.getBestRoute).not.toHaveBeenCalled()
+    expect(httpClient.getBestRoute).not.toHaveBeenCalled()
   })
 
   test("two clients don't share a cached blockchain list", async () => {
@@ -701,7 +585,7 @@ describe('quote', () => {
       type: 'INVALID_INPUT',
       metadata: { field: 'destination', reason: 'PATTERN_MISMATCH' },
     })
-    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+    expect(httpClient.getBestRoute).toHaveBeenCalledOnce()
   })
 
   test('sends a destination that matches any pattern, skipping a pattern that is not a valid regular expression', async () => {
@@ -711,7 +595,7 @@ describe('quote', () => {
 
     await client.quote(request)
 
-    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+    expect(httpClient.getBestRoute).toHaveBeenCalledOnce()
   })
 
   test.each<[string, Record<string, unknown>, string, string]>([
@@ -730,7 +614,7 @@ describe('quote', () => {
         type: 'INVALID_INPUT',
         metadata: { field, reason },
       })
-      expect(legacy.getBlockchains).not.toHaveBeenCalled()
+      expect(httpClient.getBlockchains).not.toHaveBeenCalled()
     },
   )
 
@@ -743,7 +627,7 @@ describe('quote', () => {
 
     await client.quote({ ...request, from: ETH, to })
 
-    expect(legacy.getBestRoute).toHaveBeenCalledOnce()
+    expect(httpClient.getBestRoute).toHaveBeenCalledOnce()
   })
 
   test.each(['abc', '0', '-1', '100'])(
@@ -753,7 +637,7 @@ describe('quote', () => {
 
       await client.quote({ ...request, slippage })
 
-      expect(legacy.getBestRoute).toHaveBeenCalledWith(
+      expect(httpClient.getBestRoute).toHaveBeenCalledWith(
         expect.objectContaining({ slippage }),
         expect.anything(),
       )
@@ -764,7 +648,7 @@ describe('quote', () => {
     const client = await createClient()
     const controller = new AbortController()
     const canceled = httpError(BAD_REQUEST, { error: 'canceled' })
-    legacy.getBestRoute.mockImplementation(async () => {
+    httpClient.getBestRoute.mockImplementation(async () => {
       controller.abort()
       throw canceled
     })
@@ -787,7 +671,7 @@ describe('quote', () => {
       errorCode: 1,
       traceId: 2,
     })
-    legacy.getBestRoute.mockRejectedValue(badRequest)
+    httpClient.getBestRoute.mockRejectedValue(badRequest)
 
     const error = await quoteError(client.quote(request))
 
@@ -802,7 +686,7 @@ describe('quote', () => {
   test('throws SERVER_ERROR with the fallback message for an HTTP 500 with no error', async () => {
     const client = await createClient()
     const serverError = httpError(SERVER_ERROR, { errorCode: 42, traceId: 7 })
-    legacy.getBestRoute.mockRejectedValue(serverError)
+    httpClient.getBestRoute.mockRejectedValue(serverError)
 
     const error = await quoteError(client.quote(request))
 
@@ -817,7 +701,7 @@ describe('quote', () => {
   test('throws REQUEST_FAILED without metadata for a network failure', async () => {
     const client = await createClient()
     const networkError = new Error('Network Error')
-    legacy.getBestRoute.mockRejectedValue(networkError)
+    httpClient.getBestRoute.mockRejectedValue(networkError)
 
     const error = await quoteError(client.quote(request))
 
@@ -836,7 +720,7 @@ describe('quote', () => {
       errorCode: 1001,
       traceId: 99,
     })
-    legacy.getBestRoute.mockResolvedValue(failed)
+    httpClient.getBestRoute.mockResolvedValue(failed)
 
     const error = await quoteError(client.quote(request))
 
@@ -854,7 +738,7 @@ describe('quote', () => {
       result: null,
       diagnosisMessages: ['No liquidity', 'Other'],
     })
-    legacy.getBestRoute.mockResolvedValue(empty)
+    httpClient.getBestRoute.mockResolvedValue(empty)
 
     const error = await quoteError(client.quote(request))
 
@@ -867,7 +751,7 @@ describe('quote', () => {
 
   test('throws NO_RESULT for a result with no swaps', async () => {
     const client = await createClient()
-    legacy.getBestRoute.mockResolvedValue(
+    httpClient.getBestRoute.mockResolvedValue(
       response({
         result: {
           outputAmount: '0',
@@ -888,7 +772,7 @@ describe('quote', () => {
       fromAmount: '10',
       recommendedSlippage: { error: true, slippage: '3' },
     })
-    legacy.getBestRoute.mockResolvedValue(
+    httpClient.getBestRoute.mockResolvedValue(
       response({
         result: {
           outputAmount: '3000',
@@ -924,7 +808,7 @@ describe('quote', () => {
         ],
       },
     })
-    legacy.getBestRoute.mockResolvedValue(flaggedResponse)
+    httpClient.getBestRoute.mockResolvedValue(flaggedResponse)
     const { slippage: _, ...withoutSlippage } = request
 
     for (const sent of [request, withoutSlippage]) {
@@ -939,7 +823,7 @@ describe('quote', () => {
 
   test('throws REQUEST_FAILED with the original as cause for a TypeError inside the pipeline', async () => {
     const client = await createClient()
-    legacy.getBestRoute.mockResolvedValue(null)
+    httpClient.getBestRoute.mockResolvedValue(null)
 
     const error = await quoteError(client.quote(request))
 
@@ -950,7 +834,7 @@ describe('quote', () => {
   test('throws REQUEST_CANCELED for a TypeError inside the pipeline when the signal was aborted', async () => {
     const client = await createClient()
     const controller = new AbortController()
-    legacy.getBestRoute.mockImplementation(async () => {
+    httpClient.getBestRoute.mockImplementation(async () => {
       controller.abort()
       return null
     })
@@ -968,7 +852,7 @@ describe('quote', () => {
     const client = await createClient()
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
-    legacy.getBestRoute.mockImplementation(async () => {
+    httpClient.getBestRoute.mockImplementation(async () => {
       controller.abort()
       throw raised
     })
@@ -984,7 +868,7 @@ describe('quote', () => {
     const client = await createClient()
     const controller = new AbortController()
     const empty = response({ result: null })
-    legacy.getBestRoute.mockImplementation(async () => {
+    httpClient.getBestRoute.mockImplementation(async () => {
       controller.abort()
       return empty
     })
@@ -999,7 +883,7 @@ describe('quote', () => {
   test('narrows a caught error with instanceof SdkError, then metadata on type', async () => {
     const { SdkError } = await loadSdk()
     const client = await createClient()
-    legacy.getBestRoute.mockResolvedValue(
+    httpClient.getBestRoute.mockResolvedValue(
       response({ result: null, diagnosisMessages: ['No route'] }),
     )
 

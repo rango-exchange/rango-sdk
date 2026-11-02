@@ -10,6 +10,7 @@ export type {
 } from './types.js'
 export {
   getBlockchainsAndValidateDestination,
+  loadBlockchains,
   omitErrorFields,
   omitRouteErrorFields,
   validateRoute,
