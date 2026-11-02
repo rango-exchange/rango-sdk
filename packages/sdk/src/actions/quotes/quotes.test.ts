@@ -999,6 +999,7 @@ describe('quotes', () => {
           | 'TOO_MANY_REQUESTS'
           | 'SERVER_ERROR'
           | 'UNKNOWN_SLIPPAGE'
+          | 'CLIENT_PAUSED'
         >()
         expectTypeOf(error.metadata).toEqualTypeOf<undefined>()
       }

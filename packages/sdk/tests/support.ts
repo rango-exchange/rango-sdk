@@ -609,8 +609,8 @@ export function reloadOn(on: IDBFactory): void {
 }
 
 /*
- * The client built again after a reload, with a recording port and emitter, its execution engine built by reading
- * `history`, so every `RUNNING` Execution resumes; then every pending step runs.
+ * The client built again after a reload, with a recording port and emitter, resumed as an app does at mount, so
+ * every `RUNNING` Execution resumes; then every pending step runs.
  */
 export async function resumeExecutions(
   port?: undefined,
@@ -625,7 +625,7 @@ export async function resumeExecutions(
   chains: readonly Sdk.BlockchainMeta[] = evmBlockchains,
 ) {
   const execution = await createExecutionClient(port, chains)
-  await execution.client.history.getAll()
+  await execution.client.resume()
   await settle()
   return execution
 }

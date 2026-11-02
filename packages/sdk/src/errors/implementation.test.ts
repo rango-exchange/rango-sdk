@@ -91,6 +91,7 @@ describe('SdkError', () => {
       case 'TOO_MANY_REQUESTS':
       case 'SERVER_ERROR':
       case 'UNKNOWN_SLIPPAGE':
+      case 'CLIENT_PAUSED':
         expectTypeOf(caught.metadata).toEqualTypeOf<undefined>()
         break
       case 'INVALID_INPUT':

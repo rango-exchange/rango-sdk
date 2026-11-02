@@ -68,6 +68,7 @@ export async function confirmFirstQuote(quotes: QuotesData) {
       case 'NOT_FOUND':
       case 'TOO_MANY_REQUESTS':
       case 'SERVER_ERROR':
+      case 'CLIENT_PAUSED':
       case 'REQUEST_FAILED':
         console.error(
           `The confirm request failed: ${error.message}`,
