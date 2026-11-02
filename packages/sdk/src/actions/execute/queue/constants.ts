@@ -5,6 +5,8 @@ import { SignerErrorCode, TransactionType } from 'rango-types'
 
 export const QUEUE_NAME = 'sdk-swap'
 
+export const POLL_INTERVAL_MS = 5_000
+
 export const BLOCKED_EVENT_STATUS_BY_BLOCK_REASON: Readonly<
   Record<
     BlockReason['reason'],

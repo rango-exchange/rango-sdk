@@ -2,14 +2,24 @@ import type { SdkContext } from './queue/mod.js'
 import type { Route } from '../quote/mod.js'
 import type { Manager } from '@rango-dev/queue-manager-core'
 import type { Transaction } from 'rango-sdk'
-import type { APIErrorCode, TransactionPrerequisite } from 'rango-types'
+import type {
+  APIErrorCode,
+  TransactionPrerequisite,
+  TransactionType,
+} from 'rango-types'
 
 /**
- * The client config's `execution`: the settings the execution methods run with.
+ * The client config's `execution`: the wallets and settings the execution methods run with.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#setup
  */
 export type ExecutionConfig = {
+  /**
+   * Answers the user's current wallet for a namespace, blockchain and Wallet ID, or `undefined` for none.
+   *
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+   */
+  getWallet: GetWallet
   /**
    * Receives the events of every Execution.
    *
@@ -168,6 +178,276 @@ export type ExecutionTransaction = {
     }
   }
 }
+
+// A namespace's transaction, and a Prerequisite of one type, as the Rango types define them.
+type TxOf<T extends TransactionType> = Extract<Transaction, { type: T }>
+type PrerequisiteOf<T extends TransactionPrerequisite['type']> = Extract<
+  TransactionPrerequisite,
+  { type: T }
+>
+
+/**
+ * What a namespace's `signAndSend` resolves with.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type SignAndSendResult = {
+  /** The sent transaction's hash. */
+  hash: string
+  /** A live response that `wait` gets back in the same page. */
+  response?: unknown
+  /** `true` when the hash is provisional and `wait` will return the real one. */
+  hashRequiringUpdate?: boolean
+}
+
+/**
+ * An EVM chain's EIP-3085 description, without `chainId` and `iconUrls`.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type EvmChainDescription = {
+  chainName: string
+  nativeCurrency: { name: string; symbol: string; decimals: number }
+  rpcUrls: string[]
+  blockExplorerUrls: string[]
+}
+
+/**
+ * The EVM namespace, for every EVM blockchain.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface EvmWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Answer the wallet's chain ID, hex or decimal, or `null` when it isn't ready. */
+  getChainId(): Promise<string | null>
+  /** Switch the wallet to `chainId`, first adding `{ chainId, ...chain }` when it doesn't know the chain, or reject when it can't. */
+  switchChain(req: {
+    chainId: string
+    chain?: EvmChainDescription
+  }): Promise<void>
+  /** Sign and send `tx`, an approve `buildTransaction` built included, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.EVM>
+  }): Promise<SignAndSendResult>
+  /** Resolve with the hash to follow, or the same `hash` when you have no signer for it. */
+  wait?(req: {
+    hash: string
+    response?: unknown
+  }): Promise<{ hash: string; response?: unknown }>
+  /** Answer the allowance the wallet already grants as a decimal string, or `null` for nothing. */
+  getAllowance(req: {
+    prerequisite: PrerequisiteOf<'EVM_APPROVE'>
+  }): Promise<string | null>
+  /** Build the approve that meets `prerequisite` as plain data, without prompting. */
+  buildTransaction(req: {
+    prerequisite: PrerequisiteOf<'EVM_APPROVE'>
+  }): Promise<TxOf<TransactionType.EVM>>
+  /** Answer `'pending'`, `'success'` or `'failed'` for a signed approve, from its receipt. */
+  getTransactionInfo(req: {
+    hash: string
+  }): Promise<'pending' | 'success' | 'failed'>
+}
+
+/**
+ * The TRON namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface TronWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, an approve `buildTransaction` built included, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.TRON>
+  }): Promise<SignAndSendResult>
+  /** Answer the allowance the wallet already grants as a decimal string, or `null` for nothing. */
+  getAllowance(req: {
+    prerequisite: PrerequisiteOf<'TRON_APPROVE'>
+  }): Promise<string | null>
+  /** Build the approve that meets `prerequisite` as plain data, without prompting. */
+  buildTransaction(req: {
+    prerequisite: PrerequisiteOf<'TRON_APPROVE'>
+  }): Promise<TxOf<TransactionType.TRON>>
+  /** Answer the node's transaction info for a signed approve, as it is. */
+  getTransactionInfo(req: {
+    hash: string
+  }): Promise<{ blockNumber?: number; receipt?: { result?: string } }>
+}
+
+/**
+ * The XRPL namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface XrplWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, a trustline `buildTransaction` built included, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.XRPL>
+  }): Promise<SignAndSendResult>
+  /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
+  getTrustline(req: {
+    prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
+  }): Promise<string | null>
+  /** Build a `TrustSet` with the given `limit` as plain data, without prompting. */
+  buildTransaction(req: {
+    prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
+    limit: string
+  }): Promise<TxOf<TransactionType.XRPL>>
+  /** Answer the ledger's transaction for a signed `TrustSet`, as it is. */
+  getTransactionInfo(req: {
+    hash: string
+  }): Promise<{ validated: boolean; meta?: { TransactionResult: string } }>
+}
+
+/**
+ * The Stellar namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface StellarWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, a trustline `buildTransaction` built included, and resolve once the network accepted it. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.STELLAR>
+  }): Promise<SignAndSendResult>
+  /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
+  getTrustline(req: {
+    prerequisite: PrerequisiteOf<'STELLAR_CHANGE_TRUSTLINE'>
+  }): Promise<string | null>
+  /** Build a `changeTrust` with the given `limit` as plain data, without prompting. */
+  buildTransaction(req: {
+    prerequisite: PrerequisiteOf<'STELLAR_CHANGE_TRUSTLINE'>
+    limit: string
+  }): Promise<TxOf<TransactionType.STELLAR>>
+}
+
+/**
+ * The BIP-122 namespace, for transfers on every UTXO blockchain.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface Bip122Wallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.TRANSFER>
+  }): Promise<SignAndSendResult>
+}
+
+/**
+ * The Solana namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface SolanaWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.SOLANA>
+  }): Promise<SignAndSendResult>
+}
+
+/**
+ * The Starknet namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface StarknetWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.STARKNET>
+  }): Promise<SignAndSendResult>
+}
+
+/**
+ * The TON namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface TonWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.TON>
+  }): Promise<SignAndSendResult>
+}
+
+/**
+ * The Sui namespace.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export interface SuiWallet {
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
+  /** Sign and send `tx`, and resolve with its hash. */
+  signAndSend(req: {
+    tx: TxOf<TransactionType.SUI>
+  }): Promise<SignAndSendResult>
+}
+
+/**
+ * Each namespace's wallet, holding the methods the SDK calls for it.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type WalletByNamespace = {
+  /** EVM transactions and approves. */
+  evm: EvmWallet
+  /** TRON transactions and approves. */
+  tron: TronWallet
+  /** XRPL payments and trustlines. */
+  xrpl: XrplWallet
+  /** Stellar transactions and trustlines. */
+  stellar: StellarWallet
+  /** UTXO transfers. */
+  bip122: Bip122Wallet
+  /** Solana transactions. */
+  solana: SolanaWallet
+  /** Starknet transactions. */
+  starknet: StarknetWallet
+  /** TON transactions. */
+  ton: TonWallet
+  /** Sui transactions. */
+  sui: SuiWallet
+}
+
+/**
+ * A kind of wallet, serving one or more blockchains.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type Namespace = keyof WalletByNamespace
+
+/**
+ * What `getWallet` is asked: the namespace, the blockchain and its selected Wallet ID.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type WalletQuery<N extends Namespace> = {
+  namespace: N
+  blockchain: string
+  walletId: string
+}
+
+/**
+ * Answers the current registered wallet for a query, called on every use; `undefined` fails the Execution.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type GetWallet = <N extends Namespace>(
+  query: WalletQuery<N>,
+) => WalletByNamespace[N] | undefined
 
 /**
  * Receives the execution events; a mitt emitter fits as it is.

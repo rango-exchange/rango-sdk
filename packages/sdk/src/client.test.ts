@@ -83,7 +83,10 @@ describe('client', () => {
       execution?: Sdk.ExecutionConfig
     }>()
     expect(
-      new RangoClient({ apiKey: 'test-key', execution: {} }),
+      new RangoClient({
+        apiKey: 'test-key',
+        execution: { getWallet: () => undefined },
+      }),
     ).toBeInstanceOf(RangoClient)
     // @ts-expect-error the execution settings are under execution: the config has no top-level getWallet
     void new RangoClient({ apiKey: 'test-key', getWallet: () => undefined })

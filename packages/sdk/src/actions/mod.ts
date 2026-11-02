@@ -9,9 +9,12 @@ export {
   startOrUnblockExecution,
 } from './execute/mod.js'
 export type {
+  Bip122Wallet,
   BlockReason,
   Emitter,
   ExecutionEngine,
+  EvmChainDescription,
+  EvmWallet,
   ExecutionConfig,
   ExecutionEvents,
   ExecutionFailure,
@@ -19,9 +22,21 @@ export type {
   ExecutionOptions,
   ExecutionRecord,
   ExecutionTransaction,
+  GetWallet,
   HistoryItem,
+  Namespace,
   RouteEvent,
+  SignAndSendResult,
+  SolanaWallet,
+  StarknetWallet,
+  StellarWallet,
   StepEvent,
+  SuiWallet,
+  TonWallet,
+  TronWallet,
+  WalletByNamespace,
+  WalletQuery,
+  XrplWallet,
 } from './execute/mod.js'
 export { getAllExecutions, getExecution } from './history/mod.js'
 export { fetchQuote } from './quote/mod.js'

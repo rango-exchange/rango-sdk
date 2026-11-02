@@ -20,7 +20,7 @@ export async function createExecutionEngine(
 ): Promise<ExecutionEngine> {
   // A dynamic import, so apps that never execute don't bundle core.
   const { Manager } = await import('@rango-dev/queue-manager-core')
-  const { emitter, pauseOnStart } = config
+  const { getWallet, emitter, pauseOnStart } = config
   const { promise: firstLoadDone, resolve: resolveFirstLoad } =
     Promise.withResolvers<void>()
   // Core runs a queue's next task even while paused, so every task checks this first.
@@ -88,6 +88,7 @@ export async function createExecutionEngine(
 
   const context: SdkContext = {
     httpClient,
+    getWallet,
     loadBlockchainsMeta: async () => loadBlockchains(httpClient, cache),
     emit,
     signResponsesAwaitingWait: new Map(),

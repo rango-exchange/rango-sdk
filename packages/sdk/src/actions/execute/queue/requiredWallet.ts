@@ -1,6 +1,11 @@
-import type { RequiredWallet } from './types.js'
+import type { RequiredWallet, SdkActions } from './types.js'
 import type { SelectedWallet } from '../../quote/mod.js'
-import type { ExecutionRecord, ExecutionTransaction } from '../mod.js'
+import type {
+  ExecutionRecord,
+  ExecutionTransaction,
+  Namespace,
+  WalletByNamespace,
+} from '../mod.js'
 import type { Transaction } from 'rango-sdk'
 import type { TransactionPrerequisite } from 'rango-types'
 
@@ -24,6 +29,29 @@ export function getRequiredWallet(
     blockchain: selectedWalletKey,
     address: storage.data.selectedWallets[selectedWalletKey].address,
   }
+}
+
+export function readWallet<N extends Namespace>(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
+  namespace: N,
+): WalletByNamespace[N] {
+  const storage = actions.getStorage()
+  const { transactionId } = actions.getCurrentTask().payload
+  const entry = storage.transactions[transactionId].data.value
+  const { blockchain } = getRequiredWallet(storage, entry)
+  const selectedWallet = storage.data.selectedWallets[blockchain]
+  const wallet = actions.context.getWallet({
+    namespace,
+    blockchain,
+    walletId: selectedWallet.walletId,
+  })
+  if (wallet === undefined) {
+    // A plain Error: a Host bug, so the Execution fails unreported.
+    throw new Error(
+      `Unexpected Error: getWallet answered no ${namespace} wallet for ${blockchain}.`,
+    )
+  }
+  return wallet
 }
 
 export function getCurrentStepWalletIdForReport(
