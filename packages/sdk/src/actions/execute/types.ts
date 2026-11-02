@@ -248,6 +248,8 @@ export interface EvmWallet {
   getTransactionInfo(req: {
     hash: string
   }): Promise<'pending' | 'success' | 'failed'>
+  /** Sign ethers' `{ domain, types, value }` on `chainId`, resolving the `0x` signature; called only for Hyperliquid. */
+  signTypedData?(req: { typedData: unknown; chainId: string }): Promise<string>
 }
 
 /**
@@ -402,7 +404,7 @@ export interface SuiWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export type WalletByNamespace = {
-  /** EVM transactions and approves. */
+  /** EVM transactions, approves and Hyperliquid actions. */
   evm: EvmWallet
   /** TRON transactions and approves. */
   tron: TronWallet
@@ -430,7 +432,7 @@ export type WalletByNamespace = {
 export type Namespace = keyof WalletByNamespace
 
 /**
- * What `getWallet` is asked: the namespace, the blockchain and its selected Wallet ID.
+ * What `getWallet` is asked: the namespace, the blockchain (`HYPERLIQUID` for Hyperliquid) and its selected Wallet ID.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */

@@ -68,3 +68,7 @@ export const SUPPORTED_HYPERLIQUID_ACTION_TYPES: ReadonlySet<string> = new Set([
   'withdraw3',
   'usdSend',
 ])
+
+export const HYPERLIQUID_EXCHANGE_URL = 'https://api.hyperliquid.xyz/exchange'
+
+export const HYPERLIQUID_EXPLORER_URL = 'https://rpc.hyperliquid.xyz/explorer'

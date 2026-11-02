@@ -1,8 +1,12 @@
 import type { SdkActions, TaskResult } from './types.js'
 
+import { TransactionType } from 'rango-types'
+
 import { ErrorToReport } from './executionFailure.js'
+import { waitForHyperliquidHashAndStoreIt } from './hyperliquid.js'
 import { gateSignAndProveMainTransaction } from './mainTransaction.js'
 import { gateSignAndProvePrerequisite } from './prerequisite.js'
+import { getRequiredWallet } from './requiredWallet.js'
 import { waitForHashThenPollStepStatus } from './transactionStatusPolling.js'
 
 export async function executeTransaction(
@@ -26,6 +30,21 @@ export async function executeTransaction(
   const mainTx = entry.data.value
   // No gate on a resume.
   const { walletResult: storedWalletResult } = entry.execution.result
+  const isPostedHyperliquidWithoutHash =
+    entry.execution.status === 'signed' &&
+    mainTx.type === TransactionType.HYPERLIQUID &&
+    storedWalletResult === null
+  if (isPostedHyperliquidWithoutHash) {
+    const hyperliquidHash = await waitForHyperliquidHashAndStoreIt(
+      actions,
+      transactionId,
+      getRequiredWallet(storage, mainTx),
+      mainTx.nonce,
+    )
+    return hyperliquidHash === null
+      ? []
+      : waitForHashThenPollStepStatus(actions, hyperliquidHash)
+  }
   const isSignedWithHash =
     entry.execution.status === 'signed' && storedWalletResult !== null
   if (isSignedWithHash) {

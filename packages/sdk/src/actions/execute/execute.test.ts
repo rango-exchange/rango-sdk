@@ -72,6 +72,7 @@ function minimalWallet() {
     getAllowance: vi.fn(async () => null),
     buildTransaction: vi.fn(async () => evmApproveTx()),
     getTransactionInfo: vi.fn(async (): Promise<EvmInfo> => 'pending'),
+    signTypedData: vi.fn(async () => '0xsignature'),
   } satisfies EvmNamespace
 }
 
@@ -420,7 +421,7 @@ describe('the execution keys', () => {
     expectTypeOf(getWallet).toEqualTypeOf<Sdk.GetWallet>()
   })
 
-  test('types WalletByNamespace as nine namespaces, evm and bip122 each one wallet, each with only the methods the SDK calls for it, no request carrying the blockchain, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
+  test('types WalletByNamespace as nine namespaces, evm and bip122 each one wallet, the Hyperliquid wallet an evm one, each with only the methods the SDK calls for it, no request carrying the blockchain, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
     type TxOf<T extends TransactionType> = Extract<Transaction, { type: T }>
     type PrerequisiteOf<T extends TransactionPrerequisite['type']> = Extract<
       TransactionPrerequisite,
@@ -471,7 +472,13 @@ describe('the execution keys', () => {
       getTransactionInfo(req: {
         hash: string
       }): Promise<'pending' | 'success' | 'failed'>
+      signTypedData?(req: {
+        typedData: unknown
+        chainId: string
+      }): Promise<string>
     }>()
+    // @ts-expect-error HyperliquidWallet is not exported: an evm wallet signs Hyperliquid actions
+    expectTypeOf<Sdk.HyperliquidWallet>().not.toBeNever()
     expectTypeOf<Sdk.TronWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
       signAndSend(req: {
@@ -548,8 +555,9 @@ describe('the execution keys', () => {
         tx: TxOf<TransactionType.SUI>
       }): Promise<Sdk.SignAndSendResult>
     }>()
-    // Only wait is optional: switchChain is required on evm.
+    // wait and signTypedData are optional: switchChain is required on evm.
     expectTypeOf<undefined>().toExtend<Sdk.EvmWallet['wait']>()
+    expectTypeOf<undefined>().toExtend<Sdk.EvmWallet['signTypedData']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['switchChain']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['signAndSend']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['getAllowance']>()
