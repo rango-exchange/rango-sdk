@@ -100,7 +100,7 @@ export function generateResult(
   })
 }
 
-// A clone, so a later change to the returned result doesn't reach the cached one.
+// A clone, so a later change to the returned result doesn't reach what `execute()` reads.
 export function keepAndReturnResult(cache: Cache<CacheSchema>) {
   return (result: ConfirmResult): ConfirmResult => {
     cache.set(

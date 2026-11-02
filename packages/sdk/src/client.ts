@@ -1,6 +1,8 @@
 import type {
   ConfirmOptions,
   ConfirmResult,
+  ExecutionEngine,
+  ExecutionOptions,
   QuoteRequest,
   QuoteResult,
   QuotesOptions,
@@ -8,8 +10,6 @@ import type {
   SelectedWallets,
 } from './actions/mod.js'
 import type { RangoClientConfig, ResolvedConfig } from './configs.js'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- for `{@link SdkError}` in the TSDoc
-import type { SdkError } from './errors/mod.js'
 import type {
   CacheSchema,
   ClientState,
@@ -21,9 +21,16 @@ import type { Asset } from 'rango-sdk'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
-import { confirmQuote, fetchQuote, fetchQuotes } from './actions/mod.js'
+import {
+  confirmQuote,
+  createExecutionEngine,
+  fetchQuote,
+  fetchQuotes,
+  startOrUnblockExecution,
+} from './actions/mod.js'
 import { Cache } from './cache/mod.js'
 import { resolveConfig } from './configs.js'
+import { throwSdkError } from './errors/mod.js'
 
 export class RangoClient {
   /**
@@ -36,9 +43,15 @@ export class RangoClient {
   readonly #config: ResolvedConfig
   readonly #httpClient: LegacyClient
   readonly #cache: Cache<CacheSchema>
+  /*
+   * The execution engine's build, started by the first execution call. A failed build is not kept: the next execution
+   * call builds again.
+   */
+  #executionEnginePromise: Promise<ExecutionEngine> | undefined
 
   /**
-   * @param config - Your `apiKey`, and a `baseUrl` that defaults to `https://api.rango.exchange`.
+   * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the `execution`
+   * config: the optional `pauseOnStart` that `execute()` runs with.
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#usage
    */
   constructor(config: RangoClientConfig) {
@@ -112,7 +125,7 @@ export class RangoClient {
    * Turns the cached Quote with this request ID into a Route for the user's wallets.
    *
    * A set `req.destination` is checked as in `quote()`. A copy of the result is kept in the cache's
-   * `confirmed` slot, for the last 10 confirms; confirming the same Quote again replaces it.
+   * `confirmed` slot for `execute()`, for the last 10 confirms; confirming the same Quote again replaces it.
    *
    * @param requestId - The `requestId` of a Quote cached by `quotes()`.
    * @returns `data`: a Route, and the `warnings` that apply.
@@ -136,7 +149,53 @@ export class RangoClient {
     return confirmQuote(this.#state(), requestId, selectedWallets, options)
   }
 
+  /**
+   * Runs a confirmed Route to its end, or unblocks its stored Execution.
+   *
+   * @param requestId - The `requestId` of a Route that `confirm()` returned, or of a stored Execution.
+   * @returns Once the Execution is stored and its first task has started.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await client.execute(route.requestId, {
+   *   transactionOptions: {
+   *     slippage: '1',
+   *     validations: { balance: true, fee: true },
+   *   },
+   *   walletTypes: { ETH: { walletType: 'metamask' } },
+   * })
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#execute
+   */
+  async execute(requestId: string, options?: ExecutionOptions): Promise<void> {
+    return startOrUnblockExecution(this.#state(), requestId, options)
+  }
+
   #state(): ClientState {
-    return { httpClient: this.#httpClient, cache: this.#cache }
+    return {
+      httpClient: this.#httpClient,
+      cache: this.#cache,
+      executionEngine: this.#executionEngine.bind(this),
+    }
+  }
+
+  /*
+   * Built by the first execution call, with core loaded only then, and shared by the calls made while it is in
+   * flight. A failed build is not kept: the calls waiting on it get its error, and the next execution call builds
+   * again.
+   */
+  async #executionEngine(): Promise<ExecutionEngine> {
+    if (this.#executionEnginePromise) {
+      return this.#executionEnginePromise
+    }
+    this.#executionEnginePromise = createExecutionEngine(
+      this.#config.execution,
+      this.#httpClient,
+      this.#cache,
+    ).catch((cause: unknown) => throwSdkError(cause))
+    this.#executionEnginePromise.catch(() => {
+      this.#executionEnginePromise = undefined
+    })
+    return this.#executionEnginePromise
   }
 }
