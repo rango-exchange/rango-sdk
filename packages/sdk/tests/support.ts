@@ -243,7 +243,7 @@ export async function expectSdkError(promise: Promise<unknown>) {
   return error
 }
 
-// The execution harness: an EVM chain, scripted transactions and status answers, a recording port.
+// The execution harness: an EVM chain, scripted transactions and status answers, a recording port and emitter.
 
 export function evmChain(name: string, chainId: string): Sdk.BlockchainMeta {
   return {
@@ -453,6 +453,39 @@ export function portRejections(
   ]
 }
 
+// A recorded event that carries a `HistoryItem`: every one but `loaded`.
+export type RecordedEvent =
+  | ['routeEvent', Sdk.ExecutionEvents['routeEvent']]
+  | ['stepEvent', Sdk.ExecutionEvents['stepEvent']]
+  | ['changed', Sdk.ExecutionEvents['changed']]
+
+/*
+ * An emitter that records every event, copied when emitted, so each keeps the `HistoryItem` it was sent with.
+ * `events` holds the events with a `HistoryItem`; `all` holds every event in order, `loaded` included.
+ */
+export function recordingEmitter() {
+  const events: RecordedEvent[] = []
+  const all: (RecordedEvent | ['loaded', undefined])[] = []
+  const record = (event: RecordedEvent): void => {
+    events.push(event)
+    all.push(event)
+  }
+  const sinks: {
+    [K in keyof Sdk.ExecutionEvents]: (event: Sdk.ExecutionEvents[K]) => void
+  } = {
+    routeEvent: (event) => record(['routeEvent', event]),
+    stepEvent: (event) => record(['stepEvent', event]),
+    changed: (event) => record(['changed', event]),
+    loaded: (event) => all.push(['loaded', event]),
+  }
+  const emitter: Sdk.Emitter<Sdk.ExecutionEvents> = {
+    emit(type, event) {
+      sinks[type](structuredClone(event))
+    },
+  }
+  return { emitter, events, all }
+}
+
 const SETTLE_ROUNDS = 50
 
 // Lets IndexedDB and the queue run every pending step, without moving the fake clock.
@@ -518,7 +551,7 @@ export function reloadOn(on: IDBFactory): void {
 }
 
 /*
- * The client built again after a reload, with a recording port, its execution engine built by reading
+ * The client built again after a reload, with a recording port and emitter, its execution engine built by reading
  * `history`, so every `RUNNING` Execution resumes; then every pending step runs.
  */
 export async function resumeExecutions(
@@ -749,16 +782,21 @@ export function confirmResponse(
 
 // The execution client's options: the only place most tests name the keys of the client config's `execution`.
 export type ExecutionClientOptions = {
+  // The emitter in place of the recording one, or `null` to build with no emitter.
+  emitter?: Sdk.Emitter<Sdk.ExecutionEvents> | null
   pauseOnStart?: boolean
 }
 
 type ExecutionClient<P extends NamespacePort> = {
   client: Sdk.RangoClient
+  events: RecordedEvent[]
+  all: (RecordedEvent | ['loaded', undefined])[]
 } & P
 
 /*
- * A client with these `options` (such as `pauseOnStart`) and a namespace port, by default a recording one, whose
- * blockchain list holds these blockchains. The port is returned as given, so its mocks keep their types.
+ * A client with a namespace port, by default a recording one, and a recording emitter unless `options` replaces it,
+ * with these `options` (such as `pauseOnStart`), whose blockchain list holds these blockchains. The port is returned as
+ * given, so its mocks keep their types; `events` and `all` stay empty when the emitter is replaced.
  */
 export async function createExecutionClient(
   port?: undefined,
@@ -773,12 +811,19 @@ export async function createExecutionClient<P extends NamespacePort>(
 export async function createExecutionClient(
   port: NamespacePort = recordingNamespaces(),
   chains: readonly Sdk.BlockchainMeta[] = evmBlockchains,
-  options: ExecutionClientOptions = {},
+  { emitter, ...options }: ExecutionClientOptions = {},
 ) {
   const { RangoClient } = await loadSdk()
   httpClient.getBlockchains.mockResolvedValue([...chains])
-  const client = new RangoClient({ apiKey: 'test-key', execution: options })
-  return { client, ...port }
+  const recording = recordingEmitter()
+  const client = new RangoClient({
+    apiKey: 'test-key',
+    execution: {
+      ...(emitter === null ? {} : { emitter: emitter ?? recording.emitter }),
+      ...options,
+    },
+  })
+  return { client, events: recording.events, all: recording.all, ...port }
 }
 
 // The stored Execution, as `history` answers it.
@@ -884,6 +929,31 @@ export async function confirmQuote(
   )
   await cacheQuote(client, { requestId, swaps })
   return client.confirm(requestId, SELECTED_WALLETS, options)
+}
+
+// A readable name for an event: its type, then the step event's type or `tx_execution` status.
+export function nameOf([type, event]:
+  | RecordedEvent
+  | ['loaded', undefined]): string {
+  if (type === 'changed' || type === 'loaded') {
+    return type
+  }
+  if (type === 'routeEvent') {
+    return `route:${event.event.type}`
+  }
+  return `step${event.step}:${'status' in event.event ? event.event.status : event.event.type}`
+}
+
+// What a failure Rango isn't told of still leaves, besides its stored failure: `failed` for `step` and the route.
+export function expectNotReported(events: RecordedEvent[], step = 1): void {
+  expect(events.map(nameOf)).toEqual(
+    expect.arrayContaining([`step${step}:failed`, 'route:failed']),
+  )
+  expect(httpClient.reportFailure).not.toHaveBeenCalled()
+}
+
+export function viewOf([type, event]: RecordedEvent): Sdk.HistoryItem {
+  return type === 'changed' ? event : event.view
 }
 
 export type HyperliquidTx = Extract<

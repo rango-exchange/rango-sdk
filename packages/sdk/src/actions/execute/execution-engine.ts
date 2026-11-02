@@ -1,4 +1,4 @@
-import type { SdkContext, StoredQueue } from './queue/mod.js'
+import type { Emit, SdkContext, StoredQueue } from './queue/mod.js'
 import type {
   BlockReason,
   ExecutionConfig,
@@ -20,7 +20,7 @@ export async function createExecutionEngine(
 ): Promise<ExecutionEngine> {
   // A dynamic import, so apps that never execute don't bundle core.
   const { Manager } = await import('@rango-dev/queue-manager-core')
-  const { pauseOnStart } = config ?? {}
+  const { emitter, pauseOnStart } = config ?? {}
   const { promise: firstLoadDone, resolve: resolveFirstLoad } =
     Promise.withResolvers<void>()
   // Core runs a queue's next task even while paused, so every task checks this first.
@@ -56,9 +56,40 @@ export async function createExecutionEngine(
     }
   }
 
+  // An emitter error isn't caught: inside a task it fails the task, and elsewhere it reaches the caller.
+  const emit: Emit = {
+    routeEvent(requestId, event) {
+      const historyItem = view(requestId)
+      if (historyItem !== undefined) {
+        emitter?.emit('routeEvent', { event, view: historyItem })
+      }
+    },
+    stepEvent(requestId, step, transactionId, event) {
+      const historyItem = view(requestId)
+      if (historyItem !== undefined) {
+        emitter?.emit('stepEvent', {
+          event,
+          step,
+          transactionId,
+          view: historyItem,
+        })
+      }
+    },
+    changed(requestId) {
+      const historyItem = view(requestId)
+      if (historyItem !== undefined) {
+        emitter?.emit('changed', historyItem)
+      }
+    },
+    loaded() {
+      emitter?.emit('loaded', undefined)
+    },
+  }
+
   const context: SdkContext = {
     httpClient,
     loadBlockchainsMeta: async () => loadBlockchains(httpClient, cache),
+    emit,
     signResponsesAwaitingWait: new Map(),
     isPaused: () => isClientPaused,
     view,
@@ -76,8 +107,16 @@ export async function createExecutionEngine(
     isPaused: isClientPaused,
     context: managerContext,
     events: {
+      onStorageUpdate: (requestId) => {
+        emit.changed(requestId)
+      },
+      onUpdateQueue: (requestId) => {
+        emit.changed(requestId)
+      },
+      // After each load, also a paused tab's, in place of a `changed` per ID: the host reads `history` again.
       onPersistedDataLoaded: () => {
         resolveFirstLoad()
+        emit.loaded()
       },
     },
   })

@@ -3,6 +3,8 @@ import type { ExecutionRecord } from '../mod.js'
 import type { QueueDef } from '@rango-dev/queue-manager-core'
 
 import { QUEUE_NAME } from './constants.js'
+import { fetchTransaction } from './fetch-transaction.js'
+import { runTask } from './run-task.js'
 
 export const queueDefinition: QueueDef<
   ExecutionRecord,
@@ -12,7 +14,8 @@ export const queueDefinition: QueueDef<
 > = {
   name: QUEUE_NAME,
   actions: {
-    SDK_FETCH_TRANSACTION: async () => {},
+    SDK_FETCH_TRANSACTION: async (actions) =>
+      runTask(actions, fetchTransaction),
     SDK_EXECUTE_TRANSACTION: async () => {},
     SDK_STEP_FINISHED: async () => {},
   },

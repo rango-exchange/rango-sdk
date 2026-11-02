@@ -4,7 +4,9 @@ export type {
   ConfirmOptions,
   ConfirmReq,
   ConfirmResult,
+  Emitter,
   ExecutionConfig,
+  ExecutionEvents,
   ExecutionFailure,
   ExecutionHistory,
   ExecutionOptions,
@@ -20,8 +22,10 @@ export type {
   QuotesReq,
   QuotesResult,
   Route,
+  RouteEvent,
   RouteResponse,
   SelectedWallets,
+  StepEvent,
 } from './actions/mod.js'
 export type { RangoClientConfig } from './configs.js'
 export { SdkError } from './errors/mod.js'

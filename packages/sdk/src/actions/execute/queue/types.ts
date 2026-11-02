@@ -4,6 +4,8 @@ import type {
   ExecutionRecord,
   ExecutionTransaction,
   HistoryItem,
+  RouteEvent,
+  StepEvent,
 } from '../mod.js'
 import type {
   ExecuterActions,
@@ -14,6 +16,19 @@ import type {
 import type { BlockchainMeta, Transaction } from 'rango-sdk'
 import type { TransactionType } from 'rango-types'
 
+// `changed` and `loaded` are the execution engine's; no task calls them.
+export type Emit = {
+  routeEvent(requestId: string, event: RouteEvent): void
+  stepEvent(
+    requestId: string,
+    step: number,
+    transactionId: string | null,
+    event: StepEvent,
+  ): void
+  changed(requestId: string): void
+  loaded(): void
+}
+
 export type CheckResult = NonNullable<
   ExecutionTransaction['execution']['result']['checkResult']
 >
@@ -22,11 +37,12 @@ export type SdkContext = {
   httpClient: LegacyClient
   // From the client's Cache, or with an HTTP call on a miss.
   loadBlockchainsMeta: () => Promise<readonly BlockchainMeta[]>
+  emit: Emit
   // Each signed `EVM` main entry's `sign` response until its `wait` takes it, keyed `requestId/transactionId`; a reload loses it.
   signResponsesAwaitingWait: Map<string, unknown>
   // `true` while this client is paused by `pauseOnStart: true` or `pause()`.
   isPaused: () => boolean
-  // The one `HistoryItem` builder, for `history`.
+  // The one `HistoryItem` builder, for the events and `history`.
   view: (requestId: string) => HistoryItem | undefined
   // Read without building a `HistoryItem`.
   getQueueStatus: (
