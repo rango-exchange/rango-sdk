@@ -69,7 +69,7 @@ export class RangoClient {
 
   /**
    * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the `execution`
-   * config: the optional `pauseOnStart` that `execute()` runs with.
+   * config: the optional `emitter` and `pauseOnStart` that `execute()` runs with.
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#usage
    */
   constructor(config: RangoClientConfig) {

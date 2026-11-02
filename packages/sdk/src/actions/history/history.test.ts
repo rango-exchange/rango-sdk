@@ -1,6 +1,6 @@
 /*
  * `HistoryItem`: `_queue` holds the queue's state and `_storage` a copy of the record, so changing an item from
- * `history` leaves the stored Execution and the swap as they are.
+ * `history` or an event leaves the stored Execution and the swap as they are.
  */
 import 'fake-indexeddb/auto'
 
