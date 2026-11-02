@@ -1299,7 +1299,7 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
  * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron` and `stellar`, as no build
  * is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
- * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet`.
+ * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet` until `withHyperliquid` puts it in `evm`'s map.
  * `evmOn` and `bip122On` build another such wallet on a blockchain, sharing the requests and the hashes, for a map.
  */
 export function recordingNamespaces(
@@ -1484,6 +1484,25 @@ export function recordingNamespaces(
 }
 
 type RecordingNamespaces = ReturnType<typeof recordingNamespaces>['wallet']
+
+/*
+ * `port` with `evm` as a map: its own wallet as `default`, and its `hyperliquid` wallet on `HYPERLIQUID`, so a
+ * Hyperliquid action is served by the second. Applied last, as the other decorators take a one-wallet `evm`.
+ */
+export function withHyperliquid<
+  Port extends {
+    wallet: RecordingNamespaces
+    hyperliquid: RecordingNamespaces['evm']
+  },
+>(port: Port) {
+  return {
+    ...port,
+    wallet: {
+      ...port.wallet,
+      evm: { default: port.wallet.evm, HYPERLIQUID: port.hyperliquid },
+    },
+  }
+}
 
 /*
  * `port` with `evm` as a map: its own wallet on `ETH`, and another from `evmOn` on `BSC`, for a Route that crosses

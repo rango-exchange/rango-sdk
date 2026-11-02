@@ -1,6 +1,7 @@
 import type {
   EvmTransaction,
   GatedMainTransaction,
+  HyperliquidTransaction,
   SdkActions,
   TaskResult,
   TransferTransaction,
@@ -14,6 +15,7 @@ import {
   buildEvmChainDescription,
   loadBlockchainMetaOf,
 } from './blockchainMeta.js'
+import { signPostAndLookUpHyperliquidHash } from './hyperliquid.js'
 import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
 import { buildMainTransactionSigner } from './sign.js'
 import { waitForHashThenPollStepStatus } from './transactionStatusPolling.js'
@@ -34,9 +36,11 @@ export async function gateSignAndProveMainTransaction(
   let gated: GatedMainTransaction
   switch (mainTx.type) {
     case TransactionType.HYPERLIQUID:
-      throw new Error(
-        'Unexpected Error: Hyperliquid transactions are not supported yet.',
+      gated = await gateAndBuildHyperliquidMainTransactionSigner(
+        actions,
+        mainTx,
       )
+      break
     case TransactionType.EVM:
       gated = await gateAndBuildEvmMainTransactionSigner(actions, mainTx)
       break
@@ -121,6 +125,43 @@ export async function gateSignAndProveMainTransaction(
   }
 
   return waitForHashThenPollStepStatus(actions, signedMainTx.walletResult.hash)
+}
+
+async function gateAndBuildHyperliquidMainTransactionSigner(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
+  mainTx: HyperliquidTransaction,
+): Promise<GatedMainTransaction> {
+  const { transactionId } = actions.payload
+  const requiredWallet = getRequiredWallet(actions.getStorage(), mainTx)
+  const hyperliquid = getWalletOnBlockchain(
+    actions.context.wallet?.evm,
+    requiredWallet.blockchain,
+  )
+  if (hyperliquid === undefined) {
+    return {
+      blockReason: { reason: 'NOT_CONNECTED', metadata: requiredWallet },
+    }
+  }
+  const blockReason =
+    getAccountBlockReason(
+      requiredWallet,
+      await hyperliquid.getAccount().catch(() => null),
+    ) ??
+    (await switchToRequiredChainOrGetBlockReason(
+      actions,
+      transactionId,
+      requiredWallet,
+      mainTx.action.signatureChainId,
+      async () => hyperliquid.getChainId(),
+      async (chainId) => hyperliquid.switchChain({ chainId }),
+    ))
+  return blockReason === null
+    ? {
+        blockReason,
+        signMainTransaction: async () =>
+          signPostAndLookUpHyperliquidHash(actions, hyperliquid, mainTx),
+      }
+    : { blockReason }
 }
 
 async function gateAndBuildEvmMainTransactionSigner(

@@ -252,6 +252,8 @@ export interface EvmWallet {
   getTransactionInfo(req: {
     hash: string
   }): Promise<'pending' | 'success' | 'failed'>
+  /** Sign ethers' `{ domain, types, value }` on `chainId`, resolving the `0x` signature; called only for Hyperliquid. */
+  signTypedData?(req: { typedData: unknown; chainId: string }): Promise<string>
 }
 
 /**
@@ -390,7 +392,7 @@ export interface SuiWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export type WalletPort = {
-  /** EVM transactions and approves: one wallet, or a wallet per blockchain with an optional `default`. */
+  /** EVM transactions, approves and Hyperliquid actions: one wallet, or a wallet per blockchain with an optional `default`. */
   evm?:
     | EvmWallet
     | {
