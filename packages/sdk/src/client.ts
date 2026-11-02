@@ -10,7 +10,13 @@ import type {
 import type { RangoClientConfig, ResolvedConfig } from './configs.js'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- for `{@link SdkError}` in the TSDoc
 import type { SdkError } from './errors/mod.js'
-import type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
+import type {
+  CacheSchema,
+  ClientState,
+  LegacyClient,
+  ReadonlyCache,
+  RequestOptions,
+} from './types.js'
 import type { Asset } from 'rango-sdk'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
@@ -28,7 +34,7 @@ export class RangoClient {
   readonly cache: ReadonlyCache
 
   readonly #config: ResolvedConfig
-  readonly #httpClient: LegacyRangoClient
+  readonly #httpClient: LegacyClient
   readonly #cache: Cache<CacheSchema>
 
   /**
@@ -68,7 +74,7 @@ export class RangoClient {
     request: QuoteRequest,
     opts?: RequestOptions,
   ): Promise<QuoteResult> {
-    return fetchQuote(this.#httpClient, this.#cache, request, opts)
+    return fetchQuote(this.#state(), request, opts)
   }
 
   /**
@@ -99,13 +105,14 @@ export class RangoClient {
     amount: string,
     options?: QuotesOptions,
   ): Promise<QuotesResult> {
-    return fetchQuotes(this.#httpClient, this.#cache, from, to, amount, options)
+    return fetchQuotes(this.#state(), from, to, amount, options)
   }
 
   /**
    * Turns the cached Quote with this request ID into a Route for the user's wallets.
    *
-   * A set `req.destination` is checked as in `quote()`.
+   * A set `req.destination` is checked as in `quote()`. A copy of the result is kept in the cache's
+   * `confirmed` slot, for the last 10 confirms; confirming the same Quote again replaces it.
    *
    * @param requestId - The `requestId` of a Quote cached by `quotes()`.
    * @returns `data`: a Route, and the `warnings` that apply.
@@ -126,12 +133,10 @@ export class RangoClient {
     selectedWallets: SelectedWallets,
     options?: ConfirmOptions,
   ): Promise<ConfirmResult> {
-    return confirmQuote(
-      this.#httpClient,
-      this.#cache,
-      requestId,
-      selectedWallets,
-      options,
-    )
+    return confirmQuote(this.#state(), requestId, selectedWallets, options)
+  }
+
+  #state(): ClientState {
+    return { httpClient: this.#httpClient, cache: this.#cache }
   }
 }

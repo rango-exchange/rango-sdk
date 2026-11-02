@@ -9,6 +9,7 @@ import type { CacheSchema } from '../../types.js'
 import type { Quote } from '../quotes/mod.js'
 import type { ConfirmRouteRequest, ConfirmRouteResponse } from 'rango-sdk'
 
+import { withNewest } from '../../cache/mod.js'
 import { NO_RESULT_MESSAGE, SdkError } from '../../errors/mod.js'
 import {
   checkErrors as checkRouteErrors,
@@ -16,6 +17,7 @@ import {
   generateResult as generateRouteResult,
 } from '../quote/mod.js'
 
+import { MAX_CACHED_CONFIRMED } from './constants.js'
 import { getOutputChangeWarnings } from './warnings.js'
 
 export function getCachedQuote(
@@ -96,4 +98,20 @@ export function generateResult(
     )({ response: route, warnings }),
     _response: response,
   })
+}
+
+// A clone, so a later change to the returned result doesn't reach the cached one.
+export function keepAndReturnResult(cache: Cache<CacheSchema>) {
+  return (result: ConfirmResult): ConfirmResult => {
+    cache.set(
+      'confirmed',
+      withNewest(
+        cache.get('confirmed'),
+        result.data.requestId,
+        structuredClone(result),
+        MAX_CACHED_CONFIRMED,
+      ),
+    )
+    return result
+  }
 }

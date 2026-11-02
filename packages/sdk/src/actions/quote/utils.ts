@@ -1,12 +1,11 @@
 import type { ErrorFields, Route, RouteResponse } from './types.js'
 import type { Cache } from '../../cache/mod.js'
 import type { BridgeLimitMetadata } from '../../errors/mod.js'
-import type { CacheSchema } from '../../types.js'
+import type { CacheSchema, LegacyClient } from '../../types.js'
 import type {
   Asset,
   BestRouteResponse,
   BlockchainMeta,
-  RangoClient as LegacyRangoClient,
   SimulationResult,
   SwapResult,
 } from 'rango-sdk'
@@ -64,8 +63,28 @@ export function validateSwapRequest(request: {
   }
 }
 
+/**
+ * Loads the blockchain list through the client's cache: a hit makes no request, a miss fetches it with `getBlockchains` and stores it.
+ * A failed load throws through `throwRequestError` and stores nothing, so the next call tries again.
+ */
+export async function loadBlockchains(
+  httpClient: LegacyClient,
+  cache: Cache<CacheSchema>,
+  signal?: AbortSignal,
+): Promise<readonly BlockchainMeta[]> {
+  const cached = cache.get('blockchains')
+  if (cached !== undefined) {
+    return cached
+  }
+  const blockchains = await httpClient
+    .getBlockchains({ signal })
+    .catch((cause: unknown) => throwRequestError(cause, signal))
+  cache.set('blockchains', blockchains)
+  return blockchains
+}
+
 export async function getBlockchainsAndValidateDestination(
-  httpClient: LegacyRangoClient,
+  httpClient: LegacyClient,
   cache: Cache<CacheSchema>,
   destination: string | undefined,
   blockchain: string,
@@ -74,13 +93,7 @@ export async function getBlockchainsAndValidateDestination(
   if (destination === undefined || destination === '') {
     return
   }
-  let blockchains = cache.get('blockchains')
-  if (blockchains === undefined) {
-    blockchains = await httpClient
-      .getBlockchains({ signal })
-      .catch((cause: unknown) => throwRequestError(cause, signal))
-    cache.set('blockchains', blockchains)
-  }
+  const blockchains = await loadBlockchains(httpClient, cache, signal)
   validateDestination(destination, blockchain, blockchains)
 }
 

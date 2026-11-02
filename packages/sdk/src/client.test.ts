@@ -1,29 +1,17 @@
 import type * as Sdk from './mod.js'
-import type * as LegacySdk from 'rango-sdk'
 
-import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
+import { beforeEach, describe, expect, expectTypeOf, test } from 'vitest'
 
-const legacy = vi.hoisted(() => ({ getAllRoutes: vi.fn() }))
-
-vi.mock('rango-sdk', async (importOriginal) => ({
-  ...(await importOriginal<typeof LegacySdk>()),
-  RangoClient: class {
-    readonly #args: unknown[]
-    constructor(...args: unknown[]) {
-      this.#args = args
-    }
-    getAllRoutes = async (...callArgs: unknown[]) =>
-      legacy.getAllRoutes(this.#args, ...callArgs)
-  },
-}))
-
-async function loadSdk(): Promise<typeof Sdk> {
-  return import('./mod.js')
-}
+import {
+  clientArgsOf,
+  httpClient,
+  loadSdk,
+  resetHttpClient,
+} from '../tests/support.js'
 
 describe('client', () => {
   beforeEach(() => {
-    legacy.getAllRoutes.mockReset()
+    resetHttpClient()
   })
 
   test('RangoClient is the only way to get a client', async () => {
@@ -40,7 +28,7 @@ describe('client', () => {
 
   test('two clients with different API keys each use their own config', async () => {
     const { RangoClient } = await loadSdk()
-    legacy.getAllRoutes.mockResolvedValue({ results: [] })
+    httpClient.getAllRoutes.mockResolvedValue({ results: [] })
     const args: [Sdk.Asset, Sdk.Asset, string] = [
       { blockchain: 'ETH', symbol: 'ETH', address: null },
       { blockchain: 'BSC', symbol: 'BNB', address: null },
@@ -54,11 +42,13 @@ describe('client', () => {
       apiKey: 'second-key',
       baseUrl: 'https://example.test',
     })
-    await first.quotes(...args).catch(() => undefined)
-    await second.quotes(...args).catch(() => undefined)
-    await first.quotes(...args).catch(() => undefined)
+    // No results, so each call throws NO_RESULT after reaching the server.
+    const noResult = { type: 'NO_RESULT' }
+    await expect(first.quotes(...args)).rejects.toMatchObject(noResult)
+    await expect(second.quotes(...args)).rejects.toMatchObject(noResult)
+    await expect(first.quotes(...args)).rejects.toMatchObject(noResult)
 
-    expect(legacy.getAllRoutes.mock.calls.map(([args]) => args)).toEqual([
+    expect(clientArgsOf(httpClient.getAllRoutes)).toEqual([
       ['first-key', 'https://api.rango.exchange'],
       ['second-key', 'https://example.test'],
       ['first-key', 'https://api.rango.exchange'],
