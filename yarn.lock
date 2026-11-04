@@ -758,6 +758,16 @@
   dependencies:
     caip "^1.1.1"
 
+"@hub3js/stellar@^0.6":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@hub3js/stellar/-/stellar-0.6.0.tgz#7b9253f22579f2d5a5b5e5a7cbf7378bcaf1812e"
+  integrity sha512-npYbVqKAiA8nXLeA/ppj2UWrD4Knf51uKFjSZwZbmbjhrU2XSsLEkmLjs8lu7Zr90M01lw1lRQZlL5leAYBfgg==
+  dependencies:
+    "@hub3js/std" "^0.6.0"
+    "@stellar/stellar-sdk" "^15.0.1"
+    caip "^1.1.1"
+    rango-types "^0.6.0"
+
 "@hub3js/sui@^0.6":
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/@hub3js/sui/-/sui-0.6.0.tgz#a15f1d4b1e54e72adb8e7adb68ea90e78cd7e667"
@@ -1250,7 +1260,7 @@
     buffer "^6.0.3"
     sha.js "^2.4.12"
 
-"@stellar/stellar-sdk@^15.1.0":
+"@stellar/stellar-sdk@^15.0.1", "@stellar/stellar-sdk@^15.1.0":
   version "15.1.0"
   resolved "https://registry.yarnpkg.com/@stellar/stellar-sdk/-/stellar-sdk-15.1.0.tgz#cff0345963addcfcaff2bac8c3e4c4f3a2f5ab63"
   integrity sha512-GsJUcWx2yboVzYdhTe/LHS3V1wVLSHkUkglC5bBoYWGJt31vzIhbSGno60NP9CdCTNkLJdnrsLJ63oA58Zvh5A==
