@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/mod.d.ts",
       "default": "./dist/mod.js"
+    },
+    "./adapters/hub3/evm": {
+      "types": "./dist/adapters/hub3/evm.d.ts",
+      "default": "./dist/adapters/hub3/evm.js"
     }
   },
   "files": [
@@ -35,9 +39,10 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build",
+    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
+    "test:build": "yarn build && vitest run --config vitest.build.config.ts",
     "lint": "eslint src --fix",
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
   },
@@ -47,7 +52,21 @@
     "rango-sdk": "^0.6.0",
     "rango-types": "^0.6.0"
   },
+  "peerDependencies": {
+    "@hub3js/core": "^0.64.0",
+    "@hub3js/evm": "^0.8"
+  },
+  "peerDependenciesMeta": {
+    "@hub3js/core": {
+      "optional": true
+    },
+    "@hub3js/evm": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@hub3js/core": "^0.64.0",
+    "@hub3js/evm": "^0.8",
     "fake-indexeddb": "^6.2.6",
     "vitest": "^4.1.5"
   },

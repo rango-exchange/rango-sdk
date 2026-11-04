@@ -201,6 +201,40 @@ No request carries the address: sign with the wallet's active account. Only `evm
 - `buildTransaction`: on `evm` and `tron`, build the approve; on `xrpl` and `stellar`, build the trustline with the `limit` given. Build it as plain data, without prompting.
 - `getTransactionInfo`: on `evm`, answer `'pending'`, `'success'` or `'failed'` from the receipt; on `tron` and `xrpl`, answer what the chain says, as it is.
 
+### Hub3 adapters
+
+If your wallets run on hub3 (`@hub3js/*`), build each [Wallet port](#wallet-port) entry from a hub3 provider instead of writing it. There is one adapter per **Namespace**, each on its own subpath, `@rango-dev/sdk/adapters/hub3/<namespace>`, and each takes the provider `hub.get(providerId)` answers: `hub3EvmAdapter(hub.get(providerId))` is the `evm` entry for that wallet. `hub.get()` answers `undefined` for an unknown ID, so check it first:
+
+```ts
+import type { WalletPort } from '@rango-dev/sdk'
+import type { Hub } from '@hub3js/core'
+
+import { hub3EvmAdapter } from '@rango-dev/sdk/adapters/hub3/evm'
+
+function walletOf(hub: Hub, providerId: string): WalletPort {
+  const provider = hub.get(providerId)
+  if (provider === undefined) throw new Error(`No hub3 provider ${providerId}`)
+  return {
+    evm: hub3EvmAdapter(provider),
+  }
+}
+```
+
+Each entry may come from a different provider. Supported namespaces:
+
+| Namespace | Import from                        | Adapter          | Reads the hub3 namespace | Install       |
+| --------- | ---------------------------------- | ---------------- | ------------------------ | ------------- |
+| `evm`     | `@rango-dev/sdk/adapters/hub3/evm` | `hub3EvmAdapter` | `evm`                    | `@hub3js/evm` |
+
+The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
+
+- An adapter never connects. `getAccount` answers the first account in the hub3 namespace's state as the **Active account**, or `null` when the provider has no such namespace, isn't connected or holds no account, so the **Execution** is `BLOCKED` `NOT_CONNECTED` until you connect.
+- An adapter stays bound to its provider. To change wallets, give new adapters in [`beforeResume`](#beforeresume).
+- `sign` uses the signer the provider's wallet registered for the transaction type, read from its `signers` metadata property on every call. `evm` signs with the transaction's `from` on the wallet's current chain.
+- `evm`'s `switchChain` connects the hub3 namespace to `{ chainId, ...chain }`, adding the chain when the wallet doesn't know it. Its `wait` is always there: the signer's `wait`, or the same `hash` when the signer has none. When the signer's `response` holds `hashRequiringUpdate: true`, as a Safe signer's does, so does the sign result.
+- `sign` and `wait` reject only with a `SignerError`: one the signer throws as it is, hub3's user rejection as `REJECTED_BY_USER`, and anything else as `UNEXPECTED_BEHAVIOUR` with the original as `cause`. The other methods reject with the error as it is.
+- On `evm`, the allowance read is for the **Prerequisite**'s `wallet`. `evm` builds the approve itself, with `@hub3js/evm`'s `encodeApproveCallData` for the calldata.
+
 ### `execute()`
 
 Runs a confirmed **Route** to its end, or unblocks its stored **Execution**.
