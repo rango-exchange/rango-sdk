@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig",
-  "include": ["src", "tests", "vitest.config.ts"],
+  "include": ["src", "tests", "vitest.config.ts", "vitest.build.config.ts"],
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true
