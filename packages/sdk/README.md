@@ -210,27 +210,30 @@ import type { WalletPort } from '@rango-dev/sdk'
 import type { Hub } from '@hub3js/core'
 
 import { hub3EvmAdapter } from '@rango-dev/sdk/adapters/hub3/evm'
+import { hub3SolanaAdapter } from '@rango-dev/sdk/adapters/hub3/solana'
 
 function walletOf(hub: Hub, providerId: string): WalletPort {
   const provider = hub.get(providerId)
   if (provider === undefined) throw new Error(`No hub3 provider ${providerId}`)
   return {
     evm: hub3EvmAdapter(provider),
+    solana: hub3SolanaAdapter(provider),
   }
 }
 ```
 
 Each entry may come from a different provider. Supported namespaces:
 
-| Namespace | Import from                        | Adapter          | Reads the hub3 namespace | Install       |
-| --------- | ---------------------------------- | ---------------- | ------------------------ | ------------- |
-| `evm`     | `@rango-dev/sdk/adapters/hub3/evm` | `hub3EvmAdapter` | `evm`                    | `@hub3js/evm` |
+| Namespace | Import from                           | Adapter             | Reads the hub3 namespace | Install          |
+| --------- | ------------------------------------- | ------------------- | ------------------------ | ---------------- |
+| `evm`     | `@rango-dev/sdk/adapters/hub3/evm`    | `hub3EvmAdapter`    | `evm`                    | `@hub3js/evm`    |
+| `solana`  | `@rango-dev/sdk/adapters/hub3/solana` | `hub3SolanaAdapter` | `solana`                 | `@hub3js/solana` |
 
 The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
 
 - An adapter never connects. `getAccount` answers the first account in the hub3 namespace's state as the **Active account**, or `null` when the provider has no such namespace, isn't connected or holds no account, so the **Execution** is `BLOCKED` `NOT_CONNECTED` until you connect.
 - An adapter stays bound to its provider. To change wallets, give new adapters in [`beforeResume`](#beforeresume).
-- `sign` uses the signer the provider's wallet registered for the transaction type, read from its `signers` metadata property on every call. `evm` signs with the transaction's `from` on the wallet's current chain.
+- `sign` uses the signer the provider's wallet registered for the transaction type, read from its `signers` metadata property on every call. `evm` signs with the transaction's `from` on the wallet's current chain; every other namespace signs with its **Active account**.
 - `evm`'s `switchChain` connects the hub3 namespace to `{ chainId, ...chain }`, adding the chain when the wallet doesn't know it. Its `wait` is always there: the signer's `wait`, or the same `hash` when the signer has none. When the signer's `response` holds `hashRequiringUpdate: true`, as a Safe signer's does, so does the sign result.
 - `sign` and `wait` reject only with a `SignerError`: one the signer throws as it is, hub3's user rejection as `REJECTED_BY_USER`, and anything else as `UNEXPECTED_BEHAVIOUR` with the original as `cause`. The other methods reject with the error as it is.
 - On `evm`, the allowance read is for the **Prerequisite**'s `wallet`. `evm` builds the approve itself, with `@hub3js/evm`'s `encodeApproveCallData` for the calldata.

@@ -19,6 +19,11 @@ const HUB3_CORE = '@hub3js/core'
 
 const NAMESPACES = [
   { namespace: 'evm', adapter: 'hub3EvmAdapter', hub3Package: '@hub3js/evm' },
+  {
+    namespace: 'solana',
+    adapter: 'hub3SolanaAdapter',
+    hub3Package: '@hub3js/solana',
+  },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.

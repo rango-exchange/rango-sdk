@@ -691,6 +691,15 @@
     caip "^1.1.1"
     rango-types "^0.6.0"
 
+"@hub3js/solana@^0.7":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@hub3js/solana/-/solana-0.7.0.tgz#d8426f0f897291de27680eceea23123375122040"
+  integrity sha512-wlezeks5VFYWAqk+fDAdc2uYgNN5me5jn+8txfC2Gc+oGe3kFk4iaFXt+Jk1fbrxeKYh7HhD+J9/hqOrMaWwqg==
+  dependencies:
+    "@hub3js/std" "^0.6.0"
+    caip "^1.1.1"
+    rango-types "^0.6.0"
+
 "@hub3js/std@^0.6.0":
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/@hub3js/std/-/std-0.6.0.tgz#ad6e82c52345775260583016b9c6b9ff9e1475ea"
