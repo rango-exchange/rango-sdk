@@ -43,6 +43,10 @@
     "./adapters/hub3/xrpl": {
       "types": "./dist/adapters/hub3/xrpl.d.ts",
       "default": "./dist/adapters/hub3/xrpl.js"
+    },
+    "./adapters/hub3/stellar": {
+      "types": "./dist/adapters/hub3/stellar.d.ts",
+      "default": "./dist/adapters/hub3/stellar.js"
     }
   },
   "files": [
@@ -67,7 +71,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts,src/adapters/hub3/solana.ts,src/adapters/hub3/starknet.ts,src/adapters/hub3/ton.ts,src/adapters/hub3/sui.ts,src/adapters/hub3/bip122.ts,src/adapters/hub3/tron.ts,src/adapters/hub3/xrpl.ts --splitting",
+    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts,src/adapters/hub3/solana.ts,src/adapters/hub3/starknet.ts,src/adapters/hub3/ton.ts,src/adapters/hub3/sui.ts,src/adapters/hub3/bip122.ts,src/adapters/hub3/tron.ts,src/adapters/hub3/xrpl.ts,src/adapters/hub3/stellar.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "test:build": "yarn build && vitest run --config vitest.build.config.ts",
@@ -86,10 +90,12 @@
     "@hub3js/evm": "^0.8",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
+    "@hub3js/stellar": "^0.6",
     "@hub3js/sui": "^0.6",
     "@hub3js/tron": "^0.3",
     "@hub3js/tvm": "^0.6",
     "@hub3js/xrpl": "^0.6",
+    "@stellar/stellar-sdk": "^15.0.1",
     "xrpl": "^4.2.0"
   },
   "peerDependenciesMeta": {
@@ -108,6 +114,9 @@
     "@hub3js/starknet": {
       "optional": true
     },
+    "@hub3js/stellar": {
+      "optional": true
+    },
     "@hub3js/sui": {
       "optional": true
     },
@@ -120,6 +129,9 @@
     "@hub3js/xrpl": {
       "optional": true
     },
+    "@stellar/stellar-sdk": {
+      "optional": true
+    },
     "xrpl": {
       "optional": true
     }
@@ -130,10 +142,12 @@
     "@hub3js/evm": "^0.8",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
+    "@hub3js/stellar": "^0.6",
     "@hub3js/sui": "^0.6",
     "@hub3js/tron": "^0.3",
     "@hub3js/tvm": "^0.6",
     "@hub3js/xrpl": "^0.6",
+    "@stellar/stellar-sdk": "^15.0.1",
     "fake-indexeddb": "^6.2.6",
     "vitest": "^4.1.5",
     "xrpl": "^4.2.0"

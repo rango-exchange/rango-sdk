@@ -17,7 +17,7 @@ const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HUB3_SCOPE = '@hub3js/'
 const HUB3_CORE = '@hub3js/core'
 // The chain libraries the adapters use where hub3 has no action, counted with the `@hub3js` packages.
-const CHAIN_LIBRARIES = ['xrpl']
+const CHAIN_LIBRARIES = ['xrpl', '@stellar/stellar-sdk']
 
 // Subpaths are named after the SDK namespace, not hub3's: `bip122` is hub3's `utxo`, and `ton`'s package is `tvm`.
 const NAMESPACES = [
@@ -49,6 +49,12 @@ const NAMESPACES = [
     adapter: 'hub3XrplAdapter',
     hub3Package: '@hub3js/xrpl',
     chainLibrary: 'xrpl',
+  },
+  {
+    namespace: 'stellar',
+    adapter: 'hub3StellarAdapter',
+    hub3Package: '@hub3js/stellar',
+    chainLibrary: '@stellar/stellar-sdk',
   },
 ]
 
