@@ -25,6 +25,11 @@ const NAMESPACES = [
     adapter: 'hub3SolanaAdapter',
     hub3Package: '@hub3js/solana',
   },
+  {
+    namespace: 'starknet',
+    adapter: 'hub3StarknetAdapter',
+    hub3Package: '@hub3js/starknet',
+  },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.
