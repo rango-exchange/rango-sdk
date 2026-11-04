@@ -230,6 +230,7 @@ Each entry may come from a different provider. Supported namespaces:
 | `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`   |
 | `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
 | `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
+| `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
 
 The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
 

@@ -31,6 +31,7 @@ const NAMESPACES = [
     hub3Package: '@hub3js/starknet',
   },
   { namespace: 'ton', adapter: 'hub3TonAdapter', hub3Package: '@hub3js/tvm' },
+  { namespace: 'sui', adapter: 'hub3SuiAdapter', hub3Package: '@hub3js/sui' },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.
