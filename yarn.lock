@@ -768,6 +768,14 @@
     caip "^1.1.1"
     rango-types "^0.6.0"
 
+"@hub3js/tron@^0.3":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@hub3js/tron/-/tron-0.3.0.tgz#6a3331e3bddf489cd2ea171368579209b15a48a9"
+  integrity sha512-5LHiM/ePrJBEENBWHDKytbdHoY1nIFlDKpv1GjByYoIc9E2IrmS8aPfNuFHj4I0IsS/aPeSYCHzhClzB9dA93Q==
+  dependencies:
+    "@hub3js/std" "^0.6.0"
+    caip "^1.1.1"
+
 "@hub3js/tvm@^0.6":
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/@hub3js/tvm/-/tvm-0.6.0.tgz#56a16368b7fccac77302ef035c41d53d97a12dc5"
