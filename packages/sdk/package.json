@@ -47,6 +47,10 @@
     "./adapters/hub3/stellar": {
       "types": "./dist/adapters/hub3/stellar.d.ts",
       "default": "./dist/adapters/hub3/stellar.js"
+    },
+    "./adapters/hub3/hyperliquid": {
+      "types": "./dist/adapters/hub3/hyperliquid.d.ts",
+      "default": "./dist/adapters/hub3/hyperliquid.js"
     }
   },
   "files": [
@@ -71,7 +75,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts,src/adapters/hub3/solana.ts,src/adapters/hub3/starknet.ts,src/adapters/hub3/ton.ts,src/adapters/hub3/sui.ts,src/adapters/hub3/bip122.ts,src/adapters/hub3/tron.ts,src/adapters/hub3/xrpl.ts,src/adapters/hub3/stellar.ts --splitting",
+    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts,src/adapters/hub3/solana.ts,src/adapters/hub3/starknet.ts,src/adapters/hub3/ton.ts,src/adapters/hub3/sui.ts,src/adapters/hub3/bip122.ts,src/adapters/hub3/tron.ts,src/adapters/hub3/xrpl.ts,src/adapters/hub3/stellar.ts,src/adapters/hub3/hyperliquid.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "test:build": "yarn build && vitest run --config vitest.build.config.ts",

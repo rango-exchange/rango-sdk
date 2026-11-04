@@ -56,6 +56,12 @@ const NAMESPACES = [
     hub3Package: '@hub3js/stellar',
     chainLibrary: '@stellar/stellar-sdk',
   },
+  // hub3 has no Hyperliquid namespace: its adapter reads hub3's `evm`.
+  {
+    namespace: 'hyperliquid',
+    adapter: 'hub3HyperliquidAdapter',
+    hub3Package: '@hub3js/evm',
+  },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.
