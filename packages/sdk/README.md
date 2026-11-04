@@ -224,10 +224,11 @@ function walletOf(hub: Hub, providerId: string): WalletPort {
 
 Each entry may come from a different provider. Supported namespaces:
 
-| Namespace | Import from                           | Adapter             | Reads the hub3 namespace | Install          |
-| --------- | ------------------------------------- | ------------------- | ------------------------ | ---------------- |
-| `evm`     | `@rango-dev/sdk/adapters/hub3/evm`    | `hub3EvmAdapter`    | `evm`                    | `@hub3js/evm`    |
-| `solana`  | `@rango-dev/sdk/adapters/hub3/solana` | `hub3SolanaAdapter` | `solana`                 | `@hub3js/solana` |
+| Namespace  | Import from                             | Adapter               | Reads the hub3 namespace | Install            |
+| ---------- | --------------------------------------- | --------------------- | ------------------------ | ------------------ |
+| `evm`      | `@rango-dev/sdk/adapters/hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`      |
+| `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`   |
+| `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
 
 The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
 

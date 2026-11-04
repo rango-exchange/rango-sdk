@@ -700,6 +700,15 @@
     caip "^1.1.1"
     rango-types "^0.6.0"
 
+"@hub3js/starknet@^0.6":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@hub3js/starknet/-/starknet-0.6.0.tgz#57e8c3efbc25101e9ae128bd124850539397f458"
+  integrity sha512-ot+0AkPLj9Zu+5BbtVQqjjJ7Cia3i9IQsYv6P/+7+fcckkNM/e+z+tQxsLoG0/D7sEf/q5SFc4C9p1MTbBRI2g==
+  dependencies:
+    "@hub3js/std" "^0.6.0"
+    caip "^1.1.1"
+    rango-types "^0.6.0"
+
 "@hub3js/std@^0.6.0":
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/@hub3js/std/-/std-0.6.0.tgz#ad6e82c52345775260583016b9c6b9ff9e1475ea"
