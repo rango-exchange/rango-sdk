@@ -230,6 +230,7 @@ Each entry may come from a different provider. Supported namespaces:
 | `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`   |
 | `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
 | `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
+| `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
 
 The `@hub3js/*` packages and `caip` are optional peer dependencies: install `@hub3js/core` and `caip`, plus the Install column of each adapter you import. The main `@rango-dev/sdk` entry never loads them.
 
