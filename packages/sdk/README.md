@@ -209,6 +209,7 @@ If your wallets run on hub3 (`@hub3js/*`), build each [Wallet port](#wallet-port
 import type { WalletPort } from '@rango-dev/sdk'
 import type { Hub } from '@hub3js/core'
 
+import { hub3Bip122Adapter } from '@rango-dev/sdk/adapters/hub3/bip122'
 import { hub3EvmAdapter } from '@rango-dev/sdk/adapters/hub3/evm'
 import { hub3SolanaAdapter } from '@rango-dev/sdk/adapters/hub3/solana'
 
@@ -218,6 +219,7 @@ function walletOf(hub: Hub, providerId: string): WalletPort {
   return {
     evm: hub3EvmAdapter(provider),
     solana: hub3SolanaAdapter(provider),
+    bip122: hub3Bip122Adapter(provider),
   }
 }
 ```
@@ -231,10 +233,11 @@ Each entry may come from a different provider. Supported namespaces:
 | `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
 | `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
 | `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
+| `bip122`   | `@rango-dev/sdk/adapters/hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`   |
 
 The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
 
-- An adapter never connects. `getAccount` answers the first account in the hub3 namespace's state as the **Active account**, or `null` when the provider has no such namespace, isn't connected or holds no account, so the **Execution** is `BLOCKED` `NOT_CONNECTED` until you connect.
+- An adapter never connects. `getAccount` answers the first account in the hub3 namespace's state as the **Active account**, or `null` when the provider has no such namespace, isn't connected or holds no account, so the **Execution** is `BLOCKED` `NOT_CONNECTED` until you connect. `bip122` answers the first account on the request's blockchain, one of `BTC`, `LTC`, `DOGE`, `BCH` and `ZCASH`; any other has none.
 - An adapter stays bound to its provider. To change wallets, give new adapters in [`beforeResume`](#beforeresume).
 - `sign` uses the signer the provider's wallet registered for the transaction type, read from its `signers` metadata property on every call. `evm` signs with the transaction's `from` on the wallet's current chain; every other namespace signs with its **Active account**.
 - `evm`'s `switchChain` connects the hub3 namespace to `{ chainId, ...chain }`, adding the chain when the wallet doesn't know it. Its `wait` is always there: the signer's `wait`, or the same `hash` when the signer has none. When the signer's `response` holds `hashRequiringUpdate: true`, as a Safe signer's does, so does the sign result.

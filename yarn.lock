@@ -707,6 +707,14 @@
   resolved "https://registry.yarnpkg.com/@graphql-typed-document-node/core/-/core-3.2.0.tgz#5f3d96ec6b2354ad6d8a28bf216a1d97b5426861"
   integrity sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ==
 
+"@hub3js/bip122@^0.4":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@hub3js/bip122/-/bip122-0.4.0.tgz#c5d32e5ed612e881f67116d8e2c3366f6d1ba590"
+  integrity sha512-vghJAlrhN4GY5bL1uyH0Hp7igxYZ+Da3dn+V9qRaarxVa5WWusPhi/eBnIY4mVzTrcRlQ4rgwdSSzfF3U5NjTA==
+  dependencies:
+    "@hub3js/std" "^0.6.0"
+    caip "^1.1.1"
+
 "@hub3js/core@^0.64.0":
   version "0.64.0"
   resolved "https://registry.yarnpkg.com/@hub3js/core/-/core-0.64.0.tgz#fafca9b3a7fb18c5ac27265b5840df31aca64b4c"
