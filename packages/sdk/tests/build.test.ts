@@ -1,6 +1,6 @@
 /*
- * The built package: each hub3 subpath resolves and loads only its own hub3 packages, and the main entry loads
- * none of them.
+ * The built package: each hub3 subpath resolves and loads only its own hub3 packages and chain library, and the main
+ * entry loads none of them.
  * It reads `dist`, so it needs a build first: run it with `yarn test:build`, which builds and then runs it.
  */
 import type { Metafile } from 'esbuild'
@@ -16,6 +16,8 @@ const PACKAGE_NAME = '@rango-dev/sdk'
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HUB3_SCOPE = '@hub3js/'
 const HUB3_CORE = '@hub3js/core'
+// The chain libraries the adapters use where hub3 has no action, counted with the `@hub3js` packages.
+const CHAIN_LIBRARIES = ['xrpl']
 
 // Subpaths are named after the SDK namespace, not hub3's: `bip122` is hub3's `utxo`, and `ton`'s package is `tvm`.
 const NAMESPACES = [
@@ -42,6 +44,12 @@ const NAMESPACES = [
     adapter: 'hub3TronAdapter',
     hub3Package: '@hub3js/tron',
   },
+  {
+    namespace: 'xrpl',
+    adapter: 'hub3XrplAdapter',
+    hub3Package: '@hub3js/xrpl',
+    chainLibrary: 'xrpl',
+  },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.
@@ -66,8 +74,14 @@ async function hub3ImportsOf(entry: string): Promise<string[]> {
   })
 
   return externalImportsOf(metafile)
-    .filter((path) => path.startsWith(HUB3_SCOPE))
+    .filter((path) => path.startsWith(HUB3_SCOPE) || isChainLibrary(path))
     .sort()
+}
+
+function isChainLibrary(path: string): boolean {
+  return CHAIN_LIBRARIES.some(
+    (library) => path === library || path.startsWith(`${library}/`),
+  )
 }
 
 function externalImportsOf(metafile: Metafile): string[] {
@@ -83,7 +97,7 @@ function externalImportsOf(metafile: Metafile): string[] {
 describe('the built package', () => {
   describe.each(NAMESPACES)(
     'the $namespace subpath',
-    ({ namespace, adapter, hub3Package }) => {
+    ({ namespace, adapter, hub3Package, chainLibrary }) => {
       const subpath = `${PACKAGE_NAME}/adapters/hub3/${namespace}`
 
       test('resolves through the exports map to its own built entry', () => {
@@ -103,12 +117,15 @@ describe('the built package', () => {
         expect(entry[adapter]).toBeTypeOf('function')
       })
 
-      test("imports no hub3 package but core and its own namespace's", async () => {
+      test("imports no hub3 package or chain library but core, its own namespace's and its own chain's", async () => {
         const hub3Imports = await hub3ImportsOf(resolveFromPackage(subpath))
 
         expect(
           hub3Imports.filter(
-            (path) => path !== HUB3_CORE && path !== hub3Package,
+            (path) =>
+              path !== HUB3_CORE &&
+              path !== hub3Package &&
+              path !== chainLibrary,
           ),
         ).toEqual([])
       })
@@ -121,7 +138,7 @@ describe('the built package', () => {
     )
   })
 
-  test('the main entry imports no hub3 package, through its chunks either', async () => {
+  test('the main entry imports no hub3 package or chain library, through its chunks either', async () => {
     const hub3Imports = await hub3ImportsOf(resolveFromPackage(PACKAGE_NAME))
 
     expect(hub3Imports).toEqual([])

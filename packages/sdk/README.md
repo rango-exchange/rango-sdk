@@ -226,17 +226,18 @@ function walletOf(hub: Hub, providerId: string): WalletPort {
 
 Each entry may come from a different provider. Supported namespaces:
 
-| Namespace  | Import from                             | Adapter               | Reads the hub3 namespace | Install            |
-| ---------- | --------------------------------------- | --------------------- | ------------------------ | ------------------ |
-| `evm`      | `@rango-dev/sdk/adapters/hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`      |
-| `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`   |
-| `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
-| `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
-| `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
-| `bip122`   | `@rango-dev/sdk/adapters/hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`   |
-| `tron`     | `@rango-dev/sdk/adapters/hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`     |
+| Namespace  | Import from                             | Adapter               | Reads the hub3 namespace | Install                |
+| ---------- | --------------------------------------- | --------------------- | ------------------------ | ---------------------- |
+| `evm`      | `@rango-dev/sdk/adapters/hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`          |
+| `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`       |
+| `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet`     |
+| `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`          |
+| `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`          |
+| `bip122`   | `@rango-dev/sdk/adapters/hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`       |
+| `tron`     | `@rango-dev/sdk/adapters/hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`         |
+| `xrpl`     | `@rango-dev/sdk/adapters/hub3/xrpl`     | `hub3XrplAdapter`     | `xrpl`                   | `@hub3js/xrpl`, `xrpl` |
 
-The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
+The `@hub3js/*` packages and `xrpl` are optional peer dependencies. Install `@hub3js/core` plus the package of each namespace you use, within the ranges in `peerDependencies`, and nothing for the others: each subpath loads only `@hub3js/core` and its own namespace's package, `/xrpl` also `xrpl`, so `@rango-dev/sdk/adapters/hub3/evm` needs only `@hub3js/core` and `@hub3js/evm`, and `@rango-dev/sdk/adapters/hub3/xrpl` needs `@hub3js/core`, `@hub3js/xrpl` and `xrpl`. An app not on hub3 installs none, and the main `@rango-dev/sdk` entry never loads them.
 
 - An adapter never connects. `getAccount` answers the first account in the hub3 namespace's state as the **Active account**, or `null` when the provider has no such namespace, isn't connected or holds no account, so the **Execution** is `BLOCKED` `NOT_CONNECTED` until you connect. `bip122` answers the first account on the request's blockchain, one of `BTC`, `LTC`, `DOGE`, `BCH` and `ZCASH`; any other has none.
 - An adapter stays bound to its provider. To change wallets, give new adapters in [`beforeResume`](#beforeresume).
@@ -244,6 +245,7 @@ The `@hub3js/*` packages are optional peer dependencies. Install `@hub3js/core` 
 - `evm`'s `switchChain` connects the hub3 namespace to `{ chainId, ...chain }`, adding the chain when the wallet doesn't know it. Its `wait` is always there: the signer's `wait`, or the same `hash` when the signer has none. When the signer's `response` holds `hashRequiringUpdate: true`, as a Safe signer's does, so does the sign result.
 - `sign` and `wait` reject only with a `SignerError`: one the signer throws as it is, hub3's user rejection as `REJECTED_BY_USER`, and anything else as `UNEXPECTED_BEHAVIOUR` with the original as `cause`. The other methods reject with the error as it is.
 - On `evm` and `tron`, the allowance read is for the **Prerequisite**'s `wallet`. `evm` builds the approve itself, with `@hub3js/evm`'s `encodeApproveCallData` for the calldata. `tron` builds the approve through the hub3 namespace and answers its transaction info as it is.
+- `xrpl` reads the trustline with the hub3 namespace's `accountLines`, for the **Prerequisite**'s `wallet` with its issuer as `peer`, and answers the `limit` of the line to its currency from that issuer. hub3 has no action to read a transaction, so `getTransactionInfo` reads it off `wss://xrplcluster.com/` with `xrpl`'s `Client`, over a connection of its own each time; a transaction the node doesn't know yet answers `{ validated: false }`. The node can't be changed. `buildTransaction` builds the `TrustSet` as plain data, with the `limit` the SDK gives.
 
 ### `execute()`
 
