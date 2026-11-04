@@ -234,6 +234,7 @@ Each entry may come from a different provider. Supported namespaces:
 | `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
 | `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
 | `bip122`   | `@rango-dev/sdk/adapters/hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`   |
+| `tron`     | `@rango-dev/sdk/adapters/hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`     |
 
 The `@hub3js/*` packages and `caip` are optional peer dependencies: install `@hub3js/core` and `caip`, plus the Install column of each adapter you import. The main `@rango-dev/sdk` entry never loads them.
 

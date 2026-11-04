@@ -38,6 +38,11 @@ const NAMESPACES = [
     adapter: 'hub3Bip122Adapter',
     hub3Package: '@hub3js/bip122',
   },
+  {
+    namespace: 'tron',
+    adapter: 'hub3TronAdapter',
+    hub3Package: '@hub3js/tron',
+  },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.
