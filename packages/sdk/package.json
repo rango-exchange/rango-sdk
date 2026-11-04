@@ -23,6 +23,10 @@
     "./adapters/hub3/starknet": {
       "types": "./dist/adapters/hub3/starknet.d.ts",
       "default": "./dist/adapters/hub3/starknet.js"
+    },
+    "./adapters/hub3/ton": {
+      "types": "./dist/adapters/hub3/ton.d.ts",
+      "default": "./dist/adapters/hub3/ton.js"
     }
   },
   "files": [
@@ -47,7 +51,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts,src/adapters/hub3/solana.ts,src/adapters/hub3/starknet.ts --splitting",
+    "build": "yarn run rangutopia library build --inputs src/mod.ts,src/adapters/hub3/evm.ts,src/adapters/hub3/solana.ts,src/adapters/hub3/starknet.ts,src/adapters/hub3/ton.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "test:build": "yarn build && vitest run --config vitest.build.config.ts",
@@ -65,6 +69,7 @@
     "@hub3js/evm": "^0.8",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
+    "@hub3js/tvm": "^0.6",
     "caip": "^1.1.1"
   },
   "peerDependenciesMeta": {
@@ -80,6 +85,9 @@
     "@hub3js/starknet": {
       "optional": true
     },
+    "@hub3js/tvm": {
+      "optional": true
+    },
     "caip": {
       "optional": true
     }
@@ -89,6 +97,7 @@
     "@hub3js/evm": "^0.8",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
+    "@hub3js/tvm": "^0.6",
     "caip": "^1.1.1",
     "fake-indexeddb": "^6.2.6",
     "vitest": "^4.1.5"
