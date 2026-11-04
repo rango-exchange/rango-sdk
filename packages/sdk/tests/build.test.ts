@@ -17,6 +17,7 @@ const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HUB3_SCOPE = '@hub3js/'
 const HUB3_CORE = '@hub3js/core'
 
+// Subpaths are named after the SDK namespace, not hub3's: `ton`'s package is `tvm`.
 const NAMESPACES = [
   { namespace: 'evm', adapter: 'hub3EvmAdapter', hub3Package: '@hub3js/evm' },
   {
@@ -29,6 +30,7 @@ const NAMESPACES = [
     adapter: 'hub3StarknetAdapter',
     hub3Package: '@hub3js/starknet',
   },
+  { namespace: 'ton', adapter: 'hub3TonAdapter', hub3Package: '@hub3js/tvm' },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.

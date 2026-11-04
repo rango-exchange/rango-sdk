@@ -716,6 +716,15 @@
   dependencies:
     caip "^1.1.1"
 
+"@hub3js/tvm@^0.6":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@hub3js/tvm/-/tvm-0.6.0.tgz#56a16368b7fccac77302ef035c41d53d97a12dc5"
+  integrity sha512-h3b3MszgpNvNGxfe2dgnBYfs0iwGrZ9Gpfhy8IeXB+kYp5/GU+c5tyPWcpA410BGJFkUCIqDAbcxrfaGFBLz9Q==
+  dependencies:
+    "@hub3js/std" "^0.6.0"
+    caip "^1.1.1"
+    rango-types "^0.6.0"
+
 "@humanfs/core@^0.19.2":
   version "0.19.2"
   resolved "https://registry.yarnpkg.com/@humanfs/core/-/core-0.19.2.tgz#a8272ca03b2acf492670222b2320b6c421bfde60"
