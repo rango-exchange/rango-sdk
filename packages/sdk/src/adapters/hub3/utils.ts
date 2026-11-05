@@ -1,7 +1,10 @@
+import type { SignResult } from '../../mod.js'
 import type { FindProxiedNamespace, Namespace, Provider } from '@hub3js/core'
 import type { GenericSigner, mainAPI, TransactionType } from 'rango-types'
 
 import { AccountId } from 'caip'
+
+import { tryRunAndRejectWithSignerError } from './errors.js'
 
 // The provider a multi-blockchain **Hub3 adapter** was given for `blockchain`
 export function getProvider<K extends string, P>(
@@ -81,4 +84,38 @@ export async function findSigner<TNS, Tx extends mainAPI.Transaction>(
   }
   const signers = await signersProperty.value.getSigners()
   return signers.getSigner<Tx>(type)
+}
+
+type SingleChainWallet<Tx> = {
+  getAccount(): Promise<string | null>
+  sign(req: { tx: Tx }): Promise<SignResult>
+}
+
+export function buildSingleChainWallet<
+  TNS,
+  K extends keyof TNS & string,
+  Tx extends mainAPI.Transaction,
+>(
+  provider: Provider<TNS>,
+  options: { key: K; type: TransactionType },
+): SingleChainWallet<Tx> {
+  const { key, type } = options
+  return {
+    async getAccount() {
+      return getFirstAccount(provider.get(key))
+    },
+    async sign({ tx }) {
+      return tryRunAndRejectWithSignerError(async () => {
+        const address = getFirstAccount(getNamespace(provider, key))
+        if (address === null) {
+          throw new Error(
+            `The hub3 provider "${provider.id}" has no connected "${key}" account to sign with.`,
+          )
+        }
+        const signer = await findSigner<TNS, Tx>(provider, type)
+        const { hash, response } = await signer.signAndSendTx(tx, address, null)
+        return { hash, response }
+      })
+    },
+  }
 }
