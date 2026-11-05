@@ -201,6 +201,39 @@ No request carries the address: sign with the wallet's active account. Only `evm
 - `buildTransaction`: on `evm` and `tron`, build the approve; on `xrpl` and `stellar`, build the trustline with the `limit` given. Build it as plain data, without prompting.
 - `getTransactionInfo`: on `evm`, answer `'pending'`, `'success'` or `'failed'` from the receipt; on `tron` and `xrpl`, answer what the chain says, as it is.
 
+### Hub3 adapters
+
+If your wallets run on hub3 (`@hub3js/*`), build each [Wallet port](#wallet-port) entry from a hub3 provider with its adapter instead of writing it. Each adapter takes the provider `hub.get(providerId)` answers, which is `undefined` for an unknown ID, and `evm` takes an object of them keyed by Rango blockchain name:
+
+```ts
+import type { WalletPort } from '@rango-dev/sdk'
+import type { Hub } from '@hub3js/core'
+
+import { hub3EvmAdapter } from '@rango-dev/sdk/adapters/hub3/evm'
+
+function walletOf(hub: Hub, providerId: string): WalletPort {
+  const provider = hub.get(providerId)
+  if (provider === undefined) throw new Error(`No hub3 provider ${providerId}`)
+  return {
+    evm: hub3EvmAdapter({ ETH: provider, BSC: provider }),
+  }
+}
+```
+
+Each entry may come from a different provider. Supported namespaces:
+
+| Namespace | Import from                        | Adapter          | Reads the hub3 namespace | Install       |
+| --------- | ---------------------------------- | ---------------- | ------------------------ | ------------- |
+| `evm`     | `@rango-dev/sdk/adapters/hub3/evm` | `hub3EvmAdapter` | `evm`                    | `@hub3js/evm` |
+
+The `@hub3js/*` packages and `caip` are optional peer dependencies: install `@hub3js/core` and `caip`, plus the Install column of each adapter you import. The main `@rango-dev/sdk` entry never loads them.
+
+- An adapter never connects: connect the wallet through hub3, or the **Execution** is `BLOCKED` `NOT_CONNECTED`.
+- An adapter stays bound to its provider. To change wallets, give new adapters in [`beforeResume`](#beforeresume).
+- A user rejection in the wallet fails with `REJECTED_BY_USER`.
+- `evm` uses the provider for each request's blockchain. Leave out the blockchains you don't use: a missing provider reads as not connected, so the **Execution** is `BLOCKED` `NOT_CONNECTED`.
+- `evm` adds a chain the wallet doesn't know, so the user may be asked to add the network.
+
 ### `execute()`
 
 Runs a confirmed **Route** to its end, or unblocks its stored **Execution**.
