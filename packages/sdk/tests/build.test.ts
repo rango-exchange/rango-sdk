@@ -18,7 +18,7 @@ const HUB3_SCOPE = '@hub3js/'
 // The peers every hub3 subpath may load, whatever its namespace.
 const SHARED_PEERS = ['@hub3js/core', 'caip']
 
-// Subpaths are named after the SDK namespace, not hub3's package: `ton`'s package is `tvm`.
+// Subpaths are named after the SDK namespace, not hub3's: `bip122` is hub3's `utxo`, and `ton`'s package is `tvm`.
 const NAMESPACES = [
   { namespace: 'evm', adapter: 'hub3EvmAdapter', hub3Package: '@hub3js/evm' },
   {
@@ -33,6 +33,11 @@ const NAMESPACES = [
   },
   { namespace: 'ton', adapter: 'hub3TonAdapter', hub3Package: '@hub3js/tvm' },
   { namespace: 'sui', adapter: 'hub3SuiAdapter', hub3Package: '@hub3js/sui' },
+  {
+    namespace: 'bip122',
+    adapter: 'hub3Bip122Adapter',
+    hub3Package: '@hub3js/bip122',
+  },
 ]
 
 // Resolves a specifier through the package's own exports map, the way a Host's import of it does.
