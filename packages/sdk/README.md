@@ -237,7 +237,7 @@ Ends a `PENDING`, `RUNNING` or `BLOCKED` **Execution** `CANCELED`, with a `USER_
 
 #### `delete()`
 
-Removes an ended **Execution** from storage, as `await client.delete(requestId)`; any other is left as it is. It emits no event, so refresh your list yourself.
+Removes an ended **Execution** from storage, as `await client.delete(requestId)`; any other is left as it is. It's removed from `history` at once, and deleting it from storage is only attempted: a failed delete there isn't noticed, so it can come back after a reload. It emits no event, so refresh your list yourself.
 
 #### `pause()` and `resume()`
 
