@@ -28,7 +28,7 @@ function mergeStatusAnswerIntoCheckResult(
   }
 }
 
-async function pollStepStatusUntilFinished(
+async function tryPollStepStatusUntilFinished(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   transactionId: string,
   step: number,
@@ -186,5 +186,5 @@ export async function waitForHashThenPollStepStatus(
   const finalHash = await waitForFinalEvmHash(actions, hash)
   return finalHash === null
     ? []
-    : pollStepStatusUntilFinished(actions, transactionId, step, finalHash)
+    : tryPollStepStatusUntilFinished(actions, transactionId, step, finalHash)
 }

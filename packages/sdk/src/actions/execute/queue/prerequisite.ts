@@ -63,7 +63,7 @@ function getXrplTxStatus(info: {
 }
 
 // A failed read or build is reported.
-export async function runPrerequisiteReadOrBuildOrThrowReported<T>(
+export async function tryRunPrerequisiteReadOrBuild<T>(
   readOrBuild: () => Promise<T>,
   failureMessage: string,
 ): Promise<T> {
@@ -78,7 +78,7 @@ export async function runPrerequisiteReadOrBuildOrThrowReported<T>(
  * The timeout is wall-clock time from the first read, the time the reads take included. `false` once the Execution
  * is canceled.
  */
-async function waitUntilAllowanceConfirmed(
+async function tryWaitUntilAllowanceConfirmed(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   readGrantedAllowance: () => Promise<string | null>,
   requiredAmount: string,
@@ -118,7 +118,7 @@ async function waitUntilAllowanceConfirmed(
 }
 
 // A Prerequisite's on-chain proof. `false` once the Execution is canceled.
-async function waitUntilProvedOnChain(
+async function tryWaitUntilProvedOnChain(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   readOnChainStatus: (hash: string) => Promise<OnChainTxStatus>,
   hash: string,
@@ -182,13 +182,13 @@ export async function proveEvmApproveOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     evm.getTransactionInfo({ blockchain, hash: signedHash })
-  if (!(await waitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   const readGrantedAllowance = async () =>
     evm.getAllowance({ blockchain, prerequisite })
   if (
-    !(await waitUntilAllowanceConfirmed(
+    !(await tryWaitUntilAllowanceConfirmed(
       actions,
       readGrantedAllowance,
       prerequisite.amount,
@@ -214,12 +214,12 @@ export async function proveTronApproveOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     getTronTxStatus(await tron.getTransactionInfo({ hash: signedHash }))
-  if (!(await waitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   const readGrantedAllowance = async () => tron.getAllowance({ prerequisite })
   if (
-    !(await waitUntilAllowanceConfirmed(
+    !(await tryWaitUntilAllowanceConfirmed(
       actions,
       readGrantedAllowance,
       prerequisite.amount,
@@ -244,7 +244,7 @@ export async function proveXrplTrustlineOnChain(
     signedHash: string,
   ): Promise<OnChainTxStatus> =>
     getXrplTxStatus(await xrpl.getTransactionInfo({ hash: signedHash }))
-  if (!(await waitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
+  if (!(await tryWaitUntilProvedOnChain(actions, readOnChainStatus, hash))) {
     return []
   }
   return storeEntryCompletedAndEmitApprovalSucceeded(

@@ -86,7 +86,7 @@ function splitSignature(signature: string): {
  * The sign for a Hyperliquid entry. Its hash isn't known until the explorer lists it, so it resolves with a `null`
  * `walletResult`, or `null` once the Execution is canceled: nothing is posted after a cancel.
  */
-async function signAndPostHyperliquidAction(
+async function trySignAndPostHyperliquidAction(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   hyperliquid: HyperliquidWallet,
   tx: HyperliquidTransaction,
@@ -197,7 +197,7 @@ export async function signPostAndLookUpHyperliquidHash(
   const postResult = await signEntryAndStoreSignedHash(
     actions,
     transactionId,
-    async () => signAndPostHyperliquidAction(actions, hyperliquid, tx),
+    async () => trySignAndPostHyperliquidAction(actions, hyperliquid, tx),
   )
   if (postResult === null) {
     return null

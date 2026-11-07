@@ -36,7 +36,7 @@ function buildNotStartedTransactionEntry(
 }
 
 // Before anything is written. The first failing check wins.
-function assertTransactionIsSupported(tx: Transaction): void {
+function throwIfTransactionIsUnsupported(tx: Transaction): void {
   // The type is the server's: read at run time, since a new chain may not be a `TransactionType` yet.
   if (tx.type === TransactionType.COSMOS) {
     throw new ErrorToReport(
@@ -136,7 +136,7 @@ export async function fetchTransaction(
     )
   }
 
-  assertTransactionIsSupported(tx)
+  throwIfTransactionIsUnsupported(tx)
 
   // One write, synchronous through `runTask()`'s `schedule` calls, so the entries and their tasks persist together.
   const freshStorage = actions.getStorage()

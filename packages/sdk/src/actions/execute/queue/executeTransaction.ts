@@ -43,8 +43,8 @@ import {
   proveEvmApproveOnChain,
   proveTronApproveOnChain,
   proveXrplTrustlineOnChain,
-  runPrerequisiteReadOrBuildOrThrowReported,
   storeEntryCompletedAndEmitApprovalSucceeded,
+  tryRunPrerequisiteReadOrBuild,
 } from './prerequisite.js'
 import { getRequiredWallet } from './requiredWallet.js'
 import {
@@ -70,7 +70,7 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
 ): Promise<string | null> {
   let grantedAmount: string | null
   try {
-    grantedAmount = await runPrerequisiteReadOrBuildOrThrowReported(
+    grantedAmount = await tryRunPrerequisiteReadOrBuild(
       readGrantedAmount,
       PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE[prerequisite.type],
     )
@@ -182,7 +182,7 @@ async function gateSignAndProveEvmApprove(
         prerequisite,
       }),
     async () =>
-      runPrerequisiteReadOrBuildOrThrowReported(
+      tryRunPrerequisiteReadOrBuild(
         async () =>
           evm.buildTransaction({
             blockchain: requiredWallet.blockchain,
@@ -241,7 +241,7 @@ async function gateSignAndProveTronApprove(
     resumedHashOrBlockchainMeta.blockchainMeta,
     async () => tron.getAllowance({ prerequisite }),
     async () =>
-      runPrerequisiteReadOrBuildOrThrowReported(
+      tryRunPrerequisiteReadOrBuild(
         async () => tron.buildTransaction({ prerequisite }),
         'Could not build the Tron approve transaction.',
       ),
@@ -291,7 +291,7 @@ async function gateSignAndProveXrplTrustline(
     resumedHashOrBlockchainMeta.blockchainMeta,
     async () => xrpl.getTrustline({ prerequisite }),
     async () =>
-      runPrerequisiteReadOrBuildOrThrowReported(
+      tryRunPrerequisiteReadOrBuild(
         async () =>
           xrpl.buildTransaction({
             prerequisite,
@@ -344,7 +344,7 @@ async function gateAndSignStellarTrustline(
     resumedHashOrBlockchainMeta.blockchainMeta,
     async () => stellar.getTrustline({ prerequisite }),
     async () =>
-      runPrerequisiteReadOrBuildOrThrowReported(
+      tryRunPrerequisiteReadOrBuild(
         async () =>
           stellar.buildTransaction({
             prerequisite,
