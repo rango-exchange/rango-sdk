@@ -1212,6 +1212,7 @@ describe('confirm', () => {
         case 'TOO_MANY_REQUESTS':
         case 'SERVER_ERROR':
         case 'UNKNOWN_SLIPPAGE':
+        case 'CLIENT_PAUSED':
           expectTypeOf(error.metadata).toEqualTypeOf<undefined>()
       }
     }

@@ -225,7 +225,7 @@ await client.execute(route.requestId, {
 
 Run one **Execution** per wallet at a time.
 
-- Throws: `INVALID_INPUT` (`requestId`: `NOT_FOUND`; `options`: `MISSING`), `REQUEST_FAILED`; see [Errors and failures](#errors-and-failures).
+- Throws: `INVALID_INPUT` (`requestId`: `NOT_FOUND`; `options`: `MISSING`), `CLIENT_PAUSED`, `REQUEST_FAILED`; see [Errors and failures](#errors-and-failures).
 
 ### Managing Executions
 
@@ -291,6 +291,7 @@ Events may fire again when a task runs again after a reload, so make your handle
 Each execution method throws only `SdkError`, apart from an error your `emitter` throws:
 
 - `INVALID_INPUT`, from `execute()`: `requestId` `NOT_FOUND` (no confirmed **Route** and no stored **Execution**, such as a **Route** from `quote()`), or `options` `MISSING`.
+- `CLIENT_PAUSED`, from `execute()` of a new **Route** in a paused client: nothing is stored and the **Route** stays confirmed, so call `resume()`, then `execute()` again.
 - `REQUEST_FAILED`: the execution engine can't be loaded, `execute()` can't store the **Execution**, or `pause()` can't pause, with core's error as `cause`.
 
 A swap that fails while it runs is never thrown: the **Execution** ends `FAILED` (or `CANCELED`) with `{ reasonCode, message, detail }` (`ExecutionFailure`) in `_storage.failure`.
@@ -337,6 +338,7 @@ try {
 | `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`. For an [execution method](#execution), the execution engine can't be loaded, paused or store the **Execution**, with core's error as `cause`. | none                                     |
 | `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                                                                                              | `{ swap, limit, limitValue, exclusive }` |
 | `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                                                                                | none                                     |
+| `CLIENT_PAUSED`     | `execute()` of a new **Route** in a paused client.                                                                                                                                                                        | none                                     |
 
 The metadata types are exported, and their fields are documented in your editor.
 

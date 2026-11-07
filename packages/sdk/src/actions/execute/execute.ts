@@ -16,5 +16,5 @@ export async function startOrUnblockExecution(
     unblockExecution(storedQueue, context)
     return
   }
-  await createExecution(state, manager, requestId, options)
+  await createExecution(state, manager, context, requestId, options)
 }

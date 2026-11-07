@@ -292,3 +292,137 @@ describe('pause() and resume()', () => {
     },
   )
 })
+
+// A client paused one of the two ways: built with pauseOnStart: true, or paused by pause() after it started.
+const pausedClients: [
+  string,
+  () => ReturnType<typeof createExecutionClient>,
+][] = [
+  [
+    'pauseOnStart: true',
+    async () =>
+      createExecutionClient(recordingNamespaces(), evmBlockchains, {
+        pauseOnStart: true,
+      }),
+  ],
+  [
+    'pause()',
+    async () => {
+      const built = await createExecutionClient()
+      await built.client.pause()
+      return built
+    },
+  ],
+]
+
+describe('execute() of a new Route in a paused client', () => {
+  beforeEach(() => {
+    factory = new IDBFactory()
+    reloadOn(factory)
+    scriptLegacy()
+    stubWindow()
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  test.each(pausedClients)(
+    'with %s, throws CLIENT_PAUSED with no metadata, emits nothing, sends no /tx/create, stores nothing and keeps the Route',
+    async (_, build) => {
+      const { client, all, requests } = await build()
+      await confirmQuote(client)
+      // Loads the execution engine first, so the paused Manager's first `loaded` is not counted.
+      await client.history.getAll()
+      await settle()
+      const eventCount = all.length
+
+      const error = await expectSdkError(
+        client.execute('request-1', EXECUTION_OPTIONS),
+      )
+      await settle()
+
+      expect(error).toMatchObject({
+        type: 'CLIENT_PAUSED',
+        message: 'The client is paused: call `resume()` first.',
+      })
+      expect(error).not.toHaveProperty('metadata')
+      expect(all).toHaveLength(eventCount)
+      expect(httpClient.createTransaction).not.toHaveBeenCalled()
+      expect(requests).toEqual([])
+      expect(await client.history.getAll()).toEqual([])
+      expect(client.cache.get('confirmed')?.has('request-1')).toBe(true)
+    },
+  )
+
+  test.each(pausedClients)(
+    'with %s, execute() with the same request ID after resume() runs the Execution to SUCCESS',
+    async (_, build) => {
+      const { client } = await build()
+      await confirmQuote(client)
+      await expectSdkError(client.execute('request-1', EXECUTION_OPTIONS))
+
+      // Once resume()'s reload of storage has ended, which would otherwise drop the new record.
+      await client.resume()
+      await settle()
+      await client.execute('request-1', EXECUTION_OPTIONS)
+      await settle()
+
+      expect(httpClient.createTransaction).toHaveBeenCalledTimes(1)
+      expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+    },
+  )
+
+  test('still throws INVALID_INPUT for an unknown request ID and missing options', async () => {
+    const { client } = await createExecutionClient(
+      recordingNamespaces(),
+      evmBlockchains,
+      { pauseOnStart: true },
+    )
+    await confirmQuote(client)
+
+    const errors = [
+      await expectSdkError(client.execute('request-2', EXECUTION_OPTIONS)),
+      await expectSdkError(client.execute('request-1')),
+    ]
+
+    expect(errors).toMatchObject([
+      {
+        type: 'INVALID_INPUT',
+        message: 'No confirmed route or stored execution has this `requestId`.',
+        metadata: { field: 'requestId', reason: 'NOT_FOUND' },
+      },
+      {
+        type: 'INVALID_INPUT',
+        message: 'A new execution needs `options`.',
+        metadata: { field: 'options', reason: 'MISSING' },
+      },
+    ])
+    expect(await client.history.getAll()).toEqual([])
+  })
+
+  test('execute() of a stored Execution still resolves and changes nothing', async () => {
+    await reloadWithRunning()
+    const { client, all, requests } = await createExecutionClient(
+      recordingNamespaces(),
+      evmBlockchains,
+      { pauseOnStart: true },
+    )
+    await settle()
+    const before = await historyOf(client)
+    const eventCount = all.length
+
+    await client.execute('request-1', EXECUTION_OPTIONS)
+    await settle()
+
+    expect(await historyOf(client)).toEqual(before)
+    expect(before?._queue.status).toBe('RUNNING')
+    expect(all).toHaveLength(eventCount)
+    expect(requests).toEqual([])
+    expect(httpClient.createTransaction).not.toHaveBeenCalled()
+  })
+})

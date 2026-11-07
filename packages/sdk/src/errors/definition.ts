@@ -66,4 +66,5 @@ export type SdkErrorMetadata = {
   INVALID_INPUT: InvalidInputMetadata
   BRIDGE_LIMIT: BridgeLimitMetadata
   UNKNOWN_SLIPPAGE: undefined
+  CLIENT_PAUSED: undefined
 }

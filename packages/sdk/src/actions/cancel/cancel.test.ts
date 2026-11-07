@@ -14,13 +14,18 @@ import {
   confirmQuote,
   createExecutionClient,
   createTxResponse,
+  done,
   evmBlockchains,
   EXECUTION_OPTIONS,
+  hang,
   historyOf,
   httpClient,
   hyperliquidTx,
+  isObject,
   nameOf,
+  openQueues,
   recordingNamespaces,
+  reloadOn,
   resetHttpClient,
   scriptCreateTransaction,
   settle,
@@ -83,6 +88,52 @@ function failedTransactionOf(
 ): string | null | undefined {
   const failed = events.find((event) => nameOf(event) === 'step1:failed')
   return failed?.[0] === 'stepEvent' ? failed[1].transactionId : undefined
+}
+
+/*
+ * Stores `request-1` PENDING, with no task run, in a fresh database the next client loads: a RUNNING one whose
+ * `/tx/create` hangs, with its queue and task states set back to PENDING.
+ */
+async function storePendingExecution(): Promise<void> {
+  httpClient.createTransaction.mockImplementation(hang)
+  const { client } = await createExecutionClient()
+  await start(client)
+  const source = await openQueues(factory)
+  const records: unknown[] = await done(
+    source.transaction('queues').objectStore('queues').getAll(),
+  )
+  source.close()
+  const [record] = records
+  if (
+    !isObject(record) ||
+    !isObject(record.state) ||
+    !isObject(record.state.tasks)
+  ) {
+    throw new Error('No stored queue')
+  }
+  const taskStates = Object.fromEntries(
+    Object.keys(record.state.tasks).map((id) => [
+      id,
+      { status: 'PENDING', blockedFor: null },
+    ]),
+  )
+  factory = new IDBFactory()
+  reloadOn(factory)
+  scriptCreateTransaction()
+  httpClient.checkStatus.mockResolvedValue(succeeded)
+  httpClient.reportFailure.mockResolvedValue(undefined)
+  const target = await openQueues(factory)
+  await done(
+    target
+      .transaction('queues', 'readwrite')
+      .objectStore('queues')
+      .put({
+        ...record,
+        status: 'PENDING',
+        state: { ...record.state, status: 'PENDING', tasks: taskStates },
+      }),
+  )
+  target.close()
 }
 
 describe('cancel()', () => {
@@ -341,13 +392,13 @@ describe('cancel()', () => {
   })
 
   test('a PENDING Execution ends CANCELED the same way: one USER_CANCEL write, a report, then step failed and route failed', async () => {
+    await storePendingExecution()
     stubWindow()
     const { client, events } = await createExecutionClient(
       recordingNamespaces(),
       evmBlockchains,
       { pauseOnStart: true },
     )
-    await start(client)
     expect((await historyOf(client))?._queue.status).toBe('PENDING')
     const before = events.length
 

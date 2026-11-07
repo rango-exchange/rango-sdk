@@ -38,6 +38,7 @@ export function unblockExecution(
 export async function createExecution(
   state: ClientState,
   manager: Manager,
+  context: SdkContext,
   requestId: string,
   options?: ExecutionOptions,
 ): Promise<void> {
@@ -53,6 +54,12 @@ export async function createExecution(
     throw new SdkError('INVALID_INPUT', 'A new execution needs `options`.', {
       metadata: { field: 'options', reason: 'MISSING' },
     })
+  }
+  if (context.isPaused()) {
+    throw new SdkError(
+      'CLIENT_PAUSED',
+      'The client is paused: call `resume()` first.',
+    )
   }
 
   // No `await` between the existing-record check and `create`, so a parallel call finds the record.
