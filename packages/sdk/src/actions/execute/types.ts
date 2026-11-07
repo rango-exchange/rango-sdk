@@ -224,8 +224,8 @@ export type EvmChainDescription = {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface EvmWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(req: { blockchain: string }): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(req: { blockchain: string }): Promise<string | null>
   /** Answer the wallet's chain ID, hex or decimal, or `null` when it isn't ready. */
   getChainId(req: { blockchain: string }): Promise<string | null>
   /** Switch the wallet to `chainId`, first adding `{ chainId, ...chain }` when it doesn't know the chain, or reject when it can't. */
@@ -263,8 +263,8 @@ export interface EvmWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface HyperliquidWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Answer the wallet's chain ID, hex or decimal, or `null` when it isn't ready. */
   getChainId(): Promise<string | null>
   /** Switch the wallet to `chainId`, or reject when it can't. */
@@ -279,8 +279,8 @@ export interface HyperliquidWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface TronWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, an approve `buildTransaction` built included, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.TRON> }): Promise<SignResult>
   /** Answer the allowance the wallet already grants as a decimal string, or `null` for nothing. */
@@ -303,8 +303,8 @@ export interface TronWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface XrplWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, a `TrustSet` the SDK built included, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.XRPL> }): Promise<SignResult>
   /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
@@ -323,8 +323,8 @@ export interface XrplWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface StellarWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, a trustline `buildTransaction` built included, and resolve once the network accepted it. */
   sign(req: { tx: TxOf<TransactionType.STELLAR> }): Promise<SignResult>
   /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
@@ -344,8 +344,8 @@ export interface StellarWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface Bip122Wallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(req: { blockchain: string }): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(req: { blockchain: string }): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
   sign(req: {
     blockchain: string
@@ -359,8 +359,8 @@ export interface Bip122Wallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface SolanaWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.SOLANA> }): Promise<SignResult>
 }
@@ -371,8 +371,8 @@ export interface SolanaWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface StarknetWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.STARKNET> }): Promise<SignResult>
 }
@@ -383,8 +383,8 @@ export interface StarknetWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface TonWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.TON> }): Promise<SignResult>
 }
@@ -395,8 +395,8 @@ export interface TonWallet {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
 export interface SuiWallet {
-  /** Answer the addresses the chosen wallet holds, or `null` when it isn't connected, without prompting. */
-  getAccounts(): Promise<string[] | null>
+  /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
+  getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.SUI> }): Promise<SignResult>
 }

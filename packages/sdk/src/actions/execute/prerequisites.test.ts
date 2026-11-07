@@ -259,7 +259,7 @@ describe('EVM approve Prerequisites', () => {
     },
   )
 
-  test('the approve is gated on its connection: getAccounts answering null blocks NOT_CONNECTED before the met test', async () => {
+  test('the approve is gated on its connection: getAccount answering null blocks NOT_CONNECTED before the met test', async () => {
     const port = approvingNamespaces(
       recordingNamespaces(undefined, { ETH: null }),
     )
@@ -271,7 +271,28 @@ describe('EVM approve Prerequisites', () => {
       reason: 'NOT_CONNECTED',
       metadata: { blockchain: 'ETH', address: '0xfrom' },
     })
-    expect(port.wallet.evm.getAccounts.mock.calls).toEqual([
+    expect(port.wallet.evm.getAccount.mock.calls).toEqual([
+      [{ blockchain: 'ETH' }],
+    ])
+    expect(port.requests).toEqual([])
+    expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+      'not_started',
+    )
+  })
+
+  test('the approve is gated on its account: another address blocks ACCOUNT_MISMATCH before the met test', async () => {
+    const port = approvingNamespaces(
+      recordingNamespaces(undefined, { ETH: '0xother' }),
+    )
+    const { client } = await start(port)
+
+    const view = await historyOf(client)
+    expect(view?._queue.status).toBe('BLOCKED')
+    expect(view?._queue.blocked).toEqual({
+      reason: 'ACCOUNT_MISMATCH',
+      metadata: { blockchain: 'ETH', address: '0xfrom' },
+    })
+    expect(port.wallet.evm.getAccount.mock.calls).toEqual([
       [{ blockchain: 'ETH' }],
     ])
     expect(port.requests).toEqual([])

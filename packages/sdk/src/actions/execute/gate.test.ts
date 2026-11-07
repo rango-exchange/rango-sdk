@@ -9,10 +9,10 @@ import { SignerErrorCode } from 'rango-types'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
+  activeAccounts,
   advance,
   chain,
   confirmQuote,
-  connectedAccounts,
   createExecutionClient,
   createTxResponse,
   DEFAULT_ETH_CHAIN_DESCRIPTION,
@@ -509,7 +509,7 @@ describe('the network gate', () => {
         },
       ],
     ])
-    expect(port.wallet.bip122.getAccounts.mock.calls).toEqual([
+    expect(port.wallet.bip122.getAccount.mock.calls).toEqual([
       [{ blockchain: 'BTC' }],
     ])
     expect((await client.history.get('request-1'))?._queue.status).toBe(
@@ -519,8 +519,8 @@ describe('the network gate', () => {
 
   test('a transfer on a blockchain with no selected wallet is gated and signed for its blockchain and address', async () => {
     const port = switchingNamespaces(undefined, {
-      ...connectedAccounts(),
-      DOGE: ['Dfrom'],
+      ...activeAccounts(),
+      DOGE: 'Dfrom',
     })
     const { client } = await createExecutionClient(port, [
       ...evmBlockchains,
@@ -549,7 +549,7 @@ describe('the network gate', () => {
 
     await start(client)
 
-    expect(port.wallet.bip122.getAccounts.mock.calls).toEqual([
+    expect(port.wallet.bip122.getAccount.mock.calls).toEqual([
       [{ blockchain: 'DOGE' }],
     ])
     expect(port.requests).toEqual([
@@ -886,18 +886,18 @@ describe('the connection and account gate', () => {
     vi.useRealTimers()
   })
 
-  test('getAccounts is asked with the blockchain alone before getChainId, and a held address signs', async () => {
+  test('getAccount is asked with the blockchain alone before getChainId, and the selected address signs', async () => {
     const port = switchingNamespaces()
     const { client } = await createExecutionClient(port)
 
     await start(client)
 
-    expect(port.wallet.evm.getAccounts.mock.calls).toEqual([
+    expect(port.wallet.evm.getAccount.mock.calls).toEqual([
       [{ blockchain: 'ETH' }],
     ])
-    const [accountsOrder] = port.wallet.evm.getAccounts.mock.invocationCallOrder
+    const [accountOrder] = port.wallet.evm.getAccount.mock.invocationCallOrder
     const [chainOrder] = port.wallet.evm.getChainId.mock.invocationCallOrder
-    expect(accountsOrder).toBeLessThan(chainOrder ?? 0)
+    expect(accountOrder).toBeLessThan(chainOrder ?? 0)
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'SUCCESS',
     )
@@ -905,9 +905,9 @@ describe('the connection and account gate', () => {
 
   test.each([
     ['null', null],
-    ['no account', []],
+    ['an empty address', ''],
   ])(
-    'getAccounts answering %s blocks NOT_CONNECTED, emits waiting_for_wallet_connect, and asks nothing more',
+    'getAccount answering %s blocks NOT_CONNECTED, emits waiting_for_wallet_connect, and asks nothing more',
     async (_, answer) => {
       const port = switchingNamespaces({ ETH: '0x38' }, { ETH: answer })
       const { client, events } = await createExecutionClient(port)
@@ -946,8 +946,8 @@ describe('the connection and account gate', () => {
     },
   )
 
-  test('accounts without the address block ACCOUNT_MISMATCH before the chain, even on a wrong chain', async () => {
-    const port = switchingNamespaces({ ETH: '0x38' }, { ETH: ['0xother'] })
+  test('another address blocks ACCOUNT_MISMATCH before the chain, even on a wrong chain', async () => {
+    const port = switchingNamespaces({ ETH: '0x38' }, { ETH: '0xother' })
     const { client, events } = await createExecutionClient(port)
 
     await start(client)
@@ -980,11 +980,8 @@ describe('the connection and account gate', () => {
     ])
   })
 
-  test('accounts are matched in lower case: an address differing only in case signs', async () => {
-    const port = switchingNamespaces(
-      { ETH: '0x1' },
-      { ETH: ['0xOTHER', '0xFROM'] },
-    )
+  test('the address is matched in lower case: the selected address in upper case signs', async () => {
+    const port = switchingNamespaces({ ETH: '0x1' }, { ETH: '0xFROM' })
     const { client } = await createExecutionClient(port)
 
     await start(client)
@@ -1003,25 +1000,25 @@ describe('the connection and account gate', () => {
 
     const view = await client.history.get('request-1')
     expect(view?._queue.blocked).toEqual(MISMATCH)
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
   })
 
-  const unblocks: [string, string[] | null, Sdk.BlockReason][] = [
+  const unblocks: [string, string | null, Sdk.BlockReason][] = [
     ['connected', null, NOT_CONNECTED],
-    ['on the account', ['0xother'], ACCOUNT_MISMATCH],
+    ['on the account', '0xother', ACCOUNT_MISMATCH],
   ]
 
   test.each(unblocks)(
     'execute() on a blocked Execution whose wallet is now %s signs',
     async (_, answer, blocked) => {
-      const accounts: Record<string, string[] | null> = { ETH: answer }
+      const accounts: Record<string, string | null> = { ETH: answer }
       const port = switchingNamespaces(undefined, accounts)
       const { client } = await createExecutionClient(port)
       await start(client)
       expect((await client.history.get('request-1'))?._queue.blocked).toEqual(
         blocked,
       )
-      accounts.ETH = ['0xfrom']
+      accounts.ETH = '0xfrom'
 
       await client.execute('request-1')
       await settle()
@@ -1047,7 +1044,7 @@ describe('the connection and account gate', () => {
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('BLOCKED')
     expect(view?._queue.blocked).toEqual(NOT_CONNECTED)
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(2)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(2)
     expect(port.wallet.evm.sign).not.toHaveBeenCalled()
     expect(
       events.map(nameOf).filter((name) => name === NOT_CONNECTED_EVENT),
@@ -1060,10 +1057,10 @@ describe('the connection and account gate', () => {
   ]
 
   test.each(accountsRejections)(
-    'a getAccounts rejected with %s blocks NOT_CONNECTED, emits waiting_for_wallet_connect, and fails nothing',
+    'a getAccount rejected with %s blocks NOT_CONNECTED, emits waiting_for_wallet_connect, and fails nothing',
     async (_, rejection) => {
       const port = switchingNamespaces()
-      port.wallet.evm.getAccounts.mockRejectedValue(rejection())
+      port.wallet.evm.getAccount.mockRejectedValue(rejection())
       const { client, events } = await createExecutionClient(port)
 
       await start(client)
@@ -1075,7 +1072,7 @@ describe('the connection and account gate', () => {
       expect(view?._storage.transactions.s1?.execution.status).toBe(
         'not_started',
       )
-      expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+      expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
       expect(port.wallet.evm.getChainId).not.toHaveBeenCalled()
       expect(port.wallet.evm.sign).not.toHaveBeenCalled()
       expect(port.requests).toEqual([])
@@ -1105,9 +1102,9 @@ describe('the connection and account gate', () => {
     },
   )
 
-  test('execute() on an Execution blocked by a rejected getAccounts that now answers the address signs', async () => {
+  test('execute() on an Execution blocked by a rejected getAccount that now answers the address signs', async () => {
     const port = switchingNamespaces()
-    port.wallet.evm.getAccounts.mockRejectedValueOnce(new Error('no provider'))
+    port.wallet.evm.getAccount.mockRejectedValueOnce(new Error('no provider'))
     const { client } = await createExecutionClient(port)
     await start(client)
     expect((await client.history.get('request-1'))?._queue.blocked).toEqual(
@@ -1117,7 +1114,7 @@ describe('the connection and account gate', () => {
     await client.execute('request-1')
     await settle()
 
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(2)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(2)
     expect(port.requests).toEqual([
       ['evm', 'getChainId', TARGET],
       ['evm', 'sign', { ...TARGET, tx: evmTx() }],
@@ -1129,39 +1126,39 @@ describe('the connection and account gate', () => {
     expect(httpClient.reportFailure).not.toHaveBeenCalled()
   })
 
-  test('a cancel while getAccounts is pending stores no block and asks the port nothing more', async () => {
-    const port = switchingNamespaces(undefined, { ETH: [] })
-    const pending = Promise.withResolvers<string[] | null>()
-    port.wallet.evm.getAccounts.mockImplementationOnce(
+  test('a cancel while getAccount is pending stores no block and asks the port nothing more', async () => {
+    const port = switchingNamespaces(undefined, { ETH: '' })
+    const pending = Promise.withResolvers<string | null>()
+    port.wallet.evm.getAccount.mockImplementationOnce(
       async () => pending.promise,
     )
     const { client, events } = await createExecutionClient(port)
     await start(client)
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
 
     await client.cancel('request-1')
     await settle()
-    pending.resolve([])
+    pending.resolve('')
     await settle()
 
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('CANCELED')
     expect(view?._queue.blocked).toBeNull()
     expect(view?._storage.failure?.reasonCode).toBe('USER_CANCEL')
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(port.requests).toEqual([])
     expect(events.map(nameOf)).not.toContain(NOT_CONNECTED_EVENT)
   })
 
-  test('a cancel while getAccounts is pending, which then rejects, stores no block and asks the port nothing more', async () => {
+  test('a cancel while getAccount is pending, which then rejects, stores no block and asks the port nothing more', async () => {
     const port = switchingNamespaces()
-    const pending = Promise.withResolvers<string[] | null>()
-    port.wallet.evm.getAccounts.mockImplementationOnce(
+    const pending = Promise.withResolvers<string | null>()
+    port.wallet.evm.getAccount.mockImplementationOnce(
       async () => pending.promise,
     )
     const { client, events } = await createExecutionClient(port)
     await start(client)
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
 
     await client.cancel('request-1')
     await settle()
@@ -1174,7 +1171,7 @@ describe('the connection and account gate', () => {
     expect(view?._queue.status).toBe('CANCELED')
     expect(view?._queue.blocked).toBeNull()
     expect(view?._storage.failure?.reasonCode).toBe('USER_CANCEL')
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(port.requests).toEqual([])
     expect(events).toHaveLength(settled)
     expect(httpClient.reportFailure).toHaveBeenCalledTimes(reports)

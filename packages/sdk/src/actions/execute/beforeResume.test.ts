@@ -55,9 +55,9 @@ function routingTo(namespaces: Namespaces) {
   })
 }
 
-// Every call the port got, `getAccounts` included, which its `requests` leave out.
+// Every call the port got, `getAccount` included, which its `requests` leave out.
 function callCount(port: ReturnType<typeof recordingNamespaces>): number {
-  return port.wallet.evm.getAccounts.mock.calls.length + port.requests.length
+  return port.wallet.evm.getAccount.mock.calls.length + port.requests.length
 }
 
 // A page that stored a RUNNING Execution, its `/tx/create` left hanging, then reloaded on the same database.
@@ -122,7 +122,7 @@ describe('beforeResume', () => {
     await start(client)
 
     expect(callCount(port)).toBe(0)
-    expect(other.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(other.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(other.requests.map(callOf)).toEqual([
       'getChainId',
       'sign:0xcontract',
@@ -272,7 +272,7 @@ describe('beforeResume', () => {
     expect(beforeResume.mock.calls[1]?.[2]._queue.id).toBe('request-1')
     expect(otherCalls).toBe(0)
     expect(callCount(port)).toBe(portCalls)
-    expect(other.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(other.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(other.requests.map(callOf)).toEqual([
       'getChainId',
       'sign:0xcontract',

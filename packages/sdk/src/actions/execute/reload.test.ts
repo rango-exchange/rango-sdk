@@ -387,11 +387,11 @@ describe('after a reload', () => {
     })
     const { client: loaded, requests } = await resumeExecutions(port)
     expect(requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtoken'])
-    expect(port.wallet.evm.getAccounts).not.toHaveBeenCalled()
+    expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
 
     await advance(ALLOWANCE_READ_INTERVAL_MS)
 
-    expect(port.wallet.evm.getAccounts.mock.calls).toEqual([
+    expect(port.wallet.evm.getAccount.mock.calls).toEqual([
       [{ blockchain: 'ETH' }],
     ])
 

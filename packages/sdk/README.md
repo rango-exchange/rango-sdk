@@ -161,7 +161,7 @@ import type { WalletPort } from '@rango-dev/sdk'
 // `evm(blockchain)`, `chainIdOf(blockchain)` and `solana` are your code: your app's wallets and chain config.
 const wallet: WalletPort = {
   evm: {
-    getAccounts: async (req) => evm(req.blockchain).accounts(), // null when not connected
+    getAccount: async (req) => evm(req.blockchain).account(), // null when not connected
     getChainId: async (req) => evm(req.blockchain).getChainId(),
     switchChain: async (req) =>
       evm(req.blockchain).switchChain(req.chainId, req.chain),
@@ -176,25 +176,25 @@ const wallet: WalletPort = {
     },
   },
   solana: {
-    getAccounts: async () => solana.accounts(),
+    getAccount: async () => solana.account(),
     sign: async (req) => solana.signAndSend(req.tx),
   },
 }
 ```
 
-| Namespace                          | Methods                                                                                           | Signs                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `evm`                              | `getAccounts`, `getChainId`, `switchChain`, `sign`, `wait?`, `getAllowance`, `getTransactionInfo` | EVM transactions and EVM approves, on every EVM blockchain.   |
-| `hyperliquid`                      | `getAccounts`, `getChainId`, `switchChain`, `signTypedData`                                       | Hyperliquid actions, on their `signatureChainId`.             |
-| `tron`                             | `getAccounts`, `sign`, `getAllowance`, `buildTransaction`, `getTransactionInfo`                   | TRON transactions and TRON approves.                          |
-| `xrpl`                             | `getAccounts`, `sign`, `getTrustline`, `getTransactionInfo`                                       | XRPL payments and trustlines (the SDK builds the `TrustSet`). |
-| `stellar`                          | `getAccounts`, `sign`, `getTrustline`, `buildTransaction`                                         | Stellar transactions and trustlines.                          |
-| `bip122`                           | `getAccounts`, `sign`                                                                             | Transfers on every UTXO blockchain.                           |
-| `solana`, `starknet`, `ton`, `sui` | `getAccounts`, `sign`                                                                             | Their own transactions.                                       |
+| Namespace                          | Methods                                                                                          | Signs                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `evm`                              | `getAccount`, `getChainId`, `switchChain`, `sign`, `wait?`, `getAllowance`, `getTransactionInfo` | EVM transactions and EVM approves, on every EVM blockchain.   |
+| `hyperliquid`                      | `getAccount`, `getChainId`, `switchChain`, `signTypedData`                                       | Hyperliquid actions, on their `signatureChainId`.             |
+| `tron`                             | `getAccount`, `sign`, `getAllowance`, `buildTransaction`, `getTransactionInfo`                   | TRON transactions and TRON approves.                          |
+| `xrpl`                             | `getAccount`, `sign`, `getTrustline`, `getTransactionInfo`                                       | XRPL payments and trustlines (the SDK builds the `TrustSet`). |
+| `stellar`                          | `getAccount`, `sign`, `getTrustline`, `buildTransaction`                                         | Stellar transactions and trustlines.                          |
+| `bip122`                           | `getAccount`, `sign`                                                                             | Transfers on every UTXO blockchain.                           |
+| `solana`, `starknet`, `ton`, `sui` | `getAccount`, `sign`                                                                             | Their own transactions.                                       |
 
 No request carries the address: sign with the wallet's active account. Only `evm` and `bip122` requests carry `blockchain`, the `selectedWallets` key. A method that fails rejects with a `SignerError` (exported with `SignerErrorCode`), whose `code` and `getErrorDetail()` make the stored failure.
 
-- `getAccounts`: answer the addresses the chosen wallet holds, or `null` when it isn't connected. Never prompt.
+- `getAccount`: answer the account the wallet will sign with, or `null` when it isn't connected. Never prompt.
 - `getChainId`: answer the wallet's chain ID, hex or decimal.
 - `switchChain`: switch to `chainId`, or reject when the wallet can't. On `evm`, `chain` describes the chain as EIP-3085 does without `chainId`, so a wallet that doesn't know the chain can add `{ chainId, ...chain }` first.
 - `sign`: sign and send `tx` and resolve with `{ hash, response?, hashRequiringUpdate? }`; a Stellar `sign` resolves only once the network accepted it.
@@ -268,8 +268,8 @@ const items = await client.history.getAll()
 Each stored **Execution** as a `HistoryItem`, read fresh on each call; read `getAll()` again on each [`loaded`](#events) event. Its shape may still change, as the underscores mark:
 
 - `_queue`: `id` (the request ID), `createdAt`, `status` (`PENDING`, `RUNNING`, `BLOCKED`, `SUCCESS`, `FAILED` or `CANCELED`) and `blocked`, which is `{ reason, metadata: { blockchain, address, requiredChainId? } }` while `BLOCKED`, else `null`.
-  - `NOT_CONNECTED`: no wallet, no namespace for the entry, or `getAccounts` gives `null`, `[]` or rejects. Ask the user to connect.
-  - `ACCOUNT_MISMATCH`: `address` isn't among the accounts. Ask the user to pick it.
+  - `NOT_CONNECTED`: no wallet, no namespace for the entry, or `getAccount` gives `null`, `''` or rejects. Ask the user to connect.
+  - `ACCOUNT_MISMATCH`: `address` isn't the wallet's active account. Ask the user to switch to it.
   - `NETWORK_MISMATCH` (EVM/Hyperliquid only): the wallet is still on the wrong chain after one `switchChain`. Ask the user to switch to `requiredChainId`.
 - `_storage` (`ExecutionRecord`), a copy of what is stored: the **Route** (`data`), `options`, `transactions` (`s<step>` for a step's main transaction, `s<step>.p<i>` for its **Prerequisites**), `finishedSwapSteps`, `failure` and `finishedAt`. A failed swap failed at step `finishedSwapSteps + 1`.
 

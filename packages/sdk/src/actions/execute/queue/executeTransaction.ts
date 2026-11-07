@@ -117,13 +117,13 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
     : signedPrerequisite.walletResult.hash
 }
 
-// A rejected `getAccounts`, whatever it rejects with, reads as `null`.
-async function readAccountsAndGetBlockReason(
+// A rejected `getAccount`, whatever it rejects with, reads as `null`.
+async function readAccountAndGetBlockReason(
   requiredWallet: RequiredWallet,
-  readAccounts: () => Promise<string[] | null>,
+  readAccount: () => Promise<string | null>,
 ): Promise<BlockReason | null> {
-  const connectedAccounts = await readAccounts().catch(() => null)
-  return getAccountBlockReason(requiredWallet, connectedAccounts)
+  const activeAccount = await readAccount().catch(() => null)
+  return getAccountBlockReason(requiredWallet, activeAccount)
 }
 
 async function gateSignAndProveEvmApprove(
@@ -144,14 +144,14 @@ async function gateSignAndProveEvmApprove(
     )
   }
   const { blockchainMeta } = resumedHashOrBlockchainMeta
-  const accountBlockReason = await readAccountsAndGetBlockReason(
+  const accountBlockReason = await readAccountAndGetBlockReason(
     requiredWallet,
-    async () => evm.getAccounts({ blockchain: requiredWallet.blockchain }),
+    async () => evm.getAccount({ blockchain: requiredWallet.blockchain }),
   )
   if (isCanceled(actions)) {
     return []
   }
-  // The chain ID is looked up only once the accounts pass.
+  // The chain ID is looked up only once the account passes.
   const blockReason =
     accountBlockReason ??
     (await switchToRequiredChainOrGetBlockReason(
@@ -218,9 +218,9 @@ async function gateSignAndProveTronApprove(
       resumedHashOrBlockchainMeta.hashToResumeProving,
     )
   }
-  const blockReason = await readAccountsAndGetBlockReason(
+  const blockReason = await readAccountAndGetBlockReason(
     requiredWallet,
-    async () => tron.getAccounts(),
+    async () => tron.getAccount(),
   )
   if (isCanceled(actions)) {
     return []
@@ -268,9 +268,9 @@ async function gateSignAndProveXrplTrustline(
       resumedHashOrBlockchainMeta.hashToResumeProving,
     )
   }
-  const blockReason = await readAccountsAndGetBlockReason(
+  const blockReason = await readAccountAndGetBlockReason(
     requiredWallet,
-    async () => xrpl.getAccounts(),
+    async () => xrpl.getAccount(),
   )
   if (isCanceled(actions)) {
     return []
@@ -313,9 +313,9 @@ async function gateAndSignStellarTrustline(
       false,
     )
   }
-  const blockReason = await readAccountsAndGetBlockReason(
+  const blockReason = await readAccountAndGetBlockReason(
     requiredWallet,
-    async () => stellar.getAccounts(),
+    async () => stellar.getAccount(),
   )
   if (isCanceled(actions)) {
     return []
@@ -523,14 +523,12 @@ export async function executeTransaction(
       if (hyperliquid === undefined) {
         return notConnectedBlock
       }
-      const connectedAccounts = await hyperliquid
-        .getAccounts()
-        .catch(() => null)
+      const activeAccount = await hyperliquid.getAccount().catch(() => null)
       if (isCanceled(actions)) {
         return []
       }
       blockReason =
-        getAccountBlockReason(requiredWallet, connectedAccounts) ??
+        getAccountBlockReason(requiredWallet, activeAccount) ??
         (await switchToRequiredChainOrGetBlockReason(
           actions,
           transactionId,
@@ -556,15 +554,15 @@ export async function executeTransaction(
       if (isCanceled(actions)) {
         return []
       }
-      const connectedAccounts = await evm
-        .getAccounts({ blockchain: requiredWallet.blockchain })
+      const activeAccount = await evm
+        .getAccount({ blockchain: requiredWallet.blockchain })
         .catch(() => null)
       if (isCanceled(actions)) {
         return []
       }
-      // The chain ID is looked up only once the accounts pass.
+      // The chain ID is looked up only once the account passes.
       blockReason =
-        getAccountBlockReason(requiredWallet, connectedAccounts) ??
+        getAccountBlockReason(requiredWallet, activeAccount) ??
         (await switchToRequiredChainOrGetBlockReason(
           actions,
           transactionId,
@@ -588,10 +586,10 @@ export async function executeTransaction(
       if (bip122 === undefined) {
         return notConnectedBlock
       }
-      const connectedAccounts = await bip122
-        .getAccounts({ blockchain: requiredWallet.blockchain })
+      const activeAccount = await bip122
+        .getAccount({ blockchain: requiredWallet.blockchain })
         .catch(() => null)
-      blockReason = getAccountBlockReason(requiredWallet, connectedAccounts)
+      blockReason = getAccountBlockReason(requiredWallet, activeAccount)
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         bip122.sign({ blockchain: requiredWallet.blockchain, tx: mainTx }),
       )
@@ -604,7 +602,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await tron.getAccounts().catch(() => null),
+        await tron.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         tron.sign({ tx: mainTx }),
@@ -618,7 +616,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await xrpl.getAccounts().catch(() => null),
+        await xrpl.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         xrpl.sign({ tx: mainTx }),
@@ -632,7 +630,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await stellar.getAccounts().catch(() => null),
+        await stellar.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         stellar.sign({ tx: mainTx }),
@@ -646,7 +644,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await solana.getAccounts().catch(() => null),
+        await solana.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         solana.sign({ tx: mainTx }),
@@ -660,7 +658,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await starknet.getAccounts().catch(() => null),
+        await starknet.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         starknet.sign({ tx: mainTx }),
@@ -674,7 +672,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await ton.getAccounts().catch(() => null),
+        await ton.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         ton.sign({ tx: mainTx }),
@@ -688,7 +686,7 @@ export async function executeTransaction(
       }
       blockReason = getAccountBlockReason(
         requiredWallet,
-        await sui.getAccounts().catch(() => null),
+        await sui.getAccount().catch(() => null),
       )
       signMainTransaction = buildMainTransactionSigner(actions, async () =>
         sui.sign({ tx: mainTx }),

@@ -15,20 +15,15 @@ function isSameChainId(current: string | null, required: string): boolean {
   }
 }
 
-// The gate's account check. A caller reads a rejected `getAccounts`, whatever it rejects with, as `null`.
+// The gate's account check. A caller reads a rejected `getAccount`, whatever it rejects with, as `null`.
 export function getAccountBlockReason(
   requiredWallet: RequiredWallet,
-  connectedAccounts: string[] | null,
+  activeAccount: string | null,
 ): BlockReason | null {
-  if (connectedAccounts === null || connectedAccounts.length === 0) {
+  if (!activeAccount) {
     return { reason: 'NOT_CONNECTED', metadata: requiredWallet }
   }
-  const requiredAddressLowerCase = requiredWallet.address.toLowerCase()
-  if (
-    !connectedAccounts.some(
-      (account) => account.toLowerCase() === requiredAddressLowerCase,
-    )
-  ) {
+  if (activeAccount.toLowerCase() !== requiredWallet.address.toLowerCase()) {
     return { reason: 'ACCOUNT_MISMATCH', metadata: requiredWallet }
   }
   return null

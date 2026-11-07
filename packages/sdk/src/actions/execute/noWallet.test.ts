@@ -135,7 +135,7 @@ describe('with no wallet', () => {
     await client.execute('request-1')
     await settle()
 
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(port.requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
@@ -211,7 +211,7 @@ describe('with no wallet', () => {
     await loaded.execute('request-1')
     await settle()
     expect(port.requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtoken'])
-    expect(port.wallet.evm.getAccounts).not.toHaveBeenCalled()
+    expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
     await advance(ALLOWANCE_READ_INTERVAL_MS)
 
     expect(port.requests.map(callOf)).toEqual([

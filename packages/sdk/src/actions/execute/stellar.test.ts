@@ -175,7 +175,7 @@ describe('Stellar', () => {
     })
   })
 
-  test('the main transaction is gated on its connection: getAccounts answering null blocks NOT_CONNECTED with nothing signed', async () => {
+  test('the main transaction is gated on its connection: getAccount answering null blocks NOT_CONNECTED with nothing signed', async () => {
     const port = recordingNamespaces(undefined, { STELLAR: null })
     const { client } = await start(port)
 
@@ -185,11 +185,29 @@ describe('Stellar', () => {
       reason: 'NOT_CONNECTED',
       metadata: { blockchain: 'STELLAR', address: 'GSTELLARFROM' },
     })
-    expect(port.wallet.stellar.getAccounts.mock.calls).toEqual([[]])
+    expect(port.wallet.stellar.getAccount.mock.calls).toEqual([[]])
     expect(port.requests).toEqual([])
   })
 
   describe('STELLAR_CHANGE_TRUSTLINE Prerequisites', () => {
+    test('the trustline is gated on its account: another address blocks ACCOUNT_MISMATCH before the met test', async () => {
+      const port = stellarWallet()
+      port.wallet.stellar.getAccount.mockResolvedValue('GOTHER')
+      const { client } = await start(port, [stellarTrustline()])
+
+      const view = await historyOf(client)
+      expect(view?._queue.status).toBe('BLOCKED')
+      expect(view?._queue.blocked).toEqual({
+        reason: 'ACCOUNT_MISMATCH',
+        metadata: { blockchain: 'STELLAR', address: 'GSTELLARFROM' },
+      })
+      expect(port.wallet.stellar.getAccount.mock.calls).toEqual([[]])
+      expect(port.requests).toEqual([])
+      expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+        'not_started',
+      )
+    })
+
     const met: [string, string][] = [
       ['at', TRUSTLINE_LIMIT],
       ['above', '922337203685.4775808'],

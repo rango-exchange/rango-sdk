@@ -8,6 +8,7 @@ import * as LegacySdk from 'rango-sdk'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
+  activeAccounts,
   advance,
   approvingNamespaces,
   buildingNamespaces,
@@ -16,7 +17,6 @@ import {
   chain,
   confirmQuote,
   confirmResponse,
-  connectedAccounts,
   createExecutionClient,
   createTxResponse,
   evmBlockchains,
@@ -108,14 +108,14 @@ const chains = [
 
 let factory = new IDBFactory()
 
-// A recording port whose `getAccounts` holds every wallet in WALLETS.
+// A recording port whose `getAccount` answers every wallet in WALLETS.
 function namespacesPort() {
   return recordingNamespaces(undefined, {
-    ...connectedAccounts(),
+    ...activeAccounts(),
     ...Object.fromEntries(
       Object.entries(WALLETS).map(([blockchain, { address }]) => [
         blockchain,
-        [address],
+        address,
       ]),
     ),
   })
@@ -172,7 +172,7 @@ describe('the WalletPort by namespace', () => {
 
     await start(client, tx)
 
-    expect(port.wallet.evm.getAccounts).toHaveBeenCalledWith({
+    expect(port.wallet.evm.getAccount).toHaveBeenCalledWith({
       blockchain: 'BSC',
     })
     expect(port.requests).toEqual([
@@ -198,7 +198,7 @@ describe('the WalletPort by namespace', () => {
       await start(client, tx)
 
       expect(port.requests).toEqual([[namespace, 'sign', { tx }]])
-      expect(port.wallet.evm.getAccounts).not.toHaveBeenCalled()
+      expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
       expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     },
   )
@@ -221,14 +221,14 @@ describe('the WalletPort by namespace', () => {
     expect(blocked?._storage.failure).toBeNull()
     expect(events.map(nameOf).at(-1)).toBe(NOT_CONNECTED_EVENT)
     expect(port.requests).toEqual([])
-    expect(port.wallet.evm.getAccounts).not.toHaveBeenCalled()
-    expect(port.wallet.solana.getAccounts).not.toHaveBeenCalled()
+    expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
+    expect(port.wallet.solana.getAccount).not.toHaveBeenCalled()
 
     connection.wallet = { ...connection.wallet, solana: port.wallet.solana }
     await client.execute('request-1')
     await settle()
 
-    expect(port.wallet.solana.getAccounts).toHaveBeenCalledTimes(1)
+    expect(port.wallet.solana.getAccount).toHaveBeenCalledTimes(1)
     expect(port.requests).toEqual([['solana', 'sign', { tx: solanaTx }]])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
@@ -278,7 +278,7 @@ describe('the WalletPort by namespace', () => {
     await loaded.execute('request-1')
     await settle()
     expect(port.requests.map(callOf)).toEqual(['info:0xhash1', 'read:0xtrc20'])
-    expect(port.wallet.tron.getAccounts).not.toHaveBeenCalled()
+    expect(port.wallet.tron.getAccount).not.toHaveBeenCalled()
     await advance(ALLOWANCE_READ_INTERVAL_MS)
 
     expect(port.requests.map(callOf)).toEqual([
@@ -376,11 +376,11 @@ describe('the WalletPort by namespace', () => {
           'NOT_CONNECTED',
         ],
         [
-          'whose accounts lack the address',
+          'whose active account is another address',
           () =>
             recordingNamespaces(undefined, {
-              ...connectedAccounts(),
-              SOLANA: ['SoLother'],
+              ...activeAccounts(),
+              SOLANA: 'SoLother',
             }).wallet,
           'ACCOUNT_MISMATCH',
         ],
@@ -415,7 +415,7 @@ describe('the WalletPort by namespace', () => {
 
       await start(client, solanaTx)
 
-      expect(port.wallet.solana.getAccounts).toHaveBeenCalledTimes(1)
+      expect(port.wallet.solana.getAccount).toHaveBeenCalledTimes(1)
       expect(port.wallet.solana.sign).not.toHaveBeenCalled()
       expect(port.requests).toEqual([])
       const view = await historyOf(client)

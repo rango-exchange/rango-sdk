@@ -9,12 +9,12 @@ import { type SignerError, SignerErrorCode } from 'rango-types'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
+  activeAccounts,
   BSC_ASSET,
   cacheQuote,
   chain,
   confirmQuote,
   confirmResponse,
-  connectedAccounts,
   createExecutionClient,
   createTxResponse,
   done,
@@ -406,8 +406,8 @@ describe("the failure report's wallet tag", () => {
 
   test('an entry on a blockchain with no selected wallet reports no tag, and the failure is still stored and emitted', async () => {
     const port = recordingNamespaces(undefined, {
-      ...connectedAccounts(),
-      DOGE: ['Dfrom'],
+      ...activeAccounts(),
+      DOGE: 'Dfrom',
     })
     const { client, events } = await createExecutionClient(port)
     httpClient.getBlockchains.mockResolvedValue([

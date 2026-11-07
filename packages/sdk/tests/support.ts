@@ -404,7 +404,7 @@ export function callOf(request: NamespaceRequest): string {
       return `build:${assetOf(request[2].prerequisite)}`
     case 'getTransactionInfo':
       return `info:${request[2].hash}`
-    case 'getAccounts':
+    case 'getAccount':
     case 'getChainId':
     case 'switchChain':
     case 'wait':
@@ -897,18 +897,18 @@ export const SELECTED_WALLETS = {
   HYPERLIQUID: { address: '0xhyperliquid', walletId: 'rabby' },
 }
 /*
- * What `getAccounts` answers by default: each selected wallet's address, and a TRANSFER's `bc1from` on BTC. A fresh
+ * What `getAccount` answers by default: each selected wallet's address, and a TRANSFER's `bc1from` on BTC. A fresh
  * map per call, so a test can change it.
  */
-export function connectedAccounts(): Record<string, string[] | null> {
+export function activeAccounts(): Record<string, string | null> {
   return {
     ...Object.fromEntries(
       Object.entries(SELECTED_WALLETS).map(([blockchain, { address }]) => [
         blockchain,
-        [address],
+        address,
       ]),
     ),
-    BTC: ['bc1from'],
+    BTC: 'bc1from',
   }
 }
 
@@ -1098,7 +1098,7 @@ export function stubHyperliquid({
 
 /*
  * Per-namespace fakes: v14's WalletPort by namespace. Each namespace takes v14's requests (no `address`, and `blockchain`
- * only on `evm` and `bip122`) and has v14's method names; every call but `getAccounts` is recorded, copied, in call
+ * only on `evm` and `bip122`) and has v14's method names; every call but `getAccount` is recorded, copied, in call
  * order, as `[namespace, method, request]`. `createExecutionClient` hands one to the SDK as it is, so a test asserts
  * what v14's port receives.
  */
@@ -1147,7 +1147,7 @@ export const XRPL_INFO = {
 
 // v20's namespace ports, as the tests fake them, matching the source's. Only `wait` is optional, as there.
 export type EvmNamespace = {
-  getAccounts(req: OnChain): Promise<string[] | null>
+  getAccount(req: OnChain): Promise<string | null>
   getChainId(req: OnChain): Promise<string | null>
   switchChain(req: OnChain & { chainId: string }): Promise<void>
   sign(req: OnChain & { tx: EvmTx }): Promise<SignResult>
@@ -1160,26 +1160,26 @@ export type EvmNamespace = {
   getTransactionInfo(req: OnChain & { hash: string }): Promise<EvmInfo>
 }
 export type HyperliquidNamespace = {
-  getAccounts(): Promise<string[] | null>
+  getAccount(): Promise<string | null>
   getChainId(): Promise<string | null>
   switchChain(req: { chainId: string }): Promise<void>
   signTypedData(req: { typedData: unknown; chainId: string }): Promise<string>
 }
 export type TronNamespace = {
-  getAccounts(): Promise<string[] | null>
+  getAccount(): Promise<string | null>
   sign(req: { tx: TronTx }): Promise<SignResult>
   getAllowance(req: { prerequisite: TronApprove }): Promise<string | null>
   buildTransaction(req: { prerequisite: TronApprove }): Promise<TronTx>
   getTransactionInfo(req: { hash: string }): Promise<TronInfo>
 }
 export type XrplNamespace = {
-  getAccounts(): Promise<string[] | null>
+  getAccount(): Promise<string | null>
   sign(req: { tx: XrplTx }): Promise<SignResult>
   getTrustline(req: { prerequisite: XrplTrustline }): Promise<string | null>
   getTransactionInfo(req: { hash: string }): Promise<XrplInfo>
 }
 export type StellarNamespace = {
-  getAccounts(): Promise<string[] | null>
+  getAccount(): Promise<string | null>
   sign(req: { tx: StellarTx }): Promise<SignResult>
   getTrustline(req: { prerequisite: StellarTrustline }): Promise<string | null>
   buildTransaction(req: {
@@ -1188,13 +1188,13 @@ export type StellarNamespace = {
   }): Promise<StellarTx>
 }
 export type Bip122Namespace = {
-  getAccounts(req: OnChain): Promise<string[] | null>
+  getAccount(req: OnChain): Promise<string | null>
   sign(
     req: OnChain & { tx: TxOf<LegacySdk.TransactionType.TRANSFER> },
   ): Promise<SignResult>
 }
 type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
-  getAccounts(): Promise<string[] | null>
+  getAccount(): Promise<string | null>
   sign(req: { tx: TxOf<T> }): Promise<SignResult>
 }
 export type Namespaces = {
@@ -1229,7 +1229,7 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
 
 /*
  * The recording namespace port: every namespace, with every method but `wait`. `sign` answers `0xhash1`, `0xhash2`, ...
- * across namespaces, `getAccounts` the blockchain's entry in `accounts` (the requested one on `evm` and `bip122`, the
+ * across namespaces, `getAccount` the blockchain's entry in `accounts` (the requested one on `evm` and `bip122`, the
  * namespace's own otherwise, such as `TRON`), `getChainId` the blockchain's entry in `chainIds` (`HYPERLIQUID`'s on
  * `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` rejects,
@@ -1238,7 +1238,7 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
  */
 export function recordingNamespaces(
   chainIds: Record<string, string | null> = { ETH: '0x1', BSC: '0x38' },
-  accounts: Record<string, string[] | null> = connectedAccounts(),
+  accounts: Record<string, string | null> = activeAccounts(),
 ) {
   const requests: NamespaceRequest[] = []
   let signed = 0
@@ -1246,14 +1246,13 @@ export function recordingNamespaces(
     signed += 1
     return { hash: `0xhash${signed}` }
   }
-  const accountsOn =
-    (blockchain: string) => async (): Promise<string[] | null> =>
-      accounts[blockchain] ?? null
+  const accountOn = (blockchain: string) => async (): Promise<string | null> =>
+    accounts[blockchain] ?? null
   const unscripted = new Error('No build scripted for this namespace')
   const wallet = {
     evm: {
-      getAccounts: vi.fn(
-        async (req: OnChain): Promise<string[] | null> =>
+      getAccount: vi.fn(
+        async (req: OnChain): Promise<string | null> =>
           accounts[req.blockchain] ?? null,
       ),
       getChainId: vi.fn(async (req: OnChain): Promise<string | null> => {
@@ -1285,7 +1284,7 @@ export function recordingNamespaces(
       ),
     },
     hyperliquid: {
-      getAccounts: vi.fn(accountsOn('HYPERLIQUID')),
+      getAccount: vi.fn(accountOn('HYPERLIQUID')),
       getChainId: vi.fn(async (): Promise<string | null> => {
         requests.push(['hyperliquid', 'getChainId', undefined])
         return chainIds.HYPERLIQUID ?? null
@@ -1301,7 +1300,7 @@ export function recordingNamespaces(
       ),
     },
     tron: {
-      getAccounts: vi.fn(accountsOn('TRON')),
+      getAccount: vi.fn(accountOn('TRON')),
       sign: vi.fn(async (req: Parameters<TronNamespace['sign']>[0]) => {
         requests.push(['tron', 'sign', structuredClone(req)])
         return nextHash()
@@ -1328,7 +1327,7 @@ export function recordingNamespaces(
       ),
     },
     xrpl: {
-      getAccounts: vi.fn(accountsOn('XRPL')),
+      getAccount: vi.fn(accountOn('XRPL')),
       sign: vi.fn(async (req: Parameters<XrplNamespace['sign']>[0]) => {
         requests.push(['xrpl', 'sign', structuredClone(req)])
         return nextHash()
@@ -1349,7 +1348,7 @@ export function recordingNamespaces(
       ),
     },
     stellar: {
-      getAccounts: vi.fn(accountsOn('STELLAR')),
+      getAccount: vi.fn(accountOn('STELLAR')),
       sign: vi.fn(async (req: Parameters<StellarNamespace['sign']>[0]) => {
         requests.push(['stellar', 'sign', structuredClone(req)])
         return nextHash()
@@ -1373,8 +1372,8 @@ export function recordingNamespaces(
       ),
     },
     bip122: {
-      getAccounts: vi.fn(
-        async (req: OnChain): Promise<string[] | null> =>
+      getAccount: vi.fn(
+        async (req: OnChain): Promise<string | null> =>
           accounts[req.blockchain] ?? null,
       ),
       sign: vi.fn(async (req: Parameters<Bip122Namespace['sign']>[0]) => {
@@ -1383,7 +1382,7 @@ export function recordingNamespaces(
       }),
     },
     solana: {
-      getAccounts: vi.fn(accountsOn('SOLANA')),
+      getAccount: vi.fn(accountOn('SOLANA')),
       sign: vi.fn(
         async (req: { tx: TxOf<LegacySdk.TransactionType.SOLANA> }) => {
           requests.push(['solana', 'sign', structuredClone(req)])
@@ -1392,7 +1391,7 @@ export function recordingNamespaces(
       ),
     },
     starknet: {
-      getAccounts: vi.fn(accountsOn('STARKNET')),
+      getAccount: vi.fn(accountOn('STARKNET')),
       sign: vi.fn(
         async (req: { tx: TxOf<LegacySdk.TransactionType.STARKNET> }) => {
           requests.push(['starknet', 'sign', structuredClone(req)])
@@ -1401,14 +1400,14 @@ export function recordingNamespaces(
       ),
     },
     ton: {
-      getAccounts: vi.fn(accountsOn('TON')),
+      getAccount: vi.fn(accountOn('TON')),
       sign: vi.fn(async (req: { tx: TxOf<LegacySdk.TransactionType.TON> }) => {
         requests.push(['ton', 'sign', structuredClone(req)])
         return nextHash()
       }),
     },
     sui: {
-      getAccounts: vi.fn(accountsOn('SUI')),
+      getAccount: vi.fn(accountOn('SUI')),
       sign: vi.fn(async (req: { tx: TxOf<LegacySdk.TransactionType.SUI> }) => {
         requests.push(['sui', 'sign', structuredClone(req)])
         return nextHash()
@@ -1426,7 +1425,7 @@ type RecordingNamespaces = ReturnType<typeof recordingNamespaces>['wallet']
  */
 export function switchingNamespaces(
   chainIds: Record<string, string | null> = { ETH: '0x1', BSC: '0x38' },
-  accounts: Record<string, string[] | null> = connectedAccounts(),
+  accounts: Record<string, string | null> = activeAccounts(),
 ) {
   const { wallet, requests } = recordingNamespaces(chainIds, accounts)
   const evmSwitch = vi.fn(
@@ -1457,7 +1456,7 @@ export function switchingNamespaces(
  */
 export function waitingNamespaces(
   chainIds: Record<string, string | null> = { ETH: '0x1', BSC: '0x38' },
-  accounts: Record<string, string[] | null> = connectedAccounts(),
+  accounts: Record<string, string | null> = activeAccounts(),
 ) {
   const { wallet, requests } = recordingNamespaces(chainIds, accounts)
   const wait = vi.fn(

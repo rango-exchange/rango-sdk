@@ -183,7 +183,7 @@ describe('XRPL', () => {
     })
   })
 
-  test('the Payment is gated on its connection: getAccounts answering null blocks NOT_CONNECTED with nothing signed', async () => {
+  test('the Payment is gated on its connection: getAccount answering null blocks NOT_CONNECTED with nothing signed', async () => {
     const port = recordingNamespaces(undefined, { XRPL: null })
     const { client } = await start(port)
 
@@ -193,7 +193,7 @@ describe('XRPL', () => {
       reason: 'NOT_CONNECTED',
       metadata: { blockchain: 'XRPL', address: 'rXRPLfrom' },
     })
-    expect(port.wallet.xrpl.getAccounts.mock.calls).toEqual([[]])
+    expect(port.wallet.xrpl.getAccount.mock.calls).toEqual([[]])
     expect(port.requests).toEqual([])
   })
 
@@ -263,9 +263,9 @@ describe('XRPL', () => {
       },
     )
 
-    test('the TrustSet is gated on its account: accounts without the address block ACCOUNT_MISMATCH before the met test', async () => {
+    test('the TrustSet is gated on its account: another address blocks ACCOUNT_MISMATCH before the met test', async () => {
       const port = xrplWallet()
-      port.wallet.xrpl.getAccounts.mockResolvedValue(['rOther'])
+      port.wallet.xrpl.getAccount.mockResolvedValue('rOther')
       const { client } = await start(port, [xrplTrustline()])
 
       const view = await historyOf(client)
@@ -274,7 +274,7 @@ describe('XRPL', () => {
         reason: 'ACCOUNT_MISMATCH',
         metadata: { blockchain: 'XRPL', address: 'rXRPLfrom' },
       })
-      expect(port.wallet.xrpl.getAccounts.mock.calls).toEqual([[]])
+      expect(port.wallet.xrpl.getAccount.mock.calls).toEqual([[]])
       expect(port.requests).toEqual([])
       expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
         'not_started',

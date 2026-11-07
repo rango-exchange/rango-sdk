@@ -193,9 +193,9 @@ describe('Hyperliquid', () => {
     expect(hyperliquid.posts[0]?.body).toMatchObject({ signature: { v } })
   })
 
-  test('the action is gated on its connection: getAccounts is asked on hyperliquid, and null blocks NOT_CONNECTED with nothing signed or posted', async () => {
+  test('the action is gated on its connection: getAccount is asked on hyperliquid, and null blocks NOT_CONNECTED with nothing signed or posted', async () => {
     const port = hyperliquidWallet()
-    port.wallet.hyperliquid.getAccounts.mockResolvedValue(null)
+    port.wallet.hyperliquid.getAccount.mockResolvedValue(null)
     const hyperliquid = stubHyperliquid()
     const { client } = await start(port)
 
@@ -205,7 +205,7 @@ describe('Hyperliquid', () => {
       reason: 'NOT_CONNECTED',
       metadata: { blockchain: 'HYPERLIQUID', address: '0xhyperliquid' },
     })
-    expect(port.wallet.hyperliquid.getAccounts.mock.calls).toEqual([[]])
+    expect(port.wallet.hyperliquid.getAccount.mock.calls).toEqual([[]])
     expect(port.requests).toEqual([])
     expect(hyperliquid.posts).toEqual([])
   })
@@ -464,7 +464,7 @@ describe('Hyperliquid', () => {
     })
     expect(view?._storage.failure).toBeNull()
     expect(requests).toEqual([])
-    expect(wallet.evm.getAccounts).not.toHaveBeenCalled()
+    expect(wallet.evm.getAccount).not.toHaveBeenCalled()
     expect(hyperliquid.posts).toEqual([])
   })
 

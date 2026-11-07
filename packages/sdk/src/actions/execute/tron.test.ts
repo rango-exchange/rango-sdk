@@ -170,8 +170,8 @@ describe('TRON', () => {
     })
   })
 
-  test('the main transaction is gated on its account: accounts without the address block ACCOUNT_MISMATCH with nothing signed', async () => {
-    const port = recordingNamespaces(undefined, { TRON: ['TXother'] })
+  test('the main transaction is gated on its account: another address blocks ACCOUNT_MISMATCH with nothing signed', async () => {
+    const port = recordingNamespaces(undefined, { TRON: 'TXother' })
     const { client } = await start(port)
 
     const view = await historyOf(client)
@@ -180,11 +180,29 @@ describe('TRON', () => {
       reason: 'ACCOUNT_MISMATCH',
       metadata: { blockchain: 'TRON', address: 'TXfrom' },
     })
-    expect(port.wallet.tron.getAccounts.mock.calls).toEqual([[]])
+    expect(port.wallet.tron.getAccount.mock.calls).toEqual([[]])
     expect(port.requests).toEqual([])
   })
 
   describe('TRON_APPROVE Prerequisites', () => {
+    test('the approve is gated on its account: another address blocks ACCOUNT_MISMATCH before the met test', async () => {
+      const port = tronWallet()
+      port.wallet.tron.getAccount.mockResolvedValue('TXother')
+      const { client } = await start(port, [tronApprove()])
+
+      const view = await historyOf(client)
+      expect(view?._queue.status).toBe('BLOCKED')
+      expect(view?._queue.blocked).toEqual({
+        reason: 'ACCOUNT_MISMATCH',
+        metadata: { blockchain: 'TRON', address: 'TXfrom' },
+      })
+      expect(port.wallet.tron.getAccount.mock.calls).toEqual([[]])
+      expect(port.requests).toEqual([])
+      expect(view?._storage.transactions['s1.p0']?.execution.status).toBe(
+        'not_started',
+      )
+    })
+
     test('a met approve is stored completed without a build or a sign', async () => {
       const port = tronWallet({ granted: ['1000000'] })
       const { client, events } = await start(port, [tronApprove()])
