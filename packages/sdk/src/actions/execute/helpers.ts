@@ -1,5 +1,12 @@
+import type { SdkContext, StoredQueue } from './queue/mod.js'
 import type { ExecutionOptions, ExecutionRecord } from './types.js'
+import type { ClientState } from '../../types.js'
 import type { ConfirmResult } from '../confirm/mod.js'
+import type { Manager } from '@rango-dev/queue-manager-core'
+
+import { SdkError, throwSdkError } from '../../errors/mod.js'
+
+import { QUEUE_NAME } from './queue/mod.js'
 
 // Cloned, so a later change to the route or the options never reaches the stored record.
 export function buildInitialExecutionRecord(
@@ -16,4 +23,47 @@ export function buildInitialExecutionRecord(
     failure: null,
     finishedAt: null,
   }
+}
+
+// Unblocking only reruns the gate, and core's queue update for it emits `changed`.
+export function unblockExecution(
+  storedQueue: StoredQueue,
+  context: SdkContext,
+): void {
+  if (storedQueue.status === 'BLOCKED' && !context.isPaused()) {
+    storedQueue.list.unblock()
+  }
+}
+
+export async function createExecution(
+  state: ClientState,
+  manager: Manager,
+  requestId: string,
+  options?: ExecutionOptions,
+): Promise<void> {
+  const confirmedRoute = state.cache.get('confirmed')?.get(requestId)
+  if (confirmedRoute === undefined) {
+    throw new SdkError(
+      'INVALID_INPUT',
+      'No confirmed route or stored execution has this `requestId`.',
+      { metadata: { field: 'requestId', reason: 'NOT_FOUND' } },
+    )
+  }
+  if (options === undefined) {
+    throw new SdkError('INVALID_INPUT', 'A new execution needs `options`.', {
+      metadata: { field: 'options', reason: 'MISSING' },
+    })
+  }
+
+  // No `await` between the existing-record check and `create`, so a parallel call finds the record.
+  await manager
+    .create(QUEUE_NAME, buildInitialExecutionRecord(confirmedRoute, options), {
+      id: requestId,
+    })
+    .catch((cause: unknown) => throwSdkError(cause))
+
+  // A new map, so a slot the app read earlier keeps the entry.
+  const confirmedWithoutThisRequest = new Map(state.cache.get('confirmed'))
+  confirmedWithoutThisRequest.delete(requestId)
+  state.cache.set('confirmed', confirmedWithoutThisRequest)
 }

@@ -42,7 +42,7 @@ function freshStart(on: IDBFactory): void {
 }
 
 // Confirms and executes a one-Step Route, and lets it run until it waits on the clock.
-async function startOrUnblockExecution(client: Sdk.RangoClient): Promise<void> {
+async function confirmAndExecute(client: Sdk.RangoClient): Promise<void> {
   await confirmQuote(client)
   await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
@@ -55,7 +55,7 @@ async function runRejectedSign(
   const port = recordingNamespaces()
   const { client, events } = await createExecutionClient(port)
   port.wallet.evm.sign.mockRejectedValueOnce(error)
-  await startOrUnblockExecution(client)
+  await confirmAndExecute(client)
   const view = await client.history.get('request-1')
   if (view === undefined) {
     throw new Error('No stored Execution')
@@ -305,7 +305,7 @@ describe("the port's wait", () => {
       return { hash: req.hash }
     })
 
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
 
     expect(port.wallet.evm.wait).toHaveBeenCalledTimes(1)
     expect(port.wallet.evm.wait).toHaveBeenCalledWith({
@@ -335,7 +335,7 @@ describe("the port's wait", () => {
       return statusResponse()
     })
 
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await settle()
 
@@ -359,7 +359,7 @@ describe("the port's wait", () => {
     const port = waitingNamespaces()
     const { client } = await createExecutionClient(port)
 
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
 
     expect(port.requests.map(([, method]) => method)).toEqual([
       'getChainId',
@@ -398,7 +398,7 @@ describe("the port's wait", () => {
           signerError(SignerErrorCode.SEND_TX_ERROR, 'Replaced by the user'),
         )
 
-        await startOrUnblockExecution(client)
+        await confirmAndExecute(client)
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * POLLS_AFTER)
         await settle()
 
@@ -439,7 +439,7 @@ describe("the port's wait", () => {
     const { client, events } = await createExecutionClient(port)
     port.wallet.evm.wait.mockRejectedValueOnce(new Error('RPC down'))
 
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * POLLS_AFTER)
     await settle()
 
@@ -462,7 +462,7 @@ describe("the port's wait", () => {
       return succeeded
     })
 
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
 
     expect('wait' in port.wallet.evm).toBe(false)
     expect(polledAtSign).toBe(1)
@@ -483,7 +483,7 @@ describe("the port's wait", () => {
     httpClient.checkStatus.mockReset()
     httpClient.checkStatus.mockResolvedValue(statusResponse())
 
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * POLLS_AFTER)
     await settle()
     httpClient.checkStatus.mockResolvedValue(succeeded)
@@ -507,7 +507,7 @@ describe("the port's wait", () => {
       hash: '0xsigned',
       response: { live: true },
     })
-    await startOrUnblockExecution(client)
+    await confirmAndExecute(client)
     expect(first.wallet.evm.wait).toHaveBeenCalledTimes(1)
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'RUNNING',
