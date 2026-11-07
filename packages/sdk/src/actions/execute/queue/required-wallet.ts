@@ -1,4 +1,5 @@
 import type { RequiredWallet } from './types.js'
+import type { SelectedWallet } from '../../quote/mod.js'
 import type { ExecutionRecord, ExecutionTransaction } from '../mod.js'
 import type { Transaction } from 'rango-sdk'
 
@@ -20,11 +21,11 @@ export function getRequiredWallet(
       : tx.blockChain
   return {
     blockchain: selectedWalletKey,
-    address: storage.data.selectedWallets[selectedWalletKey],
+    address: storage.data.selectedWallets[selectedWalletKey].address,
   }
 }
 
-export function getCurrentStepWalletTypeForReport(
+export function getCurrentStepWalletIdForReport(
   storage: ExecutionRecord,
 ): string | undefined {
   const mainEntryId = `s${storage.finishedSwapSteps + 1}`
@@ -41,7 +42,7 @@ export function getCurrentStepWalletTypeForReport(
     entryToReport.data.type === 'tx'
       ? getRequiredWallet(storage, entryToReport.data.value).blockchain
       : entryToReport.data.value.blockChain
-  const walletTypeOption: { walletType: string } | undefined =
-    storage.options.walletTypes[blockchain]
-  return walletTypeOption?.walletType
+  const selectedWallet: SelectedWallet | undefined =
+    storage.data.selectedWallets[blockchain]
+  return selectedWallet?.walletId
 }

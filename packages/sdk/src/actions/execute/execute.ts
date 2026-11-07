@@ -36,21 +36,6 @@ export async function startOrUnblockExecution(
       metadata: { field: 'options', reason: 'MISSING' },
     })
   }
-  const blockchainWithoutWalletType = Object.keys(
-    confirmedRoute.data.selectedWallets,
-  ).find((blockchain) => {
-    // Typed with `undefined`, since an index signature returns a value for any key.
-    const walletTypeOption: { walletType: string } | undefined =
-      options.walletTypes[blockchain]
-    return !walletTypeOption?.walletType
-  })
-  if (blockchainWithoutWalletType !== undefined) {
-    throw new SdkError(
-      'INVALID_INPUT',
-      `A new execution needs a \`walletType\` for ${blockchainWithoutWalletType}.`,
-      { metadata: { field: 'walletTypes', reason: 'MISSING' } },
-    )
-  }
 
   // No `await` between the existing-record check and `create`, so a parallel call finds the record.
   await manager

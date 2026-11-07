@@ -29,6 +29,7 @@ export type {
   Route,
   RouteEvent,
   RouteResponse,
+  SelectedWallet,
   SelectedWallets,
   SignResult,
   SolanaWallet,

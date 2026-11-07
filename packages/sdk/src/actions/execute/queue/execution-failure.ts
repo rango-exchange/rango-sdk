@@ -11,7 +11,7 @@ import type { APIErrorCode } from 'rango-types'
 import { SignerError } from 'rango-types'
 
 import { REASON_CODE_BY_SIGNER_ERROR_CODE } from './constants.js'
-import { getCurrentStepWalletTypeForReport } from './required-wallet.js'
+import { getCurrentStepWalletIdForReport } from './required-wallet.js'
 
 export class ErrorToReport extends Error {
   override readonly name = 'ErrorToReport'
@@ -107,14 +107,14 @@ function reportFailureToRango(
   failure: ExecutionFailure,
   reason: string = failure.detail || '',
 ): void {
-  const walletType = getCurrentStepWalletTypeForReport(storage)
+  const walletId = getCurrentStepWalletIdForReport(storage)
   httpClient
     .reportFailure({
       requestId: storage.data.requestId,
       step: storage.finishedSwapSteps + 1,
       eventType: failure.reasonCode,
       reason,
-      tags: walletType ? { wallet: walletType } : undefined,
+      tags: walletId ? { wallet: walletId } : undefined,
     })
     .catch(() => undefined)
 }

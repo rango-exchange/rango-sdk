@@ -40,7 +40,10 @@ import {
   validationStatus,
 } from '../../../tests/support.js'
 
-const SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
+const SELECTED_WALLETS = {
+  ETH: { address: '0xfrom', walletId: 'metamask' },
+  BSC: { address: '0xto', walletId: 'trust' },
+}
 
 const routeResult = {
   requestId: 'request-1',
@@ -336,7 +339,6 @@ describe('the execution keys', () => {
         infiniteApprove?: boolean
         validations: { balance: boolean; fee: boolean }
       }
-      walletTypes: { [blockchain: string]: { walletType: string } }
       swapMode?: 'swap' | 'refuel'
     }>()
     expectTypeOf<
@@ -559,7 +561,7 @@ describe('the execution keys', () => {
     expectTypeOf<Sdk.WalletPort['cosmos']>().not.toBeNever()
   })
 
-  test('narrows an INVALID_INPUT error on options or walletTypes to MISSING, on a client with no wallet', async () => {
+  test('narrows an INVALID_INPUT error on options to MISSING, on a client with no wallet', async () => {
     stubIndexedDB()
     const client = await createClient(evmBlockchains)
     await cacheQuote(client)
@@ -572,9 +574,6 @@ describe('the execution keys', () => {
       throw new Error('expected an INVALID_INPUT SdkError')
     }
     if (error.metadata.field === 'options') {
-      expectTypeOf(error.metadata.reason).toEqualTypeOf<'MISSING'>()
-    }
-    if (error.metadata.field === 'walletTypes') {
       expectTypeOf(error.metadata.reason).toEqualTypeOf<'MISSING'>()
     }
     expect(error.metadata.field).toBe('options')

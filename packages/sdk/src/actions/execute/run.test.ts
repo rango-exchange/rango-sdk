@@ -317,7 +317,6 @@ describe('execute() runs an EVM Route', () => {
     await client.execute('request-1', options)
     options.transactionOptions.slippage = '50'
     options.transactionOptions.validations.balance = false
-    options.walletTypes.ETH = { walletType: 'changed' }
     options.swapMode = 'swap'
     await settle()
 
@@ -337,7 +336,6 @@ describe('execute() runs an EVM Route', () => {
     await confirmQuote(client)
     const options: Sdk.ExecutionOptions = {
       transactionOptions: structuredClone(EXECUTION_OPTIONS.transactionOptions),
-      walletTypes: structuredClone(EXECUTION_OPTIONS.walletTypes),
     }
     const passed = structuredClone(options)
 
@@ -377,14 +375,16 @@ describe('execute() runs an EVM Route', () => {
   test('changing the confirmed Route before execute() changes nothing that runs', async () => {
     const { client, wallet } = await createExecutionClient()
     const confirmed = await confirmQuote(client)
-    confirmed.data.selectedWallets.ETH = '0xchanged'
+    confirmed.data.selectedWallets.ETH.address = '0xchanged'
     confirmed.data.requestAmount = '99'
 
     await client.execute('request-1', EXECUTION_OPTIONS)
     await settle()
 
     const view = await client.history.get('request-1')
-    expect(view?._storage.data.selectedWallets.ETH).toBe('0xfrom')
+    expect(view?._storage.data.selectedWallets.ETH).toEqual(
+      SELECTED_WALLETS.ETH,
+    )
     expect(view?._storage.data.requestAmount).toBe('1')
     // v14's sign takes no address: the stored one passed the Wallet gate, as `0xchanged` would not have.
     expect(wallet.evm.sign).toHaveBeenCalledTimes(1)
@@ -422,7 +422,7 @@ describe('execute() runs an EVM Route', () => {
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(1)
   })
 
-  test('every port request goes to the evm namespace and carries the blockchain with no address or walletType; sign gets the transaction and no chain ID', async () => {
+  test('every port request goes to the evm namespace and carries the blockchain with no address or Wallet ID; sign gets the transaction and no chain ID', async () => {
     const { client, requests } = await createExecutionClient()
     await confirmQuote(client)
 

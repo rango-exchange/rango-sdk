@@ -887,13 +887,14 @@ export async function expectPrerequisiteFailed(
   return view
 }
 
+// A distinct Wallet ID per blockchain, so a report tag with the wrong one shows.
 export const SELECTED_WALLETS = {
-  ETH: '0xfrom',
-  BSC: '0xto',
-  TRON: 'TXfrom',
-  XRPL: 'rXRPLfrom',
-  STELLAR: 'GSTELLARFROM',
-  HYPERLIQUID: '0xhyperliquid',
+  ETH: { address: '0xfrom', walletId: 'metamask' },
+  BSC: { address: '0xto', walletId: 'trust' },
+  TRON: { address: 'TXfrom', walletId: 'tronlink' },
+  XRPL: { address: 'rXRPLfrom', walletId: 'xaman' },
+  STELLAR: { address: 'GSTELLARFROM', walletId: 'freighter' },
+  HYPERLIQUID: { address: '0xhyperliquid', walletId: 'rabby' },
 }
 /*
  * What `getAccounts` answers by default: each selected wallet's address, and a TRANSFER's `bc1from` on BTC. A fresh
@@ -902,7 +903,7 @@ export const SELECTED_WALLETS = {
 export function connectedAccounts(): Record<string, string[] | null> {
   return {
     ...Object.fromEntries(
-      Object.entries(SELECTED_WALLETS).map(([blockchain, address]) => [
+      Object.entries(SELECTED_WALLETS).map(([blockchain, { address }]) => [
         blockchain,
         [address],
       ]),
@@ -911,27 +912,11 @@ export function connectedAccounts(): Record<string, string[] | null> {
   }
 }
 
-// A distinct wallet type per blockchain, so a report tag with the wrong one shows. BTC is only a TRANSFER's.
-export const WALLET_TYPES = {
-  ETH: 'metamask',
-  BSC: 'trust',
-  TRON: 'tronlink',
-  XRPL: 'xaman',
-  STELLAR: 'freighter',
-  HYPERLIQUID: 'rabby',
-  BTC: 'xdefi',
-}
 export const EXECUTION_OPTIONS: Sdk.ExecutionOptions = {
   transactionOptions: {
     slippage: '1',
     validations: { balance: true, fee: true },
   },
-  walletTypes: Object.fromEntries(
-    Object.entries(WALLET_TYPES).map(([blockchain, walletType]) => [
-      blockchain,
-      { walletType },
-    ]),
-  ),
   swapMode: 'refuel',
 }
 export const BSC_ASSET = { ...swap().to, blockchain: 'BSC' }

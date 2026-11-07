@@ -3,7 +3,6 @@ export type {
   ConfirmOptions,
   ConfirmReq,
   ConfirmResult,
-  SelectedWallets,
 } from './confirm/mod.js'
 export { cancelExecution } from './cancel/mod.js'
 export { deleteExecution } from './delete/mod.js'
@@ -48,6 +47,8 @@ export type {
   QuoteResult,
   Route,
   RouteResponse,
+  SelectedWallet,
+  SelectedWallets,
 } from './quote/mod.js'
 export { fetchQuotes } from './quotes/mod.js'
 export type {

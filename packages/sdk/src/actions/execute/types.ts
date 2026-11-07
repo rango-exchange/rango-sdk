@@ -55,8 +55,6 @@ export type ExecutionOptions = {
     /** Sent as given, with `approve: false`. */
     validations: { balance: boolean; fee: boolean }
   }
-  /** The wallet type the user picked per blockchain, keyed like the Route's `selectedWallets` (`HYPERLIQUID` included). */
-  walletTypes: { [blockchain: string]: { walletType: string } }
   /** Not read by the SDK: stored as given, or as `'swap'` when absent. */
   swapMode?: 'swap' | 'refuel'
 }

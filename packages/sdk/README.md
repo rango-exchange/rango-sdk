@@ -73,12 +73,17 @@ Turns the chosen **Quote** into a **Route** for the user's wallets. Pass its `re
 
 ```ts
 const chosen = data.quotes.find((entry) => !entry.error)
-const selectedWallets = { ETH: '0x...', BSC: '0x...' }
+const selectedWallets = {
+  ETH: { address: '0x...', walletId: 'metamask' },
+  BSC: { address: '0x...', walletId: 'metamask' },
+}
 const { data: route, warnings } = await client.confirm(
   chosen.data.requestId,
   selectedWallets,
 )
 ```
+
+`selectedWallets` (`SelectedWallets`) holds each blockchain's address and the ID of the wallet that holds it. Rango gets only the addresses; the **Route** keeps each Wallet ID.
 
 `req` (`ConfirmReq`) takes an optional `destination`, checked as in `quote()`. `data` is a `Route`, the same type `quote()` returns, with your `selectedWallets` and the **Quote**'s `slippage` merged in.
 
@@ -100,7 +105,7 @@ const { data: route, warnings } = await client.quote({
 })
 ```
 
-`data` is a `Route`, as from `confirm()`, with the request's `selectedWallets` and `slippage` merged in. A set `destination` is checked against `to`'s blockchain in the [blockchain list](#clientcache), fetched with the call's `signal` if not yet cached; a failed fetch caches nothing.
+`selectedWallets` is as in `confirm()`. `data` is a `Route`, as from `confirm()`, with the request's `selectedWallets` and `slippage` merged in. A set `destination` is checked against `to`'s blockchain in the [blockchain list](#clientcache), fetched with the call's `signal` if not yet cached; a failed fetch caches nothing.
 
 With `checkPrerequisites: false` the server skips the balance check: no `INSUFFICIENT_BALANCE`, and `createTransaction` may refuse the request ID.
 
@@ -209,11 +214,10 @@ await client.execute(route.requestId, {
     slippage: '1',
     validations: { balance: true, fee: true },
   },
-  walletTypes: { ETH: { walletType: 'metamask' } },
 })
 ```
 
-`ExecutionOptions`: `transactionOptions` is sent to `/tx/create` for every step (`slippage` required, `infiniteApprove` and `validations` sent as given); `walletTypes` holds the wallet type picked per `selectedWallets` key, plus `HYPERLIQUID` for a Hyperliquid step; `swapMode`, `'swap'` (the default) or `'refuel'`, is only stored. The SDK stores a copy, so changing the object afterwards changes nothing.
+`ExecutionOptions`: `transactionOptions` is sent to `/tx/create` for every step (`slippage` required, `infiniteApprove` and `validations` sent as given); `swapMode`, `'swap'` (the default) or `'refuel'`, is only stored. The SDK stores a copy, so changing the object afterwards changes nothing.
 
 - **A new Execution:** pass the `requestId` of a **Route** `confirm()` returned. It resolves once the **Execution** is stored and its first task has started, and the **Route** leaves the [cache](#clientcache)'s `confirmed` slot.
 - **A `BLOCKED` Execution:** call `execute(requestId)` with no options to run its wallet checks again. Call it on every wallet event (connect, account, network), never from a `stepEvent` or `changed` handler, so unblocking never loops into network prompts.
@@ -221,7 +225,7 @@ await client.execute(route.requestId, {
 
 Run one **Execution** per wallet at a time.
 
-- Throws: `INVALID_INPUT` (`requestId`: `NOT_FOUND`; `options`: `MISSING`; `walletTypes`: `MISSING`), `REQUEST_FAILED`; see [Errors and failures](#errors-and-failures).
+- Throws: `INVALID_INPUT` (`requestId`: `NOT_FOUND`; `options`: `MISSING`), `REQUEST_FAILED`; see [Errors and failures](#errors-and-failures).
 
 ### Managing Executions
 
@@ -248,7 +252,7 @@ Call `resume()` at mount in every app: it builds the execution engine and resume
 
 ```ts
 beforeResume(context, setContext, item) {
-  setContext({ ...context, wallet: walletFor(item._storage.options.walletTypes) })
+  setContext({ ...context, wallet: walletFor(item._storage.data.selectedWallets) })
 }
 ```
 
@@ -286,7 +290,7 @@ Events may fire again when a task runs again after a reload, so make your handle
 
 Each execution method throws only `SdkError`, apart from an error your `emitter` throws:
 
-- `INVALID_INPUT`, from `execute()`: `requestId` `NOT_FOUND` (no confirmed **Route** and no stored **Execution**, such as a **Route** from `quote()`), `options` `MISSING` or `walletTypes` `MISSING`.
+- `INVALID_INPUT`, from `execute()`: `requestId` `NOT_FOUND` (no confirmed **Route** and no stored **Execution**, such as a **Route** from `quote()`), or `options` `MISSING`.
 - `REQUEST_FAILED`: the execution engine can't be loaded, `execute()` can't store the **Execution**, or `pause()` can't pause, with core's error as `cause`.
 
 A swap that fails while it runs is never thrown: the **Execution** ends `FAILED` (or `CANCELED`) with `{ reasonCode, message, detail }` (`ExecutionFailure`) in `_storage.failure`.
@@ -319,20 +323,20 @@ try {
 }
 ```
 
-| Type                | Thrown when                                                                                                                                                                                                                                | `metadata`                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| `INVALID_INPUT`     | An input is invalid, before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; `requestId`: `NOT_FOUND`; `destination`: `NO_ADDRESS_PATTERNS`, `PATTERN_MISMATCH`; `options`: `MISSING`; `walletTypes`: `MISSING`. | `{ field, reason }`                      |
-| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                                                                                                 | none                                     |
-| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                                                                                                            | `{ diagnosisMessage? }`                  |
-| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                                                                                                  | none                                     |
-| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                                                                                                  | none                                     |
-| `FORBIDDEN`         | HTTP 403.                                                                                                                                                                                                                                  | none                                     |
-| `NOT_FOUND`         | HTTP 404.                                                                                                                                                                                                                                  | none                                     |
-| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                                                                                                  | none                                     |
-| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                                                                                                           | none                                     |
-| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`. For an [execution method](#execution), the execution engine can't be loaded, paused or store the **Execution**, with core's error as `cause`.                  | none                                     |
-| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                                                                                                               | `{ swap, limit, limitValue, exclusive }` |
-| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                                                                                                 | none                                     |
+| Type                | Thrown when                                                                                                                                                                                                               | `metadata`                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `INVALID_INPUT`     | An input is invalid, before any request. `to`: `SAME_ASSET`; `amount`: `NOT_A_NUMBER`, `NOT_POSITIVE`; `requestId`: `NOT_FOUND`; `destination`: `NO_ADDRESS_PATTERNS`, `PATTERN_MISMATCH`; `options`: `MISSING`.          | `{ field, reason }`                      |
+| `REQUEST_CANCELED`  | The `signal` aborted, including a timeout.                                                                                                                                                                                | none                                     |
+| `NO_RESULT`         | No route: no result, or a result with no swaps.                                                                                                                                                                           | `{ diagnosisMessage? }`                  |
+| `BAD_REQUEST`       | HTTP 400.                                                                                                                                                                                                                 | none                                     |
+| `UNAUTHORIZED`      | HTTP 401.                                                                                                                                                                                                                 | none                                     |
+| `FORBIDDEN`         | HTTP 403.                                                                                                                                                                                                                 | none                                     |
+| `NOT_FOUND`         | HTTP 404.                                                                                                                                                                                                                 | none                                     |
+| `TOO_MANY_REQUESTS` | HTTP 429.                                                                                                                                                                                                                 | none                                     |
+| `SERVER_ERROR`      | HTTP 500 to 599.                                                                                                                                                                                                          | none                                     |
+| `REQUEST_FAILED`    | Any other HTTP, network or API error; its code and trace ID are on `cause`. For an [execution method](#execution), the execution engine can't be loaded, paused or store the **Execution**, with core's error as `cause`. | none                                     |
+| `BRIDGE_LIMIT`      | A swap's input amount is outside its limits.                                                                                                                                                                              | `{ swap, limit, limitValue, exclusive }` |
+| `UNKNOWN_SLIPPAGE`  | Rango failed to compute a swap's slippage.                                                                                                                                                                                | none                                     |
 
 The metadata types are exported, and their fields are documented in your editor.
 

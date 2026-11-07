@@ -182,61 +182,11 @@ describe('execute() edge cases', () => {
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(1)
   })
 
-  const withoutWalletType: [string, Sdk.ExecutionOptions['walletTypes']][] = [
-    [
-      'no entry',
-      Object.fromEntries(
-        Object.entries(EXECUTION_OPTIONS.walletTypes).filter(
-          ([blockchain]) => blockchain !== 'BSC',
-        ),
-      ),
-    ],
-    [
-      'an empty walletType',
-      { ...EXECUTION_OPTIONS.walletTypes, BSC: { walletType: '' } },
-    ],
-  ]
-
-  test.each(withoutWalletType)(
-    'with %s for a selectedWallets key, a new Execution throws INVALID_INPUT walletTypes MISSING, stores nothing and keeps the Route',
-    async (_, walletTypes) => {
-      const { client, requests } = await createExecutionClient(
-        recordingNamespaces(),
-      )
-      await confirmQuote(client)
-
-      const error = await expectSdkError(
-        client.execute('request-1', { ...EXECUTION_OPTIONS, walletTypes }),
-      )
-      await settle()
-
-      expect(error).toMatchObject({
-        type: 'INVALID_INPUT',
-        message: 'A new execution needs a `walletType` for BSC.',
-        metadata: { field: 'walletTypes', reason: 'MISSING' },
-      })
-      expect(await client.history.getAll()).toEqual([])
-      expect(httpClient.createTransaction).not.toHaveBeenCalled()
-      expect(requests).toEqual([])
-
-      await client.execute('request-1', EXECUTION_OPTIONS)
-      await settle()
-
-      expect((await client.history.get('request-1'))?._queue.status).toBe(
-        'SUCCESS',
-      )
-    },
-  )
-
-  test('checks nothing else: walletTypes keys beyond selectedWallets are kept, and swapMode is stored as given', async () => {
+  test('checks nothing else: swapMode is stored as given', async () => {
     const { client } = await createExecutionClient(recordingNamespaces())
     await confirmQuote(client)
     const options: Sdk.ExecutionOptions = {
       ...EXECUTION_OPTIONS,
-      walletTypes: {
-        ...EXECUTION_OPTIONS.walletTypes,
-        SOLANA: { walletType: 'phantom' },
-      },
       swapMode: 'swap',
     }
 
@@ -483,7 +433,7 @@ describe('confirmed cache', () => {
     const before = structuredClone(returned)
 
     returned.data.requestId = 'mutated'
-    returned.data.selectedWallets.ETH = '0xmutated'
+    returned.data.selectedWallets.ETH.address = '0xmutated'
     const [firstSwap] = returned.data.result?.swaps ?? []
     if (firstSwap) {
       firstSwap.toAmount = '0'
@@ -503,7 +453,7 @@ describe('confirmed cache', () => {
 
     await client.execute('request-1', EXECUTION_OPTIONS)
     kept.data.requestId = 'mutated'
-    kept.data.selectedWallets.ETH = '0xmutated'
+    kept.data.selectedWallets.ETH.address = '0xmutated'
     await settle()
 
     const view = await client.history.get('request-1')

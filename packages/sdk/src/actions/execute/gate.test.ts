@@ -52,7 +52,6 @@ const OTHER_OPTIONS: Sdk.ExecutionOptions = {
     infiniteApprove: true,
     validations: { balance: false, fee: false },
   },
-  walletTypes: { ETH: { walletType: 'other' } },
   swapMode: 'swap',
 }
 const NOT_CONNECTED: Sdk.BlockReason = {
@@ -518,7 +517,7 @@ describe('the network gate', () => {
     )
   })
 
-  test('a transfer on a blockchain with no walletTypes entry is gated and signed for its blockchain and address', async () => {
+  test('a transfer on a blockchain with no selected wallet is gated and signed for its blockchain and address', async () => {
     const port = switchingNamespaces(undefined, {
       ...connectedAccounts(),
       DOGE: ['Dfrom'],
@@ -565,7 +564,7 @@ describe('the network gate', () => {
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
-    expect(view?._storage.options.walletTypes).not.toHaveProperty('DOGE')
+    expect(view?._storage.data.selectedWallets).not.toHaveProperty('DOGE')
   })
 
   test('an EVM entry whose blockchain has no chain ID in the list fails CLIENT_UNEXPECTED_BEHAVIOUR, stored and not reported, without signing', async () => {
@@ -684,7 +683,7 @@ describe('execute() on a stored Execution', () => {
     expectBlockedOnlyWhileBlocked(events.map(viewOf))
   })
 
-  test('with other options, unblocks a BLOCKED Execution that keeps its stored options and wallet types', async () => {
+  test('with other options, unblocks a BLOCKED Execution that keeps its stored options', async () => {
     const chainIds: Record<string, string | null> = { ETH: '0x38' }
     const port = stuckWallet(chainIds)
     const { client } = await createExecutionClient(port)

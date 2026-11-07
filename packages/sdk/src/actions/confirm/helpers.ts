@@ -1,17 +1,14 @@
-import type {
-  CheckedResponse,
-  ConfirmResult,
-  SelectedWallets,
-  WarnedResponse,
-} from './types.js'
+import type { CheckedResponse, ConfirmResult, WarnedResponse } from './types.js'
 import type { Cache } from '../../cache/mod.js'
 import type { CacheSchema } from '../../types.js'
+import type { SelectedWallets } from '../quote/mod.js'
 import type { Quote } from '../quotes/mod.js'
 import type { ConfirmRouteRequest, ConfirmRouteResponse } from 'rango-sdk'
 
 import { withNewest } from '../../cache/mod.js'
 import { NO_RESULT_MESSAGE, SdkError } from '../../errors/mod.js'
 import {
+  buildSelectedWalletAddresses,
   checkErrors as checkRouteErrors,
   checkWarnings as checkRouteWarnings,
   generateResult as generateRouteResult,
@@ -45,7 +42,7 @@ export function buildConfirmRouteRequest(
 ): ConfirmRouteRequest {
   return {
     requestId: quote.requestId,
-    selectedWallets,
+    selectedWallets: buildSelectedWalletAddresses(selectedWallets),
     ...(destination === undefined ? {} : { destination }),
   }
 }

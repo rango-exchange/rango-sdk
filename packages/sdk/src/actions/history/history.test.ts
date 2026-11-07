@@ -51,7 +51,7 @@ function scribble(view: Sdk.HistoryItem): void {
   view._queue.blocked = null
   view._storage.data.requestId = 'changed'
   view._storage.options.transactionOptions.slippage = '50'
-  view._storage.options.walletTypes.ETH = { walletType: 'changed' }
+  view._storage.data.selectedWallets.ETH.walletId = 'changed'
   view._storage.transactions = {}
   view._storage.finishedSwapSteps = 0
   view._storage.failure = {
@@ -186,7 +186,7 @@ describe('HistoryItem', () => {
     expect(view?._storage.finishedAt).toEqual(expect.any(Number))
     expect(port.wallet.evm.sign).toHaveBeenCalledTimes(TWO_STEPS.length)
     for (const [, request] of port.requests) {
-      expect(request).not.toHaveProperty('walletType')
+      expect(request).not.toHaveProperty('walletId')
     }
     // Each handler got the stored view, not one an earlier handler changed.
     for (const received of seen) {

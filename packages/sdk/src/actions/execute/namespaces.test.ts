@@ -92,10 +92,10 @@ const suiTx: TxOf<LegacySdk.TransactionType.SUI> = {
 // The single-chain namespaces' wallets, beside the support ones.
 const WALLETS = {
   ...SELECTED_WALLETS,
-  SOLANA: 'SoLfrom',
-  STARKNET: '0xstarknet',
-  TON: 'UQton',
-  SUI: '0xsui',
+  SOLANA: { address: 'SoLfrom', walletId: 'phantom' },
+  STARKNET: { address: '0xstarknet', walletId: 'argent' },
+  TON: { address: 'UQton', walletId: 'tonkeeper' },
+  SUI: { address: '0xsui', walletId: 'suiet' },
 }
 const chains = [
   ...evmBlockchains,
@@ -105,15 +105,6 @@ const chains = [
   chainOf('TON'),
   chainOf('SUI'),
 ]
-const OPTIONS: Sdk.ExecutionOptions = {
-  ...EXECUTION_OPTIONS,
-  walletTypes: Object.fromEntries(
-    Object.keys(WALLETS).map((blockchain) => [
-      blockchain,
-      { walletType: `${blockchain.toLowerCase()}-wallet` },
-    ]),
-  ),
-}
 
 let factory = new IDBFactory()
 
@@ -122,7 +113,7 @@ function namespacesPort() {
   return recordingNamespaces(undefined, {
     ...connectedAccounts(),
     ...Object.fromEntries(
-      Object.entries(WALLETS).map(([blockchain, address]) => [
+      Object.entries(WALLETS).map(([blockchain, { address }]) => [
         blockchain,
         [address],
       ]),
@@ -136,7 +127,7 @@ async function start(client: Sdk.RangoClient, tx: LegacySdk.Transaction) {
   await cacheQuote(client)
   httpClient.confirmRoute.mockResolvedValueOnce(confirmResponse('request-1'))
   await client.confirm('request-1', WALLETS)
-  await client.execute('request-1', OPTIONS)
+  await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
 }
 

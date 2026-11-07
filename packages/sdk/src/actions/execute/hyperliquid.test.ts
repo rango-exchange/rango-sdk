@@ -29,6 +29,7 @@ import {
   nameOf,
   recordingNamespaces,
   resetHttpClient,
+  SELECTED_WALLETS,
   settle,
   SIGNATURE_CHAIN_ID,
   SIGNATURE_R,
@@ -467,7 +468,7 @@ describe('Hyperliquid', () => {
     expect(hyperliquid.posts).toEqual([])
   })
 
-  test('an exchange answer that is not ok fails CLIENT_UNEXPECTED_BEHAVIOUR, with no hash looked up', async () => {
+  test("an exchange answer that is not ok fails CLIENT_UNEXPECTED_BEHAVIOUR, reported with the HYPERLIQUID wallet's Wallet ID and with no hash looked up", async () => {
     const hyperliquid = stubHyperliquid({
       exchange: { status: 'err', response: 'Insufficient balance' },
     })
@@ -488,6 +489,7 @@ describe('Hyperliquid', () => {
       expect.objectContaining({
         step: 1,
         eventType: 'CLIENT_UNEXPECTED_BEHAVIOUR',
+        tags: { wallet: SELECTED_WALLETS.HYPERLIQUID.walletId },
       }),
     )
   })

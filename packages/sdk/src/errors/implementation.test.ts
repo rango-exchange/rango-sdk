@@ -96,12 +96,7 @@ describe('SdkError', () => {
       case 'INVALID_INPUT':
         // No `wallet`: a missing wallet Blocks NOT_CONNECTED, it is never an error.
         expectTypeOf(caught.metadata.field).toEqualTypeOf<
-          | 'requestId'
-          | 'to'
-          | 'amount'
-          | 'destination'
-          | 'options'
-          | 'walletTypes'
+          'requestId' | 'to' | 'amount' | 'destination' | 'options'
         >()
         switch (caught.metadata.field) {
           case 'requestId':
@@ -121,9 +116,6 @@ describe('SdkError', () => {
             >()
             break
           case 'options':
-            expectTypeOf(caught.metadata.reason).toEqualTypeOf<'MISSING'>()
-            break
-          case 'walletTypes':
             expectTypeOf(caught.metadata.reason).toEqualTypeOf<'MISSING'>()
         }
     }

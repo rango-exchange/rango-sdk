@@ -44,8 +44,7 @@ export type BridgeLimitMetadata = {
  * against the blockchain list (`NO_ADDRESS_PATTERNS` or `PATTERN_MISMATCH`). `confirm()` checks `requestId`
  * (`NOT_FOUND` when no cached Quote has it). A missing `execution.wallet` is never an input error: each gated entry
  * Blocks `NOT_CONNECTED` until one is set. `execute()` checks `requestId` (`NOT_FOUND` when no confirmed Route kept by `confirm()` and no stored Execution
- * has it), and, for a new Execution, `options` (`MISSING`) and a `walletTypes` entry with a `walletType` for each key
- * of the Route's `selectedWallets` as `walletTypes` (`MISSING`).
+ * has it), and, for a new Execution, `options` (`MISSING`).
  */
 export type InvalidInputMetadata =
   | { field: 'requestId'; reason: 'NOT_FOUND' }
@@ -53,7 +52,6 @@ export type InvalidInputMetadata =
   | { field: 'amount'; reason: 'NOT_A_NUMBER' | 'NOT_POSITIVE' }
   | { field: 'destination'; reason: 'NO_ADDRESS_PATTERNS' | 'PATTERN_MISMATCH' }
   | { field: 'options'; reason: 'MISSING' }
-  | { field: 'walletTypes'; reason: 'MISSING' }
 
 export type SdkErrorMetadata = {
   NO_RESULT: NoResultMetadata

@@ -1,9 +1,15 @@
-import type { ErrorFields, Route, RouteResponse } from './types.js'
+import type {
+  ErrorFields,
+  Route,
+  RouteResponse,
+  SelectedWallets,
+} from './types.js'
 import type { Cache } from '../../cache/mod.js'
 import type { BridgeLimitMetadata } from '../../errors/mod.js'
 import type { CacheSchema, LegacyClient } from '../../types.js'
 import type {
   Asset,
+  BestRouteRequest,
   BestRouteResponse,
   BlockchainMeta,
   SimulationResult,
@@ -236,12 +242,29 @@ export function omitRouteErrorFields(route: CheckedRoute): RouteResponse {
 
 export function toRoute(
   route: CheckedRoute,
-  selectedWallets: Route['selectedWallets'],
+  selectedWallets: SelectedWallets,
   slippage: string | undefined,
 ): Route {
   return {
     ...omitRouteErrorFields(route),
-    selectedWallets: { ...selectedWallets },
+    selectedWallets: Object.fromEntries(
+      Object.entries(selectedWallets).map(([blockchain, wallet]) => [
+        blockchain,
+        { ...wallet },
+      ]),
+    ),
     ...(slippage === undefined ? {} : { slippage }),
   }
+}
+
+// What Rango takes as `selectedWallets`: each blockchain's address, with no Wallet ID.
+export function buildSelectedWalletAddresses(
+  selectedWallets: SelectedWallets,
+): BestRouteRequest['selectedWallets'] {
+  return Object.fromEntries(
+    Object.entries(selectedWallets).map(([blockchain, { address }]) => [
+      blockchain,
+      address,
+    ]),
+  )
 }

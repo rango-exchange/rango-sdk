@@ -10,8 +10,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   BSC_ASSET,
+  cacheQuote,
   chain,
   confirmQuote,
+  confirmResponse,
   connectedAccounts,
   createExecutionClient,
   createTxResponse,
@@ -27,13 +29,13 @@ import {
   recordingNamespaces,
   resetHttpClient,
   scriptCreateTransaction,
+  SELECTED_WALLETS,
   settle,
   signerError,
   succeeded,
   swap,
   switchingNamespaces,
   viewOf,
-  WALLET_TYPES,
 } from '../../../tests/support.js'
 
 // A transfer of BTC from its own address, which no selected wallet holds.
@@ -159,7 +161,7 @@ describe('an Execution failure', () => {
       step: 1,
       eventType: 'CALL_WALLET_FAILED',
       reason: SIGN_FAILED,
-      tags: { wallet: 'metamask' },
+      tags: { wallet: SELECTED_WALLETS.ETH.walletId },
     })
   })
 
@@ -218,7 +220,7 @@ describe('an Execution failure', () => {
       step: 1,
       eventType: 'CALL_WALLET_FAILED',
       reason: 'User said no',
-      tags: { wallet: 'metamask' },
+      tags: { wallet: SELECTED_WALLETS.ETH.walletId },
     })
   })
 
@@ -312,10 +314,13 @@ describe("the failure report's wallet tag", () => {
   async function startWith(
     client: Sdk.RangoClient,
     tx: LegacySdk.Transaction,
+    selectedWallets: Sdk.SelectedWallets = SELECTED_WALLETS,
   ): Promise<void> {
     httpClient.createTransaction.mockReset()
     httpClient.createTransaction.mockResolvedValue(createTxResponse(tx))
-    await confirmQuote(client)
+    httpClient.confirmRoute.mockResolvedValueOnce(confirmResponse('request-1'))
+    await cacheQuote(client, { requestId: 'request-1' })
+    await client.confirm('request-1', selectedWallets)
     await client.execute('request-1', EXECUTION_OPTIONS)
     await settle()
   }
@@ -337,7 +342,7 @@ describe("the failure report's wallet tag", () => {
     }
   }
 
-  test("a failure at a step's main entry reports that entry's wallet type", async () => {
+  test("a failure at a step's main entry reports that entry's Wallet ID", async () => {
     const port = recordingNamespaces()
     const { client } = await createExecutionClient(port)
     await confirmQuote(client, 'request-1', [
@@ -353,11 +358,11 @@ describe("the failure report's wallet tag", () => {
 
     expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
     expect(httpClient.reportFailure).toHaveBeenCalledWith(
-      reportedSignFailed({ wallet: WALLET_TYPES.BSC }, 2),
+      reportedSignFailed({ wallet: SELECTED_WALLETS.BSC.walletId }, 2),
     )
   })
 
-  test("a TRANSFER's failure reports the wallet type of the transaction's own blockchain", async () => {
+  test("a TRANSFER's failure reports the Wallet ID of the transaction's own blockchain", async () => {
     const port = recordingNamespaces()
     const { client } = await createExecutionClient(port)
     httpClient.getBlockchains.mockResolvedValue([
@@ -366,10 +371,13 @@ describe("the failure report's wallet tag", () => {
     ])
     port.wallet.bip122.sign.mockRejectedValueOnce(signFailed())
 
-    await startWith(client, BTC_TRANSFER)
+    await startWith(client, BTC_TRANSFER, {
+      ...SELECTED_WALLETS,
+      BTC: { address: 'bc1from', walletId: 'xdefi' },
+    })
 
     expect(httpClient.reportFailure).toHaveBeenCalledWith(
-      reportedSignFailed({ wallet: WALLET_TYPES.BTC }),
+      reportedSignFailed({ wallet: 'xdefi' }),
     )
   })
 
@@ -396,7 +404,7 @@ describe("the failure report's wallet tag", () => {
     ])
   })
 
-  test('an entry with no walletType in the options reports no tag, and the failure is still stored and emitted', async () => {
+  test('an entry on a blockchain with no selected wallet reports no tag, and the failure is still stored and emitted', async () => {
     const port = recordingNamespaces(undefined, {
       ...connectedAccounts(),
       DOGE: ['Dfrom'],
@@ -453,19 +461,19 @@ describe("the failure report's wallet tag", () => {
       return execution
     }
 
-    test("reports the main entry's wallet type while the step has one", async () => {
+    test("reports the main entry's Wallet ID while the step has one", async () => {
       const { client } = await blockOnApprove()
 
       await client.cancel('request-1')
       await settle()
 
       expect(httpClient.reportFailure).toHaveBeenCalledWith({
-        ...reported('USER_CANCEL', { wallet: WALLET_TYPES.BSC }),
+        ...reported('USER_CANCEL', { wallet: SELECTED_WALLETS.BSC.walletId }),
         reason: 'Swap canceled by user.',
       })
     })
 
-    test("reports the Prerequisite's wallet type when only the Prerequisite is stored", async () => {
+    test("reports the Prerequisite's Wallet ID when only the Prerequisite is stored", async () => {
       await blockOnApprove()
       const source = await openQueues(factory)
       const records: unknown[] = await done(
@@ -505,7 +513,7 @@ describe("the failure report's wallet tag", () => {
       )
       expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
       expect(httpClient.reportFailure).toHaveBeenCalledWith({
-        ...reported('USER_CANCEL', { wallet: WALLET_TYPES.ETH }),
+        ...reported('USER_CANCEL', { wallet: SELECTED_WALLETS.ETH.walletId }),
         reason: 'Swap canceled by user.',
       })
       expect(events.map(nameOf).slice(-FAILED_TAIL)).toEqual([

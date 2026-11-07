@@ -112,7 +112,7 @@ async function gateSignAndProvePrerequisite(
   const entry = storage.transactions[transactionId]
   const requiredWallet = {
     blockchain: prerequisite.blockChain,
-    address: storage.data.selectedWallets[prerequisite.blockChain],
+    address: storage.data.selectedWallets[prerequisite.blockChain].address,
   }
   const notConnectedBlock: { block: BlockReason } = {
     block: {

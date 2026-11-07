@@ -24,7 +24,12 @@ import {
   validationStatus,
 } from '../../../tests/support.js'
 
-const SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
+const SELECTED_WALLETS = {
+  ETH: { address: '0xfrom', walletId: 'metamask' },
+  BSC: { address: '0xto', walletId: 'trust' },
+}
+// What `/routing/confirm` gets for `SELECTED_WALLETS`: the addresses, with no Wallet IDs.
+const SENT_SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
 
 // Caches a Quote, then confirms it with the default wallets and destination.
 async function confirmCached(
@@ -93,7 +98,7 @@ describe('confirm', () => {
     expect(httpClient.confirmRoute.mock.lastCall).toStrictEqual([
       {
         requestId: 'request-2',
-        selectedWallets: SELECTED_WALLETS,
+        selectedWallets: SENT_SELECTED_WALLETS,
         destination: DESTINATION,
       },
       { signal: controller.signal },
@@ -243,15 +248,23 @@ describe('confirm', () => {
     const client = await createClient()
     const quote = await cacheQuote(client)
 
-    const first = await client.confirm(quote.requestId, { ETH: '0xa' })
-    const second = await client.confirm(quote.requestId, { ETH: '0xb' })
+    const first = await client.confirm(quote.requestId, {
+      ETH: { address: '0xa', walletId: 'metamask' },
+    })
+    const second = await client.confirm(quote.requestId, {
+      ETH: { address: '0xb', walletId: 'rabby' },
+    })
 
     expect(httpClient.confirmRoute.mock.calls.map(([body]) => body)).toEqual([
       { requestId: 'request-1', selectedWallets: { ETH: '0xa' } },
       { requestId: 'request-1', selectedWallets: { ETH: '0xb' } },
     ])
-    expect(first.data.selectedWallets).toEqual({ ETH: '0xa' })
-    expect(second.data.selectedWallets).toEqual({ ETH: '0xb' })
+    expect(first.data.selectedWallets).toEqual({
+      ETH: { address: '0xa', walletId: 'metamask' },
+    })
+    expect(second.data.selectedWallets).toEqual({
+      ETH: { address: '0xb', walletId: 'rabby' },
+    })
     expect(
       client.cache.get('quotes')?.get('route-1')?.get(quote.requestId),
     ).toEqual(quote)
@@ -275,7 +288,7 @@ describe('confirm', () => {
 
     expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
-      selectedWallets: SELECTED_WALLETS,
+      selectedWallets: SENT_SELECTED_WALLETS,
       destination: DESTINATION,
     })
     expect(confirmed.data.slippage).toBe('1.5')
@@ -313,7 +326,7 @@ describe('confirm', () => {
     await client.confirm('request-1', SELECTED_WALLETS)
 
     expect(httpClient.confirmRoute.mock.lastCall).toStrictEqual([
-      { requestId: 'request-1', selectedWallets: SELECTED_WALLETS },
+      { requestId: 'request-1', selectedWallets: SENT_SELECTED_WALLETS },
       { signal: undefined },
     ])
   })
@@ -589,29 +602,34 @@ describe('confirm', () => {
     expect(route).not.toHaveProperty('destination')
   })
 
-  test('carries a copy of selectedWallets and the cached Quote slippage, without the destination', async () => {
+  test('carries a copy of selectedWallets, each Wallet ID included, and the cached Quote slippage, without the destination', async () => {
     const client = await createClient()
-    const selectedWallets = { ETH: '0xfrom', BSC: '0xto', SOLANA: 'sol' }
+    const selectedWallets = {
+      ...structuredClone(SELECTED_WALLETS),
+      SOLANA: { address: 'sol', walletId: 'phantom' },
+    }
     await cacheQuote(client, {}, '2')
 
     const confirmed = await client.confirm('request-1', selectedWallets, {
       req: { destination: DESTINATION },
     })
 
+    const kept = {
+      ...SELECTED_WALLETS,
+      SOLANA: { address: 'sol', walletId: 'phantom' },
+    }
     expect(confirmed.data.selectedWallets).not.toBe(selectedWallets)
-    expect(confirmed.data.selectedWallets).toEqual({
-      ETH: '0xfrom',
-      BSC: '0xto',
-      SOLANA: 'sol',
-    })
+    expect(confirmed.data.selectedWallets).toEqual(kept)
+    expect(
+      client.cache.get('confirmed')?.get('request-1')?.data.selectedWallets,
+    ).toEqual(kept)
 
-    selectedWallets.ETH = '0xchanged'
-    Object.assign(selectedWallets, { POLYGON: '0xadded' })
-    expect(confirmed.data.selectedWallets).toEqual({
-      ETH: '0xfrom',
-      BSC: '0xto',
-      SOLANA: 'sol',
+    selectedWallets.ETH = { address: '0xchanged', walletId: 'rabby' }
+    selectedWallets.BSC.walletId = 'changed'
+    Object.assign(selectedWallets, {
+      POLYGON: { address: '0xadded', walletId: 'metamask' },
     })
+    expect(confirmed.data.selectedWallets).toEqual(kept)
     expect(confirmed.data.slippage).toBe('2')
     expect(confirmed.data).not.toHaveProperty('destination')
     expect(confirmed).not.toHaveProperty('selectedWallets')
@@ -646,7 +664,7 @@ describe('confirm', () => {
 
     expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
-      selectedWallets: SELECTED_WALLETS,
+      selectedWallets: SENT_SELECTED_WALLETS,
     })
     expect(confirmed.data.slippage).toBe('1.5')
   })
@@ -670,7 +688,7 @@ describe('confirm', () => {
     expectTypeOf(client.confirm).parameters.toEqualTypeOf<
       [
         string,
-        LegacySdk.ConfirmRouteRequest['selectedWallets'],
+        Sdk.SelectedWallets,
         ({ req?: Sdk.ConfirmReq; signal?: AbortSignal } | undefined)?,
       ]
     >()
@@ -711,11 +729,15 @@ describe('confirm', () => {
     expectTypeOf(misuse).toBeFunction()
   })
 
-  test('exports ConfirmReq and SelectedWallets, and not ConfirmRequest, ConfirmQuote or ConfirmRouteRequest', () => {
+  test('exports ConfirmReq, SelectedWallets and SelectedWallet, and not ConfirmRequest, ConfirmQuote or ConfirmRouteRequest', () => {
     expectTypeOf<Sdk.ConfirmReq>().toHaveProperty('destination')
-    expectTypeOf<Sdk.SelectedWallets>().toEqualTypeOf<
-      LegacySdk.ConfirmRouteRequest['selectedWallets']
-    >()
+    expectTypeOf<Sdk.SelectedWallets>().toEqualTypeOf<{
+      [blockchain: string]: Sdk.SelectedWallet
+    }>()
+    expectTypeOf<Sdk.SelectedWallet>().toEqualTypeOf<{
+      address: string
+      walletId: string
+    }>()
     // @ts-expect-error ConfirmRequest is not exported
     expectTypeOf<Sdk.ConfirmRequest>().not.toBeNever()
     // @ts-expect-error ConfirmQuote is not exported
@@ -738,7 +760,7 @@ describe('confirm', () => {
 
     expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
-      selectedWallets: SELECTED_WALLETS,
+      selectedWallets: SENT_SELECTED_WALLETS,
       destination: DESTINATION,
     })
   })
@@ -1162,12 +1184,7 @@ describe('confirm', () => {
         case 'INVALID_INPUT':
           expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
           expectTypeOf(error.metadata.field).toEqualTypeOf<
-            | 'requestId'
-            | 'to'
-            | 'amount'
-            | 'destination'
-            | 'options'
-            | 'walletTypes'
+            'requestId' | 'to' | 'amount' | 'destination' | 'options'
           >()
           if (error.metadata.field === 'requestId') {
             expectTypeOf(error.metadata.reason).toEqualTypeOf<'NOT_FOUND'>()

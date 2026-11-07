@@ -160,7 +160,10 @@ export class RangoClient {
    * @example
    * ```ts
    * const chosen = data.quotes.find((entry) => !entry.error)
-   * const selectedWallets = { ETH: '0x...', BSC: '0x...' }
+   * const selectedWallets = {
+   *   ETH: { address: '0x...', walletId: 'metamask' },
+   *   BSC: { address: '0x...', walletId: 'metamask' },
+   * }
    * const { data: route, warnings } = await client.confirm(
    *   chosen.data.requestId,
    *   selectedWallets,
@@ -189,7 +192,6 @@ export class RangoClient {
    *     slippage: '1',
    *     validations: { balance: true, fee: true },
    *   },
-   *   walletTypes: { ETH: { walletType: 'metamask' } },
    * })
    * ```
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#execute
