@@ -113,6 +113,11 @@ export type HyperliquidTransaction = Extract<
 // Where an entry is signed: the `selectedWallets` key, or `'HYPERLIQUID'`, and the entry's address on it.
 export type RequiredWallet = { blockchain: string; address: string }
 
+// A signed Prerequisite's stored hash to resume proving, else the meta its gate needs.
+export type ResumedHashOrBlockchainMeta =
+  | { hashToResumeProving: string }
+  | { blockchainMeta: BlockchainMeta }
+
 // `response` is kept for an EVM port's `wait`.
 export type SignedEntryResult = {
   walletResult: { hash: string }

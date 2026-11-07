@@ -1,7 +1,26 @@
-import type { SdkActions, SignedEntryResult, TaskResult } from './types.js'
-import type { BlockReason, SignResult } from '../mod.js'
+import type {
+  RequiredWallet,
+  ResumedHashOrBlockchainMeta,
+  SdkActions,
+  SignedEntryResult,
+  TaskResult,
+} from './types.js'
+import type {
+  BlockReason,
+  EvmWallet,
+  SignResult,
+  StellarWallet,
+  TronWallet,
+  XrplWallet,
+} from '../mod.js'
 import type { BlockchainMeta } from 'rango-sdk'
-import type { TransactionPrerequisite } from 'rango-types'
+import type {
+  EvmApprovePrerequisite,
+  StellarChangeTrustLinePrerequisite,
+  TransactionPrerequisite,
+  TronApprovePrerequisite,
+  XrplChangeTrustLinePrerequisite,
+} from 'rango-types'
 
 import { TransactionType } from 'rango-types'
 
@@ -98,6 +117,234 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
     : signedPrerequisite.walletResult.hash
 }
 
+// A rejected `getAccounts`, whatever it rejects with, reads as `null`.
+async function readAccountsAndGetBlockReason(
+  requiredWallet: RequiredWallet,
+  readAccounts: () => Promise<string[] | null>,
+): Promise<BlockReason | null> {
+  const connectedAccounts = await readAccounts().catch(() => null)
+  return getAccountBlockReason(requiredWallet, connectedAccounts)
+}
+
+async function gateSignAndProveEvmApprove(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
+  evm: EvmWallet,
+  transactionId: string,
+  prerequisite: EvmApprovePrerequisite,
+  requiredWallet: RequiredWallet,
+  resumedHashOrBlockchainMeta: ResumedHashOrBlockchainMeta,
+): Promise<TaskResult> {
+  if ('hashToResumeProving' in resumedHashOrBlockchainMeta) {
+    return proveEvmApproveOnChain(
+      actions,
+      evm,
+      transactionId,
+      prerequisite,
+      resumedHashOrBlockchainMeta.hashToResumeProving,
+    )
+  }
+  const { blockchainMeta } = resumedHashOrBlockchainMeta
+  const accountBlockReason = await readAccountsAndGetBlockReason(
+    requiredWallet,
+    async () => evm.getAccounts({ blockchain: requiredWallet.blockchain }),
+  )
+  if (isCanceled(actions)) {
+    return []
+  }
+  // The chain ID is looked up only once the accounts pass.
+  const blockReason =
+    accountBlockReason ??
+    (await switchToRequiredChainOrGetBlockReason(
+      actions,
+      transactionId,
+      requiredWallet,
+      blockchainMeta.chainId,
+      async () => evm.getChainId({ blockchain: requiredWallet.blockchain }),
+      async (chainId) =>
+        evm.switchChain({
+          blockchain: requiredWallet.blockchain,
+          chainId,
+          chain: buildEvmChainDescription(blockchainMeta),
+        }),
+    ))
+  if (isCanceled(actions)) {
+    return []
+  }
+  if (blockReason !== null) {
+    return { block: blockReason }
+  }
+  const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+    actions,
+    transactionId,
+    prerequisite,
+    blockchainMeta,
+    async () =>
+      evm.getAllowance({
+        blockchain: requiredWallet.blockchain,
+        prerequisite,
+      }),
+    async () => buildEvmApproveTx(prerequisite),
+    async (prerequisiteTx) =>
+      evm.sign({
+        blockchain: requiredWallet.blockchain,
+        tx: prerequisiteTx,
+      }),
+  )
+  return signedPrerequisiteHash === null
+    ? []
+    : proveEvmApproveOnChain(
+        actions,
+        evm,
+        transactionId,
+        prerequisite,
+        signedPrerequisiteHash,
+      )
+}
+
+async function gateSignAndProveTronApprove(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
+  tron: TronWallet,
+  transactionId: string,
+  prerequisite: TronApprovePrerequisite,
+  requiredWallet: RequiredWallet,
+  resumedHashOrBlockchainMeta: ResumedHashOrBlockchainMeta,
+): Promise<TaskResult> {
+  if ('hashToResumeProving' in resumedHashOrBlockchainMeta) {
+    return proveTronApproveOnChain(
+      actions,
+      tron,
+      transactionId,
+      prerequisite,
+      resumedHashOrBlockchainMeta.hashToResumeProving,
+    )
+  }
+  const blockReason = await readAccountsAndGetBlockReason(
+    requiredWallet,
+    async () => tron.getAccounts(),
+  )
+  if (isCanceled(actions)) {
+    return []
+  }
+  if (blockReason !== null) {
+    return { block: blockReason }
+  }
+  const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+    actions,
+    transactionId,
+    prerequisite,
+    resumedHashOrBlockchainMeta.blockchainMeta,
+    async () => tron.getAllowance({ prerequisite }),
+    async () =>
+      runPrerequisiteReadOrBuildOrThrowReported(
+        async () => tron.buildTransaction({ prerequisite }),
+        'Could not build the Tron approve transaction.',
+      ),
+    async (prerequisiteTx) => tron.sign({ tx: prerequisiteTx }),
+  )
+  return signedPrerequisiteHash === null
+    ? []
+    : proveTronApproveOnChain(
+        actions,
+        tron,
+        transactionId,
+        prerequisite,
+        signedPrerequisiteHash,
+      )
+}
+
+async function gateSignAndProveXrplTrustline(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
+  xrpl: XrplWallet,
+  transactionId: string,
+  prerequisite: XrplChangeTrustLinePrerequisite,
+  requiredWallet: RequiredWallet,
+  resumedHashOrBlockchainMeta: ResumedHashOrBlockchainMeta,
+): Promise<TaskResult> {
+  if ('hashToResumeProving' in resumedHashOrBlockchainMeta) {
+    return proveXrplTrustlineOnChain(
+      actions,
+      xrpl,
+      transactionId,
+      resumedHashOrBlockchainMeta.hashToResumeProving,
+    )
+  }
+  const blockReason = await readAccountsAndGetBlockReason(
+    requiredWallet,
+    async () => xrpl.getAccounts(),
+  )
+  if (isCanceled(actions)) {
+    return []
+  }
+  if (blockReason !== null) {
+    return { block: blockReason }
+  }
+  const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+    actions,
+    transactionId,
+    prerequisite,
+    resumedHashOrBlockchainMeta.blockchainMeta,
+    async () => xrpl.getTrustline({ prerequisite }),
+    async () => buildXrplTrustSetTx(prerequisite),
+    async (prerequisiteTx) => xrpl.sign({ tx: prerequisiteTx }),
+  )
+  return signedPrerequisiteHash === null
+    ? []
+    : proveXrplTrustlineOnChain(
+        actions,
+        xrpl,
+        transactionId,
+        signedPrerequisiteHash,
+      )
+}
+
+// Its resolved `sign` proved it, so a signed one is completed with no port call.
+async function gateAndSignStellarTrustline(
+  actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
+  stellar: StellarWallet,
+  transactionId: string,
+  prerequisite: StellarChangeTrustLinePrerequisite,
+  requiredWallet: RequiredWallet,
+  resumedHashOrBlockchainMeta: ResumedHashOrBlockchainMeta,
+): Promise<TaskResult> {
+  if ('hashToResumeProving' in resumedHashOrBlockchainMeta) {
+    return storeEntryCompletedAndEmitApprovalSucceeded(
+      actions,
+      transactionId,
+      false,
+    )
+  }
+  const blockReason = await readAccountsAndGetBlockReason(
+    requiredWallet,
+    async () => stellar.getAccounts(),
+  )
+  if (isCanceled(actions)) {
+    return []
+  }
+  if (blockReason !== null) {
+    return { block: blockReason }
+  }
+  const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+    actions,
+    transactionId,
+    prerequisite,
+    resumedHashOrBlockchainMeta.blockchainMeta,
+    async () => stellar.getTrustline({ prerequisite }),
+    async () =>
+      runPrerequisiteReadOrBuildOrThrowReported(
+        async () =>
+          stellar.buildTransaction({
+            prerequisite,
+            limit: TRUSTLINE_LIMIT_BY_BLOCKCHAIN.STELLAR,
+          }),
+        'Could not build the Stellar trustline transaction.',
+      ),
+    async (prerequisiteTx) => stellar.sign({ tx: prerequisiteTx }),
+  )
+  return signedPrerequisiteHash === null
+    ? []
+    : storeEntryCompletedAndEmitApprovalSucceeded(actions, transactionId, false)
+}
+
 /*
  * A signed one resumes its on-chain proof with no gate. Only an EVM approve's requests carry `blockchain`, and no
  * `sign` a chain ID: its chain was checked first. It is never handed to `wait`.
@@ -128,21 +375,18 @@ async function gateSignAndProvePrerequisite(
   const { walletResult: storedWalletResult } = entry.execution.result
   const isSignedWithHash =
     entry.execution.status === 'signed' && storedWalletResult !== null
-  const resumedHashOrBlockchainMeta:
-    | { hashToResumeProving: string }
-    | { blockchainMeta: BlockchainMeta } = isSignedWithHash
-    ? { hashToResumeProving: storedWalletResult.hash }
-    : {
-        blockchainMeta: await loadBlockchainMetaOf(
-          actions,
-          requiredWallet.blockchain,
-        ),
-      }
+  const resumedHashOrBlockchainMeta: ResumedHashOrBlockchainMeta =
+    isSignedWithHash
+      ? { hashToResumeProving: storedWalletResult.hash }
+      : {
+          blockchainMeta: await loadBlockchainMetaOf(
+            actions,
+            requiredWallet.blockchain,
+          ),
+        }
   if (isCanceled(actions)) {
     return []
   }
-  const isResumingSignedPrerequisite =
-    'hashToResumeProving' in resumedHashOrBlockchainMeta
 
   switch (prerequisite.type) {
     case 'EVM_APPROVE': {
@@ -150,207 +394,56 @@ async function gateSignAndProvePrerequisite(
       if (evm === undefined) {
         return notConnectedBlock
       }
-      if (isResumingSignedPrerequisite) {
-        return proveEvmApproveOnChain(
-          actions,
-          evm,
-          transactionId,
-          prerequisite,
-          resumedHashOrBlockchainMeta.hashToResumeProving,
-        )
-      }
-      const connectedAccounts = await evm
-        .getAccounts({ blockchain: requiredWallet.blockchain })
-        .catch(() => null)
-      if (isCanceled(actions)) {
-        return []
-      }
-      // The chain ID is looked up only once the accounts pass.
-      const blockReason =
-        getAccountBlockReason(requiredWallet, connectedAccounts) ??
-        (await switchToRequiredChainOrGetBlockReason(
-          actions,
-          transactionId,
-          requiredWallet,
-          resumedHashOrBlockchainMeta.blockchainMeta.chainId,
-          async () => evm.getChainId({ blockchain: requiredWallet.blockchain }),
-          async (chainId) =>
-            evm.switchChain({
-              blockchain: requiredWallet.blockchain,
-              chainId,
-              chain: buildEvmChainDescription(
-                resumedHashOrBlockchainMeta.blockchainMeta,
-              ),
-            }),
-        ))
-      if (isCanceled(actions)) {
-        return []
-      }
-      if (blockReason !== null) {
-        return { block: blockReason }
-      }
-      const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+      return gateSignAndProveEvmApprove(
         actions,
+        evm,
         transactionId,
         prerequisite,
-        resumedHashOrBlockchainMeta.blockchainMeta,
-        async () =>
-          evm.getAllowance({
-            blockchain: requiredWallet.blockchain,
-            prerequisite,
-          }),
-        async () => buildEvmApproveTx(prerequisite),
-        async (prerequisiteTx) =>
-          evm.sign({
-            blockchain: requiredWallet.blockchain,
-            tx: prerequisiteTx,
-          }),
+        requiredWallet,
+        resumedHashOrBlockchainMeta,
       )
-      return signedPrerequisiteHash === null
-        ? []
-        : proveEvmApproveOnChain(
-            actions,
-            evm,
-            transactionId,
-            prerequisite,
-            signedPrerequisiteHash,
-          )
     }
     case 'TRON_APPROVE': {
       const tron = wallet?.tron
       if (tron === undefined) {
         return notConnectedBlock
       }
-      if (isResumingSignedPrerequisite) {
-        return proveTronApproveOnChain(
-          actions,
-          tron,
-          transactionId,
-          prerequisite,
-          resumedHashOrBlockchainMeta.hashToResumeProving,
-        )
-      }
-      const blockReason = getAccountBlockReason(
-        requiredWallet,
-        await tron.getAccounts().catch(() => null),
-      )
-      if (isCanceled(actions)) {
-        return []
-      }
-      if (blockReason !== null) {
-        return { block: blockReason }
-      }
-      const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+      return gateSignAndProveTronApprove(
         actions,
+        tron,
         transactionId,
         prerequisite,
-        resumedHashOrBlockchainMeta.blockchainMeta,
-        async () => tron.getAllowance({ prerequisite }),
-        async () =>
-          runPrerequisiteReadOrBuildOrThrowReported(
-            async () => tron.buildTransaction({ prerequisite }),
-            'Could not build the Tron approve transaction.',
-          ),
-        async (prerequisiteTx) => tron.sign({ tx: prerequisiteTx }),
+        requiredWallet,
+        resumedHashOrBlockchainMeta,
       )
-      return signedPrerequisiteHash === null
-        ? []
-        : proveTronApproveOnChain(
-            actions,
-            tron,
-            transactionId,
-            prerequisite,
-            signedPrerequisiteHash,
-          )
     }
     case 'XRPL_CHANGE_TRUSTLINE': {
       const xrpl = wallet?.xrpl
       if (xrpl === undefined) {
         return notConnectedBlock
       }
-      if (isResumingSignedPrerequisite) {
-        return proveXrplTrustlineOnChain(
-          actions,
-          xrpl,
-          transactionId,
-          resumedHashOrBlockchainMeta.hashToResumeProving,
-        )
-      }
-      const blockReason = getAccountBlockReason(
-        requiredWallet,
-        await xrpl.getAccounts().catch(() => null),
-      )
-      if (isCanceled(actions)) {
-        return []
-      }
-      if (blockReason !== null) {
-        return { block: blockReason }
-      }
-      const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+      return gateSignAndProveXrplTrustline(
         actions,
+        xrpl,
         transactionId,
         prerequisite,
-        resumedHashOrBlockchainMeta.blockchainMeta,
-        async () => xrpl.getTrustline({ prerequisite }),
-        async () => buildXrplTrustSetTx(prerequisite),
-        async (prerequisiteTx) => xrpl.sign({ tx: prerequisiteTx }),
+        requiredWallet,
+        resumedHashOrBlockchainMeta,
       )
-      return signedPrerequisiteHash === null
-        ? []
-        : proveXrplTrustlineOnChain(
-            actions,
-            xrpl,
-            transactionId,
-            signedPrerequisiteHash,
-          )
     }
     case 'STELLAR_CHANGE_TRUSTLINE': {
       const stellar = wallet?.stellar
       if (stellar === undefined) {
         return notConnectedBlock
       }
-      // Its resolved `sign` proved it, so it is completed with no port call.
-      if (isResumingSignedPrerequisite) {
-        return storeEntryCompletedAndEmitApprovalSucceeded(
-          actions,
-          transactionId,
-          false,
-        )
-      }
-      const blockReason = getAccountBlockReason(
-        requiredWallet,
-        await stellar.getAccounts().catch(() => null),
-      )
-      if (isCanceled(actions)) {
-        return []
-      }
-      if (blockReason !== null) {
-        return { block: blockReason }
-      }
-      const signedPrerequisiteHash = await signPrerequisiteUnlessAlreadyGranted(
+      return gateAndSignStellarTrustline(
         actions,
+        stellar,
         transactionId,
         prerequisite,
-        resumedHashOrBlockchainMeta.blockchainMeta,
-        async () => stellar.getTrustline({ prerequisite }),
-        async () =>
-          runPrerequisiteReadOrBuildOrThrowReported(
-            async () =>
-              stellar.buildTransaction({
-                prerequisite,
-                limit: TRUSTLINE_LIMIT_BY_BLOCKCHAIN.STELLAR,
-              }),
-            'Could not build the Stellar trustline transaction.',
-          ),
-        async (prerequisiteTx) => stellar.sign({ tx: prerequisiteTx }),
+        requiredWallet,
+        resumedHashOrBlockchainMeta,
       )
-      return signedPrerequisiteHash === null
-        ? []
-        : storeEntryCompletedAndEmitApprovalSucceeded(
-            actions,
-            transactionId,
-            false,
-          )
     }
   }
 }
