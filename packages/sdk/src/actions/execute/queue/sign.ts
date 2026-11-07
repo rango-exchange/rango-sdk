@@ -2,10 +2,10 @@ import type { CheckResult, SdkActions, SignedEntryResult } from './types.js'
 import type { SignResult } from '../mod.js'
 import type { BlockchainMeta } from 'rango-sdk'
 
-import { loadBlockchainMetaOf } from './blockchain-meta.js'
-import { isCanceled } from './execution-failure.js'
-import { buildCheckResultWithExplorerLink } from './explorer-link.js'
-import { getRequiredWallet } from './required-wallet.js'
+import { loadBlockchainMetaOf } from './blockchainMeta.js'
+import { isCanceled } from './executionFailure.js'
+import { buildCheckResultWithExplorerLink } from './explorerLink.js'
+import { getRequiredWallet } from './requiredWallet.js'
 
 // What `signWithWallet` resolved with, or `null` when it did or once the Execution is canceled.
 export async function signEntryAndStoreSignedHash<

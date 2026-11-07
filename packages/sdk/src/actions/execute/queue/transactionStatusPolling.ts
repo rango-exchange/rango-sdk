@@ -3,11 +3,11 @@ import type { TransactionStatusResponse } from 'rango-sdk'
 
 import { TransactionStatus, TransactionType } from 'rango-types'
 
-import { loadBlockchainMetaOf } from './blockchain-meta.js'
+import { loadBlockchainMetaOf } from './blockchainMeta.js'
 import { POLL_INTERVAL_MS } from './constants.js'
-import { ErrorToReport, isCanceled } from './execution-failure.js'
-import { replaceLastExplorerLinkWithReplacedHash } from './explorer-link.js'
-import { getRequiredWallet } from './required-wallet.js'
+import { ErrorToReport, isCanceled } from './executionFailure.js'
+import { replaceLastExplorerLinkWithReplacedHash } from './explorerLink.js'
+import { getRequiredWallet } from './requiredWallet.js'
 import { sleep } from './utils.js'
 
 function mergeStatusAnswerIntoCheckResult(

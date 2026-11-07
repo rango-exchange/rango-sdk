@@ -11,7 +11,7 @@ import type { APIErrorCode } from 'rango-types'
 import { SignerError } from 'rango-types'
 
 import { REASON_CODE_BY_SIGNER_ERROR_CODE } from './constants.js'
-import { getCurrentStepWalletIdForReport } from './required-wallet.js'
+import { getCurrentStepWalletIdForReport } from './requiredWallet.js'
 
 export class ErrorToReport extends Error {
   override readonly name = 'ErrorToReport'

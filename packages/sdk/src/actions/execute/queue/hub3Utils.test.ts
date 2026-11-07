@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { encodeApproveCallData } from './hub3-utils.js'
+import { encodeApproveCallData } from './hub3Utils.js'
 
 describe('encodeApproveCallData', () => {
   test('encodes the approve selector, the lower-cased spender and the amount as hex, each padded to a 32-byte word', () => {

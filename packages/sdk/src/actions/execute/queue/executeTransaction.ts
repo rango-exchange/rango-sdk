@@ -27,12 +27,12 @@ import { TransactionType } from 'rango-types'
 import {
   buildEvmChainDescription,
   loadBlockchainMetaOf,
-} from './blockchain-meta.js'
+} from './blockchainMeta.js'
 import {
   PREREQUISITE_READ_FAILURE_MESSAGE_BY_TYPE,
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
-import { ErrorToReport, isCanceled } from './execution-failure.js'
+import { ErrorToReport, isCanceled } from './executionFailure.js'
 import {
   signPostAndLookUpHyperliquidHash,
   waitForHyperliquidHashAndStoreIt,
@@ -48,17 +48,17 @@ import {
   runPrerequisiteReadOrBuildOrThrowReported,
   storeEntryCompletedAndEmitApprovalSucceeded,
 } from './prerequisite.js'
-import { getRequiredWallet } from './required-wallet.js'
+import { getRequiredWallet } from './requiredWallet.js'
 import {
   awaitSignResultAndBuildExplorerLink,
   buildMainTransactionSigner,
   signEntryAndStoreSignedHash,
 } from './sign.js'
-import { waitForHashThenPollStepStatus } from './transaction-status-polling.js'
+import { waitForHashThenPollStepStatus } from './transactionStatusPolling.js'
 import {
   getAccountBlockReason,
   switchToRequiredChainOrGetBlockReason,
-} from './wallet-readiness.js'
+} from './walletReadiness.js'
 
 // The signed hash, or `null` when the Prerequisite was already met or once the Execution is canceled.
 async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(

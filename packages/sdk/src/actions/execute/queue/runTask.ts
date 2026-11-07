@@ -6,7 +6,7 @@ import type {
 } from './types.js'
 
 import { BLOCKED_EVENT_STATUS_BY_BLOCK_REASON } from './constants.js'
-import { failExecution, isCanceled } from './execution-failure.js'
+import { failExecution, isCanceled } from './executionFailure.js'
 
 // The only caller of `schedule`, `next`, `block` and `failed`. No task calls `retry()`.
 export async function runTask<K extends ActionName>(

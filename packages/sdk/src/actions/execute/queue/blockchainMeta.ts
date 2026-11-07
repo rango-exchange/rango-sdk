@@ -4,7 +4,7 @@ import type { BlockchainMeta } from 'rango-sdk'
 
 import { TransactionType } from 'rango-types'
 
-import { getErrorMessage } from './execution-failure.js'
+import { getErrorMessage } from './executionFailure.js'
 
 /*
  * At the gate, before signing, and once a Hyperliquid hash is found. A failed load isn't retried, and both throws are

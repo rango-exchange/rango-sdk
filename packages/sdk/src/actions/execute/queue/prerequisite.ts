@@ -18,8 +18,8 @@ import {
   POLL_INTERVAL_MS,
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
-import { ErrorToReport, isCanceled } from './execution-failure.js'
-import { encodeApproveCallData } from './hub3-utils.js'
+import { ErrorToReport, isCanceled } from './executionFailure.js'
+import { encodeApproveCallData } from './hub3Utils.js'
 import { sleep } from './utils.js'
 
 type OnChainTxStatus = 'pending' | 'success' | 'failed'

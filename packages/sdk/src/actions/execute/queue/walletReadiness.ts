@@ -1,7 +1,7 @@
 import type { RequiredWallet, SdkActions } from './types.js'
 import type { BlockReason } from '../mod.js'
 
-import { isCanceled } from './execution-failure.js'
+import { isCanceled } from './executionFailure.js'
 
 // Chain IDs compare as BigInts, so hex and decimal match. A value BigInt cannot read matches nothing.
 function isSameChainId(current: string | null, required: string): boolean {

@@ -3,5 +3,5 @@ export { queueDefinition } from './definition.js'
 export {
   reportAndEmitExecutionFailure,
   storeExecutionFailure,
-} from './execution-failure.js'
+} from './executionFailure.js'
 export type { Emit, SdkContext, StoredQueue } from './types.js'

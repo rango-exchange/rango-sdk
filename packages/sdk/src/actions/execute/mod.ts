@@ -1,6 +1,6 @@
 export { ENDED_QUEUE_STATUSES } from './constants.js'
 export { startOrUnblockExecution } from './execute.js'
-export { createExecutionEngine } from './execution-engine.js'
+export { createExecutionEngine } from './executionEngine.js'
 export {
   reportAndEmitExecutionFailure,
   storeExecutionFailure,

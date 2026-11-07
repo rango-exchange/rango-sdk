@@ -5,7 +5,7 @@ import type {
 } from './types.js'
 import type { HyperliquidWallet } from '../mod.js'
 
-import { loadBlockchainMetaOf } from './blockchain-meta.js'
+import { loadBlockchainMetaOf } from './blockchainMeta.js'
 import {
   HEX,
   HYPERLIQUID_EXCHANGE_URL,
@@ -13,9 +13,9 @@ import {
   POLL_INTERVAL_MS,
   SUPPORTED_HYPERLIQUID_ACTION_TYPES,
 } from './constants.js'
-import { ErrorToReport, isCanceled } from './execution-failure.js'
-import { buildCheckResultWithExplorerLink } from './explorer-link.js'
-import { getRequiredWallet } from './required-wallet.js'
+import { ErrorToReport, isCanceled } from './executionFailure.js'
+import { buildCheckResultWithExplorerLink } from './explorerLink.js'
+import { getRequiredWallet } from './requiredWallet.js'
 import { signEntryAndStoreSignedHash } from './sign.js'
 import { sleep } from './utils.js'
 

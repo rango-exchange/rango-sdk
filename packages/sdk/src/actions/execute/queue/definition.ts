@@ -3,10 +3,10 @@ import type { ExecutionRecord } from '../mod.js'
 import type { QueueDef } from '@rango-dev/queue-manager-core'
 
 import { QUEUE_NAME } from './constants.js'
-import { executeTransaction } from './execute-transaction.js'
-import { fetchTransaction } from './fetch-transaction.js'
-import { runTask } from './run-task.js'
-import { stepFinished } from './step-finished.js'
+import { executeTransaction } from './executeTransaction.js'
+import { fetchTransaction } from './fetchTransaction.js'
+import { runTask } from './runTask.js'
+import { stepFinished } from './stepFinished.js'
 
 export const queueDefinition: QueueDef<
   ExecutionRecord,
