@@ -132,7 +132,7 @@ async function start(client: Sdk.RangoClient, tx: LegacySdk.Transaction) {
 }
 
 /*
- * A client whose `execution` has a recording emitter and a `beforeResume` that sets the context's wallet to `wallet()`
+ * A client whose `execution` has a recording emitter and a `beforeResume` that sets the wallet to `wallet()`
  * on every run, and no `wallet` of its own, on a Blockchain list of `blockchains`.
  */
 async function connectingClient(
@@ -142,8 +142,8 @@ async function connectingClient(
   const { RangoClient } = await loadSdk()
   httpClient.getBlockchains.mockResolvedValue([...blockchains])
   const { emitter, events } = recordingEmitter()
-  const beforeResume = vi.fn<Sdk.BeforeResume>((context, setContext) => {
-    setContext({ ...context, wallet: wallet() })
+  const beforeResume = vi.fn<Sdk.BeforeResume>((_, setContext) => {
+    setContext({ wallet: wallet() })
   })
   const client = new RangoClient({
     apiKey: 'test-key',

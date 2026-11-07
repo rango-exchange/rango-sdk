@@ -147,7 +147,7 @@ Every key of `execution` (`ExecutionConfig`) is optional:
 - `wallet` (`WalletPort`): signs and reads for the user's wallets; see [Wallet port](#wallet-port). Without one, each **Execution** is `BLOCKED` `NOT_CONNECTED` until a wallet is set.
 - `emitter` (`Emitter<ExecutionEvents>`): receives the [events](#events) of every **Execution**; a mitt emitter fits as it is.
 - `pauseOnStart`: `true` builds the execution engine paused, for an app in several tabs; see [`pause()` and `resume()`](#pause-and-resume).
-- `beforeResume`: sets the context, such as the wallet, before each run of an **Execution**; see [`beforeResume`](#beforeresume).
+- `beforeResume`: sets the wallet before each run of an **Execution**; see [`beforeResume`](#beforeresume).
 
 Build one execution client per page, and don't run other `@rango-dev/queue-manager-core` apps on the same origin: they share one database. Execution is browser only: in Node, `quotes()`, `confirm()` and `quote()` work, and `execute()` throws `REQUEST_FAILED`.
 
@@ -252,11 +252,11 @@ Call `resume()` at mount in every app: it builds the execution engine and resume
 
 ```ts
 beforeResume(context, setContext, item) {
-  setContext({ ...context, wallet: walletFor(item._storage.data.selectedWallets) })
+  setContext({ wallet: walletFor(item._storage.data.selectedWallets) })
 }
 ```
 
-Called before each run of an **Execution** with the live context, `setContext` and the [`HistoryItem`](#history). `setContext` is client-wide, so set the wallet in every call. It must be synchronous and must not throw.
+Called before each run of an **Execution** with the wallet, a `setContext` that sets it and the [`HistoryItem`](#history). `setContext` is client-wide, so set the wallet in every call. It must be synchronous and must not throw.
 
 ### `history`
 

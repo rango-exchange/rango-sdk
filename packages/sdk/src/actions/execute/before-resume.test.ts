@@ -16,6 +16,7 @@ import {
   hang,
   historyOf,
   httpClient,
+  nameOf,
   recordingNamespaces,
   reloadOn,
   scriptCreateTransaction,
@@ -47,10 +48,10 @@ async function start(
   await settle()
 }
 
-// A hook that replaces the context's wallet with this namespace port on every call.
+// A hook that sets the wallet to this namespace port on every call.
 function routingTo(namespaces: Namespaces) {
-  return vi.fn<Sdk.BeforeResume>((context, setContext) => {
-    setContext({ ...context, wallet: namespaces })
+  return vi.fn<Sdk.BeforeResume>((_, setContext) => {
+    setContext({ wallet: namespaces })
   })
 }
 
@@ -84,7 +85,7 @@ describe('beforeResume', () => {
     vi.unstubAllGlobals()
   })
 
-  test('execute() calls it once, before the first port call, with the live context and the Execution’s HistoryItem', async () => {
+  test('execute() calls it once, before the first port call, with only the wallet and the Execution’s HistoryItem', async () => {
     const port = recordingNamespaces()
     const seen: { context: Context; item: Sdk.HistoryItem; calls: number }[] =
       []
@@ -99,7 +100,7 @@ describe('beforeResume', () => {
 
     expect(beforeResume).toHaveBeenCalledTimes(1)
     expect(seen[0]?.calls).toBe(0)
-    expect(seen[0]?.context.wallet).toBe(port.wallet)
+    expect(seen[0]?.context).toEqual({ wallet: port.wallet })
     expect(seen[0]?.item).toMatchObject({
       _storage: {
         data: { requestId: 'request-1', selectedWallets: SELECTED_WALLETS },
@@ -129,13 +130,52 @@ describe('beforeResume', () => {
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
+  test('a setContext with only another wallet keeps the rest of the context: the run still fetches, emits and polls', async () => {
+    const other = recordingNamespaces()
+    const { client, events } = await createExecutionClient(
+      recordingNamespaces(),
+      evmBlockchains,
+      { beforeResume: routingTo(other.wallet) },
+    )
+
+    await start(client)
+
+    expect(other.requests.map(callOf)).toEqual([
+      'getChainId',
+      'sign:0xcontract',
+    ])
+    expect(httpClient.createTransaction).toHaveBeenCalledTimes(1)
+    expect(httpClient.checkStatus).toHaveBeenCalled()
+    expect(events.map(nameOf)).toEqual(
+      expect.arrayContaining(['step1:succeeded', 'route:succeeded']),
+    )
+    expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+  })
+
+  test('a setContext({}) leaves the client with no wallet, so the run Blocks NOT_CONNECTED with no port call', async () => {
+    const port = recordingNamespaces()
+    const beforeResume = vi.fn<Sdk.BeforeResume>((_, setContext) => {
+      setContext({})
+    })
+    const { client } = await createExecutionClient(port, evmBlockchains, {
+      beforeResume,
+    })
+
+    await start(client)
+
+    const view = await historyOf(client)
+    expect(view?._queue.status).toBe('BLOCKED')
+    expect(view?._queue.blocked).toMatchObject({ reason: 'NOT_CONNECTED' })
+    expect(callCount(port)).toBe(0)
+  })
+
   test('a later call gets the context the last setContext set', async () => {
     const port = recordingNamespaces()
     const other = recordingNamespaces()
     const wallets: (Sdk.WalletPort | undefined)[] = []
     const beforeResume = vi.fn<Sdk.BeforeResume>((context, setContext) => {
       wallets.push(context.wallet)
-      setContext({ ...context, wallet: other.wallet })
+      setContext({ wallet: other.wallet })
     })
     const { client } = await createExecutionClient(port, evmBlockchains, {
       beforeResume,
@@ -220,9 +260,9 @@ describe('beforeResume', () => {
     expect(beforeResume).toHaveBeenCalledTimes(1)
     const portCalls = callCount(port)
     let otherCalls: number | undefined
-    beforeResume.mockImplementation((context, setContext) => {
+    beforeResume.mockImplementation((_, setContext) => {
       otherCalls = callCount(other)
-      setContext({ ...context, wallet: other.wallet })
+      setContext({ wallet: other.wallet })
     })
 
     await client.execute('request-1')

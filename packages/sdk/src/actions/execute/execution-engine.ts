@@ -109,7 +109,7 @@ export async function createExecutionEngine(
     context: managerContext,
     /*
      * Core calls this before it reads the context for a run, and passes `current`, not the object, so `setContext`
-     * writes the object the Manager was given. No `try`: a throw is a Host bug.
+     * writes the object the Manager was given, replacing only its wallet. No `try`: a throw is a Host bug.
      */
     ...(beforeResume === undefined
       ? {}
@@ -118,9 +118,12 @@ export async function createExecutionEngine(
             const historyItem = view(queue.id)
             if (historyItem !== undefined) {
               beforeResume(
-                managerContext.current,
-                (newContext) => {
-                  managerContext.current = newContext
+                { wallet: managerContext.current.wallet },
+                (next) => {
+                  managerContext.current = {
+                    ...managerContext.current,
+                    wallet: next.wallet,
+                  }
                 },
                 historyItem,
               )

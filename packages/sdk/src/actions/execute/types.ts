@@ -33,7 +33,7 @@ export type ExecutionConfig = {
    */
   pauseOnStart?: boolean
   /**
-   * Called before each run of an Execution, to set the context, such as the wallet, that run uses.
+   * Called before each run of an Execution, to set the wallet that run uses.
    *
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#beforeresume
    */
@@ -440,14 +440,14 @@ export interface Emitter<Events extends Record<string, unknown>> {
 }
 
 /**
- * Called before each run of an Execution with the live context, a client-wide `setContext` and the Execution's
+ * Called before each run of an Execution with the wallet, a client-wide `setContext` that sets it and the Execution's
  * `HistoryItem`.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#beforeresume
  */
 export type BeforeResume = (
-  context: SdkContext,
-  setContext: (next: SdkContext) => void,
+  context: { wallet?: WalletPort },
+  setContext: (next: { wallet?: WalletPort }) => void,
   item: HistoryItem,
 ) => void
 
