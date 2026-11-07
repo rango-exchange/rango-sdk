@@ -5,8 +5,6 @@ import type {
 } from '../quote/mod.js'
 import type { ConfirmRouteRequest, ConfirmRouteResponse } from 'rango-sdk'
 
-export type SelectedWallets = ConfirmRouteRequest['selectedWallets']
-
 // `requestId` and `selectedWallets` are `confirm()` arguments, so they can't be given twice.
 export type ConfirmReq = Omit<
   ConfirmRouteRequest,

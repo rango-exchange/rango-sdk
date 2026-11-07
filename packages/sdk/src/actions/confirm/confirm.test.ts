@@ -3,163 +3,33 @@ import type * as Sdk from '../../mod.js'
 import * as LegacySdk from 'rango-sdk'
 import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
 
-const legacy = vi.hoisted(() => ({
-  confirmRoute: vi.fn(),
-  getAllRoutes: vi.fn(),
-  getBlockchains: vi.fn(),
-}))
+import {
+  BAD_REQUEST,
+  blockchains,
+  cacheQuote,
+  chain,
+  expectSdkError as confirmError,
+  createClient,
+  DESTINATION,
+  ETH,
+  httpClient,
+  httpError,
+  loadSdk,
+  type QuoteOverrides,
+  quotesResponse,
+  resetHttpClient,
+  SERVER_ERROR,
+  swap,
+  USDC,
+  validationStatus,
+} from '../../../tests/support.js'
 
-vi.mock('rango-sdk', async (importOriginal) => ({
-  ...(await importOriginal<typeof LegacySdk>()),
-  RangoClient: class {
-    confirmRoute = legacy.confirmRoute
-    getAllRoutes = legacy.getAllRoutes
-    getBlockchains = legacy.getBlockchains
-  },
-}))
-
-async function loadSdk(): Promise<typeof Sdk> {
-  return import('../../mod.js')
+const SELECTED_WALLETS = {
+  ETH: { address: '0xfrom', walletId: 'metamask' },
+  BSC: { address: '0xto', walletId: 'trust' },
 }
-
-const ETH = { blockchain: 'ETH', symbol: 'ETH', address: null }
-const USDC = {
-  blockchain: 'BSC',
-  symbol: 'USDC',
-  address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-}
-
-function swap(overrides: Partial<Sdk.SwapResult> = {}): Sdk.SwapResult {
-  const asset = {
-    blockchain: 'ETH',
-    address: null,
-    symbol: 'ETH',
-    logo: '',
-    blockchainLogo: '',
-    decimals: 18,
-    usdPrice: 3000,
-  }
-  return {
-    swapperId: 'Across',
-    swapperLogo: '',
-    swapperType: 'BRIDGE',
-    swapChainType: 'INTER_CHAIN',
-    from: asset,
-    to: { ...asset, blockchain: 'BSC', symbol: 'USDC', usdPrice: 1 },
-    toAmount: '3000',
-    fromAmount: '1',
-    fromAmountMaxValue: '10',
-    fromAmountMinValue: '0.1',
-    fromAmountPrecision: null,
-    fromAmountRestrictionType: 'EXCLUSIVE',
-    routes: null,
-    internalSwaps: null,
-    fee: [],
-    estimatedTimeInSeconds: 60,
-    timeStat: null,
-    includesDestinationTx: false,
-    maxRequiredSign: 1,
-    recommendedSlippage: { error: false, slippage: '0.5' },
-    warnings: [],
-    ...overrides,
-  }
-}
-
-type QuoteOverrides = Partial<
-  Pick<
-    Sdk.Quote,
-    'requestId' | 'outputAmount' | 'swaps' | 'requestAmount' | 'to'
-  > & { routeId: string }
->
-
-function quotesResponse(
-  overrides: QuoteOverrides = {},
-): LegacySdk.MultiRouteResponse {
-  return {
-    from: ETH,
-    to: overrides.to ?? USDC,
-    requestAmount: overrides.requestAmount ?? '1',
-    routeId: overrides.routeId ?? 'route-1',
-    results: [
-      {
-        requestId: overrides.requestId ?? 'request-1',
-        outputAmount: overrides.outputAmount ?? '3000',
-        resultType: LegacySdk.RoutingResultType.OK,
-        swaps: overrides.swaps ?? [swap()],
-        scores: [],
-        tags: [],
-        missingBlockchains: [],
-        walletNotSupportingFromBlockchain: false,
-      },
-    ],
-    diagnosisMessages: [],
-    error: null,
-    errorCode: null,
-    traceId: null,
-  }
-}
-
-// Caches one Quote through `quotes()` and returns it; a `null` slippage requests it without one.
-async function cacheQuote(
-  client: Sdk.RangoClient,
-  overrides: QuoteOverrides = {},
-  slippage: string | null = '1.5',
-): Promise<Sdk.Quote> {
-  legacy.getAllRoutes.mockResolvedValueOnce(quotesResponse(overrides))
-  const { data } = await client.quotes(
-    ETH,
-    USDC,
-    '1',
-    slippage === null ? {} : { req: { slippage } },
-  )
-  const cached = data.quotes[0]?.data
-  if (!cached) {
-    throw new Error('quotes() returned no Quote')
-  }
-  return cached
-}
-
-const DESTINATION = '0x000000000000000000000000000000000000dead'
-
-function chain(name: string, addressPatterns: string[]): Sdk.BlockchainMeta {
-  return {
-    type: LegacySdk.TransactionType.TRANSFER,
-    name,
-    shortName: name,
-    displayName: name,
-    defaultDecimals: 18,
-    feeAssets: [],
-    addressPatterns,
-    logo: '',
-    color: '',
-    sort: 0,
-    enabled: true,
-    chainId: null,
-    info: {
-      infoType: 'TransferMetaInfo',
-      blockExplorerUrls: [],
-      addressUrl: '',
-      transactionUrl: '',
-      tokenUrl: null,
-    },
-  }
-}
-
-const blockchains = [
-  chain('ETH', ['^(0x)[0-9A-Fa-f]{40}$']),
-  chain('BSC', ['^(0x)[0-9A-Fa-f]{40}$']),
-]
-
-// A client whose blockchain list, once fetched, holds these blockchains.
-async function createClient(
-  chains: readonly Sdk.BlockchainMeta[] = blockchains,
-): Promise<Sdk.RangoClient> {
-  const { RangoClient } = await loadSdk()
-  legacy.getBlockchains.mockResolvedValue([...chains])
-  return new RangoClient({ apiKey: 'test-key' })
-}
-
-const SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
+// What `/routing/confirm` gets for `SELECTED_WALLETS`: the addresses, with no Wallet IDs.
+const SENT_SELECTED_WALLETS = { ETH: '0xfrom', BSC: '0xto' }
 
 // Caches a Quote, then confirms it with the default wallets and destination.
 async function confirmCached(
@@ -173,20 +43,6 @@ async function confirmCached(
     ...options,
   })
 }
-
-const validationStatus: Sdk.BlockchainValidationStatus[] = [
-  {
-    blockchain: 'ETH',
-    wallets: [
-      {
-        address: '0xfrom',
-        addressIsValid: true,
-        requiredAssets: [],
-        validResult: true,
-      },
-    ],
-  },
-]
 
 type ConfirmResult = NonNullable<LegacySdk.ConfirmRouteResponse['result']>
 
@@ -222,31 +78,11 @@ function response(
   }
 }
 
-const BAD_REQUEST = 400
-const SERVER_ERROR = 500
-
-function httpError(status: number, data: unknown) {
-  return Object.assign(new Error(`Request failed with ${status}`), {
-    response: { status, data },
-  })
-}
-
-async function confirmError(promise: Promise<unknown>) {
-  const { SdkError } = await loadSdk()
-  const error = await promise.catch((e: unknown) => e)
-  expect(error).toBeInstanceOf(SdkError)
-  expect(error).toBeInstanceOf(Error)
-  expect(error).toHaveProperty('name', 'SdkError')
-  return error
-}
-
 describe('confirm', () => {
   beforeEach(() => {
     vi.resetModules()
-    legacy.getAllRoutes.mockReset()
-    legacy.getBlockchains.mockReset()
-    legacy.confirmRoute.mockReset()
-    legacy.confirmRoute.mockResolvedValue(response())
+    resetHttpClient()
+    httpClient.confirmRoute.mockResolvedValue(response())
   })
 
   test("sends exactly the cached Quote's request ID, the wallets and the destination, with the signal", async () => {
@@ -259,10 +95,10 @@ describe('confirm', () => {
       signal: controller.signal,
     })
 
-    expect(legacy.confirmRoute.mock.lastCall).toStrictEqual([
+    expect(httpClient.confirmRoute.mock.lastCall).toStrictEqual([
       {
         requestId: 'request-2',
-        selectedWallets: SELECTED_WALLETS,
+        selectedWallets: SENT_SELECTED_WALLETS,
         destination: DESTINATION,
       },
       { signal: controller.signal },
@@ -292,7 +128,7 @@ describe('confirm', () => {
         type: 'INVALID_INPUT',
         metadata: { field: 'requestId', reason: 'NOT_FOUND' },
       })
-      expect(legacy.confirmRoute).not.toHaveBeenCalled()
+      expect(httpClient.confirmRoute).not.toHaveBeenCalled()
     },
   )
 
@@ -307,7 +143,7 @@ describe('confirm', () => {
       type: 'INVALID_INPUT',
       metadata: { field: 'requestId', reason: 'NOT_FOUND' },
     })
-    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+    expect(httpClient.confirmRoute).not.toHaveBeenCalled()
   })
 
   test('confirms a Quote from an earlier quotes() after a later one with another route ID', async () => {
@@ -320,7 +156,7 @@ describe('confirm', () => {
 
     await client.confirm(requestId, SELECTED_WALLETS)
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toMatchObject({
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toMatchObject({
       requestId: 'earlier',
     })
   })
@@ -351,7 +187,7 @@ describe('confirm', () => {
         type: 'INVALID_INPUT',
         metadata: { field: 'requestId', reason: 'NOT_FOUND' },
       })
-      expect(legacy.confirmRoute).not.toHaveBeenCalled()
+      expect(httpClient.confirmRoute).not.toHaveBeenCalled()
     },
   )
 
@@ -371,7 +207,7 @@ describe('confirm', () => {
 
     await client.confirm(requestId, SELECTED_WALLETS)
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toMatchObject({
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toMatchObject({
       requestId: 'oldest',
     })
   })
@@ -389,7 +225,7 @@ describe('confirm', () => {
       type: 'INVALID_INPUT',
       metadata: { field: 'requestId', reason: 'NOT_FOUND' },
     })
-    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+    expect(httpClient.confirmRoute).not.toHaveBeenCalled()
   })
 
   test('still confirms the cached Quote after an untyped caller tries to replace the quotes map through client.cache', async () => {
@@ -403,22 +239,32 @@ describe('confirm', () => {
 
     await client.confirm(requestId, SELECTED_WALLETS)
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toMatchObject({ requestId })
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toMatchObject({
+      requestId,
+    })
   })
 
   test('confirms the same request ID twice, keeping the Quote cached', async () => {
     const client = await createClient()
     const quote = await cacheQuote(client)
 
-    const first = await client.confirm(quote.requestId, { ETH: '0xa' })
-    const second = await client.confirm(quote.requestId, { ETH: '0xb' })
+    const first = await client.confirm(quote.requestId, {
+      ETH: { address: '0xa', walletId: 'metamask' },
+    })
+    const second = await client.confirm(quote.requestId, {
+      ETH: { address: '0xb', walletId: 'rabby' },
+    })
 
-    expect(legacy.confirmRoute.mock.calls.map(([body]) => body)).toEqual([
+    expect(httpClient.confirmRoute.mock.calls.map(([body]) => body)).toEqual([
       { requestId: 'request-1', selectedWallets: { ETH: '0xa' } },
       { requestId: 'request-1', selectedWallets: { ETH: '0xb' } },
     ])
-    expect(first.data.selectedWallets).toEqual({ ETH: '0xa' })
-    expect(second.data.selectedWallets).toEqual({ ETH: '0xb' })
+    expect(first.data.selectedWallets).toEqual({
+      ETH: { address: '0xa', walletId: 'metamask' },
+    })
+    expect(second.data.selectedWallets).toEqual({
+      ETH: { address: '0xb', walletId: 'rabby' },
+    })
     expect(
       client.cache.get('quotes')?.get('route-1')?.get(quote.requestId),
     ).toEqual(quote)
@@ -440,9 +286,9 @@ describe('confirm', () => {
       req: { destination: DESTINATION },
     })
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
-      selectedWallets: SELECTED_WALLETS,
+      selectedWallets: SENT_SELECTED_WALLETS,
       destination: DESTINATION,
     })
     expect(confirmed.data.slippage).toBe('1.5')
@@ -463,12 +309,12 @@ describe('confirm', () => {
 
     await client.confirm('request-1', {}, { req: given })
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
       selectedWallets: {},
       ...sent,
     })
-    expect(legacy.getBlockchains).not.toHaveBeenCalled()
+    expect(httpClient.getBlockchains).not.toHaveBeenCalled()
     expect(client.cache.get('blockchains')).toBeUndefined()
   })
 
@@ -479,8 +325,8 @@ describe('confirm', () => {
 
     await client.confirm('request-1', SELECTED_WALLETS)
 
-    expect(legacy.confirmRoute.mock.lastCall).toStrictEqual([
-      { requestId: 'request-1', selectedWallets: SELECTED_WALLETS },
+    expect(httpClient.confirmRoute.mock.lastCall).toStrictEqual([
+      { requestId: 'request-1', selectedWallets: SENT_SELECTED_WALLETS },
       { signal: undefined },
     ])
   })
@@ -527,7 +373,7 @@ describe('confirm', () => {
         type: 'INVALID_INPUT',
         metadata: { field: 'destination', reason },
       })
-      expect(legacy.confirmRoute).not.toHaveBeenCalled()
+      expect(httpClient.confirmRoute).not.toHaveBeenCalled()
     },
   )
 
@@ -537,11 +383,11 @@ describe('confirm', () => {
     expect(client.cache.get('blockchains')).toBeUndefined()
     await confirmCached(client)
 
-    expect(legacy.getBlockchains.mock.calls).toStrictEqual([
+    expect(httpClient.getBlockchains.mock.calls).toStrictEqual([
       [{ signal: undefined }],
     ])
     expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
-    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+    expect(httpClient.confirmRoute).toHaveBeenCalledOnce()
   })
 
   test("doesn't fetch the blockchain list again once it is cached", async () => {
@@ -550,8 +396,8 @@ describe('confirm', () => {
     await confirmCached(client)
     await confirmCached(client)
 
-    expect(legacy.getBlockchains).toHaveBeenCalledOnce()
-    expect(legacy.confirmRoute).toHaveBeenCalledTimes(2)
+    expect(httpClient.getBlockchains).toHaveBeenCalledOnce()
+    expect(httpClient.confirmRoute).toHaveBeenCalledTimes(2)
   })
 
   test('sends the signal with the blockchain list fetch', async () => {
@@ -560,14 +406,14 @@ describe('confirm', () => {
 
     await confirmCached(client, {}, { signal: controller.signal })
 
-    expect(legacy.getBlockchains.mock.lastCall).toStrictEqual([
+    expect(httpClient.getBlockchains.mock.lastCall).toStrictEqual([
       { signal: controller.signal },
     ])
   })
 
   test('throws an SdkError typed by HTTP status when the blockchain list fetch fails, caching nothing, and fetches again on the next call', async () => {
     const client = await createClient()
-    legacy.getBlockchains.mockRejectedValueOnce(
+    httpClient.getBlockchains.mockRejectedValueOnce(
       httpError(SERVER_ERROR, { error: 'Server is down' }),
     )
 
@@ -578,19 +424,19 @@ describe('confirm', () => {
       message: 'Server is down',
     })
     expect(client.cache.get('blockchains')).toBeUndefined()
-    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+    expect(httpClient.confirmRoute).not.toHaveBeenCalled()
 
     await confirmCached(client)
 
-    expect(legacy.getBlockchains).toHaveBeenCalledTimes(2)
+    expect(httpClient.getBlockchains).toHaveBeenCalledTimes(2)
     expect(client.cache.get('blockchains')).toStrictEqual(blockchains)
-    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+    expect(httpClient.confirmRoute).toHaveBeenCalledOnce()
   })
 
   test('throws REQUEST_CANCELED when the signal aborts the blockchain list fetch, caching nothing', async () => {
     const client = await createClient()
     const controller = new AbortController()
-    legacy.getBlockchains.mockImplementationOnce(async () => {
+    httpClient.getBlockchains.mockImplementationOnce(async () => {
       controller.abort()
       throw new TypeError('aborted')
     })
@@ -601,7 +447,7 @@ describe('confirm', () => {
 
     expect(error).toHaveProperty('type', 'REQUEST_CANCELED')
     expect(client.cache.get('blockchains')).toBeUndefined()
-    expect(legacy.confirmRoute).not.toHaveBeenCalled()
+    expect(httpClient.confirmRoute).not.toHaveBeenCalled()
   })
 
   test('checks the request ID before fetching the blockchain list', async () => {
@@ -617,7 +463,7 @@ describe('confirm', () => {
       type: 'INVALID_INPUT',
       metadata: { field: 'requestId', reason: 'NOT_FOUND' },
     })
-    expect(legacy.getBlockchains).not.toHaveBeenCalled()
+    expect(httpClient.getBlockchains).not.toHaveBeenCalled()
   })
 
   test('types the blockchains slot, and has no metadata slot', async () => {
@@ -648,7 +494,7 @@ describe('confirm', () => {
       type: 'INVALID_INPUT',
       metadata: { field: 'destination', reason: 'PATTERN_MISMATCH' },
     })
-    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+    expect(httpClient.confirmRoute).toHaveBeenCalledOnce()
   })
 
   test('sends a destination that matches any pattern, skipping a pattern that is not a valid regular expression', async () => {
@@ -658,7 +504,7 @@ describe('confirm', () => {
 
     await confirmCached(client)
 
-    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+    expect(httpClient.confirmRoute).toHaveBeenCalledOnce()
   })
 
   test.each(['abc', '0', '100'])(
@@ -669,13 +515,13 @@ describe('confirm', () => {
 
       await client.confirm('request-1', SELECTED_WALLETS)
 
-      expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+      expect(httpClient.confirmRoute).toHaveBeenCalledOnce()
     },
   )
 
   test('confirms a Quote without a slippage and gives it no slippage warnings', async () => {
     const client = await createClient()
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({
         result: result({
           result: {
@@ -692,7 +538,7 @@ describe('confirm', () => {
 
     const { warnings } = await client.confirm('request-1', SELECTED_WALLETS)
 
-    expect(legacy.confirmRoute).toHaveBeenCalledOnce()
+    expect(httpClient.confirmRoute).toHaveBeenCalledOnce()
     expect(warnings).toEqual([])
   })
 
@@ -702,7 +548,7 @@ describe('confirm', () => {
       diagnosisMessages: ['Some swappers are down'],
     })
     const confirmResponse = response({ result: confirmedResult, traceId: 12 })
-    legacy.confirmRoute.mockResolvedValue(confirmResponse)
+    httpClient.confirmRoute.mockResolvedValue(confirmResponse)
 
     const confirmed = await confirmCached(client)
 
@@ -744,7 +590,7 @@ describe('confirm', () => {
       requestAmount: _amount,
       ...partial
     } = result()
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({ result: partial as ConfirmResult }),
     )
 
@@ -756,29 +602,34 @@ describe('confirm', () => {
     expect(route).not.toHaveProperty('destination')
   })
 
-  test('carries a copy of selectedWallets and the cached Quote slippage, without the destination', async () => {
+  test('carries a copy of selectedWallets, each Wallet ID included, and the cached Quote slippage, without the destination', async () => {
     const client = await createClient()
-    const selectedWallets = { ETH: '0xfrom', BSC: '0xto', SOLANA: 'sol' }
+    const selectedWallets = {
+      ...structuredClone(SELECTED_WALLETS),
+      SOLANA: { address: 'sol', walletId: 'phantom' },
+    }
     await cacheQuote(client, {}, '2')
 
     const confirmed = await client.confirm('request-1', selectedWallets, {
       req: { destination: DESTINATION },
     })
 
+    const kept = {
+      ...SELECTED_WALLETS,
+      SOLANA: { address: 'sol', walletId: 'phantom' },
+    }
     expect(confirmed.data.selectedWallets).not.toBe(selectedWallets)
-    expect(confirmed.data.selectedWallets).toEqual({
-      ETH: '0xfrom',
-      BSC: '0xto',
-      SOLANA: 'sol',
-    })
+    expect(confirmed.data.selectedWallets).toEqual(kept)
+    expect(
+      client.cache.get('confirmed')?.get('request-1')?.data.selectedWallets,
+    ).toEqual(kept)
 
-    selectedWallets.ETH = '0xchanged'
-    Object.assign(selectedWallets, { POLYGON: '0xadded' })
-    expect(confirmed.data.selectedWallets).toEqual({
-      ETH: '0xfrom',
-      BSC: '0xto',
-      SOLANA: 'sol',
+    selectedWallets.ETH = { address: '0xchanged', walletId: 'rabby' }
+    selectedWallets.BSC.walletId = 'changed'
+    Object.assign(selectedWallets, {
+      POLYGON: { address: '0xadded', walletId: 'metamask' },
     })
+    expect(confirmed.data.selectedWallets).toEqual(kept)
     expect(confirmed.data.slippage).toBe('2')
     expect(confirmed.data).not.toHaveProperty('destination')
     expect(confirmed).not.toHaveProperty('selectedWallets')
@@ -797,7 +648,7 @@ describe('confirm', () => {
 
   test('confirms a Quote from a quotes() result by its request ID', async () => {
     const client = await createClient()
-    legacy.getAllRoutes.mockResolvedValue(quotesResponse())
+    httpClient.getAllRoutes.mockResolvedValue(quotesResponse())
     const { data } = await client.quotes(ETH, USDC, '1', {
       req: { slippage: '1.5' },
     })
@@ -811,9 +662,9 @@ describe('confirm', () => {
       SELECTED_WALLETS,
     )
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
-      selectedWallets: SELECTED_WALLETS,
+      selectedWallets: SENT_SELECTED_WALLETS,
     })
     expect(confirmed.data.slippage).toBe('1.5')
   })
@@ -832,15 +683,24 @@ describe('confirm', () => {
 
   test('takes the request ID and the wallets as arguments, and only req and signal as options', async () => {
     const client = await createClient()
+    const { requestId } = await cacheQuote(client)
 
     expectTypeOf(client.confirm).parameters.toEqualTypeOf<
       [
         string,
-        LegacySdk.ConfirmRouteRequest['selectedWallets'],
+        Sdk.SelectedWallets,
         ({ req?: Sdk.ConfirmReq; signal?: AbortSignal } | undefined)?,
       ]
     >()
+    expectTypeOf<Sdk.ConfirmOptions>().toEqualTypeOf<{
+      req?: Sdk.ConfirmReq
+      signal?: AbortSignal
+    }>()
     expectTypeOf<Sdk.ConfirmReq>().toEqualTypeOf<{ destination?: string }>()
+    await client.confirm(requestId, SELECTED_WALLETS, {
+      // @ts-expect-error createTransaction is no longer a confirm() option
+      createTransaction: { infiniteApprove: true },
+    })
   })
 
   test('rejects a Quote, a one-object request, a flat destination and any meta in the options', () => {
@@ -869,11 +729,15 @@ describe('confirm', () => {
     expectTypeOf(misuse).toBeFunction()
   })
 
-  test('exports ConfirmReq and SelectedWallets, and not ConfirmRequest, ConfirmQuote or ConfirmRouteRequest', () => {
+  test('exports ConfirmReq, SelectedWallets and SelectedWallet, and not ConfirmRequest, ConfirmQuote or ConfirmRouteRequest', () => {
     expectTypeOf<Sdk.ConfirmReq>().toHaveProperty('destination')
-    expectTypeOf<Sdk.SelectedWallets>().toEqualTypeOf<
-      LegacySdk.ConfirmRouteRequest['selectedWallets']
-    >()
+    expectTypeOf<Sdk.SelectedWallets>().toEqualTypeOf<{
+      [blockchain: string]: Sdk.SelectedWallet
+    }>()
+    expectTypeOf<Sdk.SelectedWallet>().toEqualTypeOf<{
+      address: string
+      walletId: string
+    }>()
     // @ts-expect-error ConfirmRequest is not exported
     expectTypeOf<Sdk.ConfirmRequest>().not.toBeNever()
     // @ts-expect-error ConfirmQuote is not exported
@@ -884,7 +748,7 @@ describe('confirm', () => {
 
   test('sends the request for a Quote whose entry has an error, without checking it', async () => {
     const client = await createClient()
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       quotesResponse({ swaps: [swap({ fromAmountMinValue: '2' })] }),
     )
     const { data } = await client.quotes(ETH, USDC, '1')
@@ -894,16 +758,16 @@ describe('confirm', () => {
       req: { destination: DESTINATION },
     })
 
-    expect(legacy.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toStrictEqual({
       requestId: 'request-1',
-      selectedWallets: SELECTED_WALLETS,
+      selectedWallets: SENT_SELECTED_WALLETS,
       destination: DESTINATION,
     })
   })
 
   test('raises EXCESSIVE_OUTPUT_AMOUNT_CHANGE against the cached Quote', async () => {
     const client = await createClient()
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({
         result: result({
           result: {
@@ -940,7 +804,7 @@ describe('confirm', () => {
     'takes the input value of EXCESSIVE_OUTPUT_AMOUNT_CHANGE from $name',
     async ({ quoteAmount, routeAmount, raised }) => {
       const client = await createClient()
-      legacy.confirmRoute.mockResolvedValue(
+      httpClient.confirmRoute.mockResolvedValue(
         response({
           result: result({
             requestAmount: routeAmount,
@@ -965,7 +829,7 @@ describe('confirm', () => {
 
   test('does not raise EXCESSIVE_OUTPUT_AMOUNT_CHANGE for a drop smaller than 1%', async () => {
     const client = await createClient()
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({
         result: result({
           result: {
@@ -992,7 +856,7 @@ describe('confirm', () => {
       price: 3,
       meta: null,
     }
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({
         result: result({
           result: {
@@ -1033,7 +897,7 @@ describe('confirm', () => {
       ok: false,
       reason: 'FEE' as const,
     }
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({
         result: result({
           validationStatus: [
@@ -1082,7 +946,7 @@ describe('confirm', () => {
     const client = await createClient()
     const controller = new AbortController()
     const canceled = new Error('canceled')
-    legacy.confirmRoute.mockImplementation(async () => {
+    httpClient.confirmRoute.mockImplementation(async () => {
       controller.abort()
       throw canceled
     })
@@ -1101,7 +965,7 @@ describe('confirm', () => {
   test('throws BAD_REQUEST with the body error message for an HTTP 400', async () => {
     const client = await createClient()
     const badRequest = httpError(BAD_REQUEST, { error: 'Route expired' })
-    legacy.confirmRoute.mockRejectedValue(badRequest)
+    httpClient.confirmRoute.mockRejectedValue(badRequest)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1116,7 +980,7 @@ describe('confirm', () => {
   test('throws SERVER_ERROR with the fallback message for an HTTP 500 with no error', async () => {
     const client = await createClient()
     const serverError = httpError(SERVER_ERROR, { errorCode: 42, traceId: 7 })
-    legacy.confirmRoute.mockRejectedValue(serverError)
+    httpClient.confirmRoute.mockRejectedValue(serverError)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1137,7 +1001,7 @@ describe('confirm', () => {
       errorCode: '1001',
       traceId: 99,
     })
-    legacy.confirmRoute.mockResolvedValue(failed)
+    httpClient.confirmRoute.mockResolvedValue(failed)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1152,7 +1016,7 @@ describe('confirm', () => {
   test('throws REQUEST_FAILED for ok: false with no error message', async () => {
     const client = await createClient()
     const failed = response({ ok: false })
-    legacy.confirmRoute.mockResolvedValue(failed)
+    httpClient.confirmRoute.mockResolvedValue(failed)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1166,7 +1030,7 @@ describe('confirm', () => {
   test('throws NO_RESULT when the response has no result', async () => {
     const client = await createClient()
     const empty = response({ result: null })
-    legacy.confirmRoute.mockResolvedValue(empty)
+    httpClient.confirmRoute.mockResolvedValue(empty)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1182,7 +1046,7 @@ describe('confirm', () => {
     const empty = response({
       result: result({ result: null, diagnosisMessages: ['No liquidity'] }),
     })
-    legacy.confirmRoute.mockResolvedValue(empty)
+    httpClient.confirmRoute.mockResolvedValue(empty)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1195,7 +1059,7 @@ describe('confirm', () => {
   test('throws BRIDGE_LIMIT for a swap outside its limits', async () => {
     const client = await createClient()
     const tooSmall = swap({ fromAmount: '0.1' })
-    legacy.confirmRoute.mockResolvedValue(
+    httpClient.confirmRoute.mockResolvedValue(
       response({
         result: result({
           result: {
@@ -1234,7 +1098,7 @@ describe('confirm', () => {
         },
       }),
     })
-    legacy.confirmRoute.mockResolvedValue(flagged)
+    httpClient.confirmRoute.mockResolvedValue(flagged)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1246,7 +1110,7 @@ describe('confirm', () => {
 
   test('throws REQUEST_FAILED with the original as cause for a TypeError inside the pipeline', async () => {
     const client = await createClient()
-    legacy.confirmRoute.mockResolvedValue(null)
+    httpClient.confirmRoute.mockResolvedValue(null)
 
     const error = await confirmError(confirmCached(client))
 
@@ -1257,7 +1121,7 @@ describe('confirm', () => {
   test('throws REQUEST_CANCELED for a TypeError inside the pipeline when the signal was aborted', async () => {
     const client = await createClient()
     const controller = new AbortController()
-    legacy.confirmRoute.mockImplementation(async () => {
+    httpClient.confirmRoute.mockImplementation(async () => {
       controller.abort()
       return null
     })
@@ -1275,7 +1139,7 @@ describe('confirm', () => {
     const client = await createClient()
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
-    legacy.confirmRoute.mockImplementation(async () => {
+    httpClient.confirmRoute.mockImplementation(async () => {
       controller.abort()
       throw raised
     })
@@ -1291,7 +1155,7 @@ describe('confirm', () => {
     const client = await createClient()
     const controller = new AbortController()
     const empty = response({ result: null })
-    legacy.confirmRoute.mockImplementation(async () => {
+    httpClient.confirmRoute.mockImplementation(async () => {
       controller.abort()
       return empty
     })
@@ -1306,7 +1170,7 @@ describe('confirm', () => {
   test('narrows a caught error with instanceof, then metadata on type', async () => {
     const { SdkError } = await loadSdk()
     const client = await createClient()
-    legacy.confirmRoute.mockResolvedValue(response({ result: null }))
+    httpClient.confirmRoute.mockResolvedValue(response({ result: null }))
 
     let type: unknown
     try {
@@ -1320,7 +1184,7 @@ describe('confirm', () => {
         case 'INVALID_INPUT':
           expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
           expectTypeOf(error.metadata.field).toEqualTypeOf<
-            'requestId' | 'to' | 'amount' | 'destination'
+            'requestId' | 'to' | 'amount' | 'destination' | 'options'
           >()
           if (error.metadata.field === 'requestId') {
             expectTypeOf(error.metadata.reason).toEqualTypeOf<'NOT_FOUND'>()
@@ -1348,6 +1212,7 @@ describe('confirm', () => {
         case 'TOO_MANY_REQUESTS':
         case 'SERVER_ERROR':
         case 'UNKNOWN_SLIPPAGE':
+        case 'CLIENT_PAUSED':
           expectTypeOf(error.metadata).toEqualTypeOf<undefined>()
       }
     }

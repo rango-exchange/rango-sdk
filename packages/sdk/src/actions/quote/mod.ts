@@ -7,9 +7,13 @@ export type {
   QuoteResult,
   Route,
   RouteResponse,
+  SelectedWallet,
+  SelectedWallets,
 } from './types.js'
 export {
+  buildSelectedWalletAddresses,
   getBlockchainsAndValidateDestination,
+  loadBlockchains,
   omitErrorFields,
   omitRouteErrorFields,
   validateRoute,
