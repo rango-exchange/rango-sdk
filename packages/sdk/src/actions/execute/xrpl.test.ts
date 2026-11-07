@@ -1,15 +1,15 @@
-// XRPL: the `Payment` signed with no network gate, and the SDK-built `TrustSet` with its met test and proof, driven through the public client over fake-indexeddb, with the timers faked.
+// XRPL: the `Payment` signed with no network gate, and the `TrustSet` the port builds, with its met test and proof, driven through the public client over fake-indexeddb, with the timers faked.
 import 'fake-indexeddb/auto'
 
 import type {
   Rejection,
   XrplInfo,
   XrplTrustline,
+  XrplTx,
 } from '../../../tests/support.js'
 import type * as Sdk from '../../mod.js'
 
 import { IDBFactory } from 'fake-indexeddb'
-import * as LegacySdk from 'rango-sdk'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
@@ -38,6 +38,7 @@ import {
   XRPL_INFO,
   xrplChain,
   xrplTrustline,
+  xrplTrustSetTx,
   xrplTx,
 } from '../../../tests/support.js'
 
@@ -45,24 +46,6 @@ const POLL_INTERVAL_MS = 5_000
 const TRUSTLINE_LIMIT = '10000000000000'
 
 const chains = [...evmBlockchains, xrplChain()]
-
-// The TrustSet the SDK builds for a trustline from `wallet`.
-function trustSet(wallet = 'rXRPLfrom') {
-  return {
-    type: LegacySdk.TransactionType.XRPL,
-    blockChain: 'XRPL',
-    data: {
-      TransactionType: 'TrustSet',
-      Account: wallet,
-      LimitAmount: {
-        currency: 'USD',
-        issuer: 'rIssuer',
-        value: '10000000000000',
-      },
-    },
-    prerequisites: [],
-  }
-}
 
 let factory = new IDBFactory()
 
@@ -82,20 +65,22 @@ async function start(
   return execution
 }
 
-// A port that grants no trustline and proves it at once, with a `buildTransaction` on each namespace that must stay unused.
+// A port that grants no trustline, builds `xrplTrustSetTx()` unless given `builds`, and proves it at once.
 function xrplWallet({
   granted = [null],
   infos = [XRPL_INFO.success],
+  builds,
 }: {
   granted?: readonly (string | null | Error | Rejection)[]
   infos?: readonly (XrplInfo | Error)[]
+  builds?: readonly (XrplTx | Error | Rejection)[]
 } = {}) {
   return buildingNamespaces(
     approvingNamespaces(recordingNamespaces(), {
       granted,
       infos: { xrpl: infos },
     }),
-    {},
+    { xrpl: builds },
   )
 }
 
@@ -221,6 +206,7 @@ describe('XRPL', () => {
           status: 'completed',
           result: { walletResult: null, checkResult: null },
         })
+        expect(port.wallet.xrpl.buildTransaction).not.toHaveBeenCalled()
         expect(events.map(nameOf)).not.toContain('step1:approval_tx_succeeded')
       },
     )
@@ -231,7 +217,7 @@ describe('XRPL', () => {
     ]
 
     test.each(unmet)(
-      'a trustline read %s is built by the SDK as a TrustSet from the Prerequisite wallet and signed, with no port build',
+      'a trustline read %s is built once by the port with the limit, right before the sign, and signed as built',
       async (_name, granted) => {
         const port = xrplWallet({ granted: [granted] })
         const prerequisite = xrplTrustline({ wallet: 'rTrustlineOwner' })
@@ -239,15 +225,15 @@ describe('XRPL', () => {
 
         expect(port.requests.map(callOf)).toEqual([
           'read:USD',
+          'build:USD',
           'sign:TrustSet',
           'info:0xhash1',
           'sign:Payment',
         ])
-        expect(signsOf(port.requests)[0]).toEqual({
-          tx: trustSet('rTrustlineOwner'),
-        })
-        expect(port.wallet.tron.buildTransaction).not.toHaveBeenCalled()
-        expect(port.wallet.stellar.buildTransaction).not.toHaveBeenCalled()
+        expect(port.wallet.xrpl.buildTransaction.mock.calls).toEqual([
+          [{ prerequisite, limit: TRUSTLINE_LIMIT }],
+        ])
+        expect(signsOf(port.requests)[0]).toEqual({ tx: xrplTrustSetTx() })
         expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
       },
     )
@@ -260,6 +246,23 @@ describe('XRPL', () => {
 
         await expectPrerequisiteFailed(client, failure)
         expect(port.requests.map(callOf)).toEqual(['read:USD'])
+      },
+    )
+
+    test.each(
+      portRejections('Could not build the XRPL trustline transaction.'),
+    )(
+      'a buildTransaction rejected with %s ends the swap with its failure, and nothing is signed',
+      async (_, error, failure) => {
+        const port = xrplWallet({ builds: [error] })
+        const { client } = await start(port, [xrplTrustline()])
+
+        await expectPrerequisiteFailed(client, failure)
+        expect(port.requests.map(callOf)).toEqual(['read:USD', 'build:USD'])
+        expect(
+          (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+            .status,
+        ).toBe('not_started')
       },
     )
 
@@ -306,7 +309,7 @@ describe('XRPL', () => {
       })
       const { client } = await start(port, [xrplTrustline()])
 
-      const proof = ['read:USD', 'sign:TrustSet', 'info:0xhash1']
+      const proof = ['read:USD', 'build:USD', 'sign:TrustSet', 'info:0xhash1']
       expect(port.requests.map(callOf)).toEqual(proof)
 
       await advance(POLL_INTERVAL_MS - 1)
@@ -342,6 +345,7 @@ describe('XRPL', () => {
       )
       expect(port.requests.map(callOf)).toEqual([
         'read:USD',
+        'build:USD',
         'sign:TrustSet',
         'info:0xhash1',
       ])

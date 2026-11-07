@@ -26,6 +26,7 @@ import {
   createExecutionClient,
   DESTINATION,
   ETH,
+  evmApproveTx,
   evmBlockchains,
   EXECUTION_OPTIONS,
   expectSdkError,
@@ -69,6 +70,7 @@ function minimalWallet() {
     getChainId: vi.fn(async () => '0x1'),
     switchChain: vi.fn(async () => undefined),
     getAllowance: vi.fn(async () => null),
+    buildTransaction: vi.fn(async () => evmApproveTx()),
     getTransactionInfo: vi.fn(async (): Promise<EvmInfo> => 'pending'),
   } satisfies EvmNamespace
 }
@@ -470,6 +472,10 @@ describe('the execution keys', () => {
         blockchain: string
         prerequisite: PrerequisiteOf<'EVM_APPROVE'>
       }): Promise<string | null>
+      buildTransaction(req: {
+        blockchain: string
+        prerequisite: PrerequisiteOf<'EVM_APPROVE'>
+      }): Promise<TxOf<TransactionType.EVM>>
       getTransactionInfo(req: {
         blockchain: string
         hash: string
@@ -504,6 +510,10 @@ describe('the execution keys', () => {
       getTrustline(req: {
         prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
       }): Promise<string | null>
+      buildTransaction(req: {
+        prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
+        limit: string
+      }): Promise<TxOf<TransactionType.XRPL>>
       getTransactionInfo(req: { hash: string }): Promise<{
         validated: boolean
         meta?: { TransactionResult: string }
@@ -554,7 +564,9 @@ describe('the execution keys', () => {
     expectTypeOf<undefined>().not.toExtend<
       Sdk.HyperliquidWallet['signTypedData']
     >()
+    expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['buildTransaction']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.TronWallet['buildTransaction']>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.XrplWallet['buildTransaction']>()
     // @ts-expect-error WalletTarget is not exported: no request carries an address
     expectTypeOf<Sdk.WalletTarget>().not.toBeNever()
     // @ts-expect-error there is no cosmos namespace

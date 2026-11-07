@@ -38,8 +38,6 @@ import {
   waitForHyperliquidHashAndStoreIt,
 } from './hyperliquid.js'
 import {
-  buildEvmApproveTx,
-  buildXrplTrustSetTx,
   getRequiredGrantAmount,
   isGrantedAmountEnough,
   proveEvmApproveOnChain,
@@ -183,7 +181,15 @@ async function gateSignAndProveEvmApprove(
         blockchain: requiredWallet.blockchain,
         prerequisite,
       }),
-    async () => buildEvmApproveTx(prerequisite),
+    async () =>
+      runPrerequisiteReadOrBuildOrThrowReported(
+        async () =>
+          evm.buildTransaction({
+            blockchain: requiredWallet.blockchain,
+            prerequisite,
+          }),
+        'Could not build the EVM approve transaction.',
+      ),
     async (prerequisiteTx) =>
       evm.sign({
         blockchain: requiredWallet.blockchain,
@@ -284,7 +290,15 @@ async function gateSignAndProveXrplTrustline(
     prerequisite,
     resumedHashOrBlockchainMeta.blockchainMeta,
     async () => xrpl.getTrustline({ prerequisite }),
-    async () => buildXrplTrustSetTx(prerequisite),
+    async () =>
+      runPrerequisiteReadOrBuildOrThrowReported(
+        async () =>
+          xrpl.buildTransaction({
+            prerequisite,
+            limit: TRUSTLINE_LIMIT_BY_BLOCKCHAIN.XRPL,
+          }),
+        'Could not build the XRPL trustline transaction.',
+      ),
     async (prerequisiteTx) => xrpl.sign({ tx: prerequisiteTx }),
   )
   return signedPrerequisiteHash === null

@@ -234,7 +234,7 @@ export interface EvmWallet {
     chainId: string
     chain?: EvmChainDescription
   }): Promise<void>
-  /** Sign and send `tx`, an approve the SDK built included, and resolve with its hash. */
+  /** Sign and send `tx`, an approve `buildTransaction` built included, and resolve with its hash. */
   sign(req: {
     blockchain: string
     tx: TxOf<TransactionType.EVM>
@@ -250,6 +250,11 @@ export interface EvmWallet {
     blockchain: string
     prerequisite: PrerequisiteOf<'EVM_APPROVE'>
   }): Promise<string | null>
+  /** Build the approve that meets `prerequisite` as plain data, without prompting. */
+  buildTransaction(req: {
+    blockchain: string
+    prerequisite: PrerequisiteOf<'EVM_APPROVE'>
+  }): Promise<TxOf<TransactionType.EVM>>
   /** Answer `'pending'`, `'success'` or `'failed'` for a signed approve, from its receipt. */
   getTransactionInfo(req: {
     blockchain: string
@@ -305,12 +310,17 @@ export interface TronWallet {
 export interface XrplWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
-  /** Sign and send `tx`, a `TrustSet` the SDK built included, and resolve with its hash. */
+  /** Sign and send `tx`, a trustline `buildTransaction` built included, and resolve with its hash. */
   sign(req: { tx: TxOf<TransactionType.XRPL> }): Promise<SignResult>
   /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
   getTrustline(req: {
     prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
   }): Promise<string | null>
+  /** Build a `TrustSet` with the given `limit` as plain data, without prompting. */
+  buildTransaction(req: {
+    prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
+    limit: string
+  }): Promise<TxOf<TransactionType.XRPL>>
   /** Answer the ledger's transaction for a signed `TrustSet`, as it is. */
   getTransactionInfo(req: {
     hash: string

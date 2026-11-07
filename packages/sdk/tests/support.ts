@@ -334,6 +334,18 @@ export function evmApprove(overrides: Partial<EvmApprove> = {}): EvmApprove {
   }
 }
 
+// The approve the fake port builds: an approval transaction on `to`, the token, from the selected wallet.
+export function evmApproveTx(
+  overrides: Partial<LegacySdk.EvmTransaction> = {},
+): LegacySdk.EvmTransaction {
+  return evmTx({
+    to: '0xtoken',
+    data: '0xapprove',
+    isApprovalTx: true,
+    ...overrides,
+  })
+}
+
 // An allowance far above any approve amount.
 export const UNLIMITED = '1000000000000000000000000000000000000000'
 
@@ -686,6 +698,25 @@ export function xrplTx(overrides: Partial<XrplTx> = {}): XrplTx {
       Account: 'rXRPLfrom',
       Destination: 'rDestination',
       Amount: '1000000',
+    },
+    ...overrides,
+  }
+}
+
+// The `TrustSet` the fake port builds, from the selected XRPL wallet.
+export function xrplTrustSetTx(overrides: Partial<XrplTx> = {}): XrplTx {
+  return {
+    type: LegacySdk.TransactionType.XRPL,
+    blockChain: 'XRPL',
+    prerequisites: [],
+    data: {
+      TransactionType: 'TrustSet',
+      Account: 'rXRPLfrom',
+      LimitAmount: {
+        currency: 'USD',
+        issuer: 'rIssuer',
+        value: '10000000000000',
+      },
     },
     ...overrides,
   }
@@ -1157,6 +1188,7 @@ export type EvmNamespace = {
   getAllowance(
     req: OnChain & { prerequisite: EvmApprove },
   ): Promise<string | null>
+  buildTransaction(req: OnChain & { prerequisite: EvmApprove }): Promise<EvmTx>
   getTransactionInfo(req: OnChain & { hash: string }): Promise<EvmInfo>
 }
 export type HyperliquidNamespace = {
@@ -1176,6 +1208,10 @@ export type XrplNamespace = {
   getAccount(): Promise<string | null>
   sign(req: { tx: XrplTx }): Promise<SignResult>
   getTrustline(req: { prerequisite: XrplTrustline }): Promise<string | null>
+  buildTransaction(req: {
+    prerequisite: XrplTrustline
+    limit: string
+  }): Promise<XrplTx>
   getTransactionInfo(req: { hash: string }): Promise<XrplInfo>
 }
 export type StellarNamespace = {
@@ -1232,9 +1268,9 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
  * across namespaces, `getAccount` the blockchain's entry in `accounts` (the requested one on `evm` and `bip122`, the
  * namespace's own otherwise, such as `TRON`), `getChainId` the blockchain's entry in `chainIds` (`HYPERLIQUID`'s on
  * `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
- * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` rejects,
- * as no build is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per
- * test.
+ * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
+ * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron` and `stellar`, as no build
+ * is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
  */
 export function recordingNamespaces(
   chainIds: Record<string, string | null> = { ETH: '0x1', BSC: '0x38' },
@@ -1274,6 +1310,12 @@ export function recordingNamespaces(
         ): Promise<string | null> => {
           requests.push(['evm', 'getAllowance', structuredClone(req)])
           return null
+        },
+      ),
+      buildTransaction: vi.fn(
+        async (req: OnChain & { prerequisite: EvmApprove }): Promise<EvmTx> => {
+          requests.push(['evm', 'buildTransaction', structuredClone(req)])
+          return evmApproveTx({ to: req.prerequisite.token })
         },
       ),
       getTransactionInfo: vi.fn(
@@ -1338,6 +1380,15 @@ export function recordingNamespaces(
         ): Promise<string | null> => {
           requests.push(['xrpl', 'getTrustline', structuredClone(req)])
           return null
+        },
+      ),
+      buildTransaction: vi.fn(
+        async (req: {
+          prerequisite: XrplTrustline
+          limit: string
+        }): Promise<XrplTx> => {
+          requests.push(['xrpl', 'buildTransaction', structuredClone(req)])
+          return xrplTrustSetTx()
         },
       ),
       getTransactionInfo: vi.fn(
@@ -1553,24 +1604,52 @@ export function approvingNamespaces<W extends RecordingNamespaces>(
 }
 
 /*
- * `port` with a `buildTransaction` on `tron` and `stellar`, the namespaces v14 has it on, that records every request too,
- * copied, and answers from its namespace's script in order, repeating the last answer; an Error rejects, and so does a
- * namespace given no script. Replaceable per test.
+ * `port` with a `buildTransaction` that records every request too, copied, and answers from its namespace's script in
+ * order, repeating the last answer; an Error rejects. Given no script, `tron` and `stellar` reject, and `evm` and `xrpl`
+ * keep `port`'s build. Replaceable per test.
  */
 export function buildingNamespaces<W extends RecordingNamespaces>(
   port: { wallet: W; requests: NamespaceRequest[] },
   builds: {
+    evm?: readonly (EvmTx | Error | Rejection)[]
     tron?: readonly (TronTx | Error | Rejection)[]
+    xrpl?: readonly (XrplTx | Error | Rejection)[]
     stellar?: readonly (StellarTx | Error | Rejection)[]
   },
 ) {
   const { wallet, requests } = port
   const unscripted = new Error('No build scripted for this namespace')
+  const nextEvm = builds.evm === undefined ? undefined : scripted(builds.evm)
   const nextTron = scripted(builds.tron ?? [unscripted])
+  const nextXrpl = builds.xrpl === undefined ? undefined : scripted(builds.xrpl)
   const nextStellar = scripted(builds.stellar ?? [unscripted])
   return {
     wallet: {
       ...wallet,
+      evm: {
+        ...wallet.evm,
+        buildTransaction: vi.fn(
+          async (req: OnChain & { prerequisite: EvmApprove }) => {
+            if (nextEvm === undefined) {
+              return wallet.evm.buildTransaction(req)
+            }
+            requests.push(['evm', 'buildTransaction', structuredClone(req)])
+            return nextEvm()
+          },
+        ),
+      },
+      xrpl: {
+        ...wallet.xrpl,
+        buildTransaction: vi.fn(
+          async (req: { prerequisite: XrplTrustline; limit: string }) => {
+            if (nextXrpl === undefined) {
+              return wallet.xrpl.buildTransaction(req)
+            }
+            requests.push(['xrpl', 'buildTransaction', structuredClone(req)])
+            return nextXrpl()
+          },
+        ),
+      },
       tron: {
         ...wallet.tron,
         buildTransaction: vi.fn(async (req: { prerequisite: TronApprove }) => {

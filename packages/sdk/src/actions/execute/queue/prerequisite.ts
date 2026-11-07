@@ -1,15 +1,12 @@
 import type { SdkActions, TaskResult } from './types.js'
 import type { EvmWallet, TronWallet, XrplWallet } from '../mod.js'
-import type { Transaction } from 'rango-sdk'
 import type {
   EvmApprovePrerequisite,
   TransactionPrerequisite,
   TronApprovePrerequisite,
-  XrplChangeTrustLinePrerequisite,
 } from 'rango-types'
 
 import BigNumber from 'bignumber.js'
-import { TransactionType } from 'rango-types'
 
 import {
   ALLOWANCE_CONSECUTIVE_SUFFICIENT_READS,
@@ -19,7 +16,6 @@ import {
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
 import { ErrorToReport, isCanceled } from './executionFailure.js'
-import { encodeApproveCallData } from './hub3Utils.js'
 import { sleep } from './utils.js'
 
 type OnChainTxStatus = 'pending' | 'success' | 'failed'
@@ -43,48 +39,6 @@ export function isGrantedAmountEnough(
   required: string,
 ): boolean {
   return granted !== null && new BigNumber(granted).gte(required)
-}
-
-// Built before the prompt, never stored.
-export function buildEvmApproveTx(
-  prerequisite: EvmApprovePrerequisite,
-): Extract<Transaction, { type: TransactionType.EVM }> {
-  return {
-    type: TransactionType.EVM,
-    blockChain: prerequisite.blockChain,
-    from: prerequisite.wallet,
-    to: prerequisite.token,
-    data: encodeApproveCallData(prerequisite.spender, prerequisite.amount),
-    value: null,
-    nonce: null,
-    gasLimit: null,
-    gasPrice: null,
-    maxPriorityFeePerGas: null,
-    maxFeePerGas: null,
-    isApprovalTx: true,
-    prerequisites: [],
-  }
-}
-
-// From the Prerequisite's own wallet; built before the prompt, never stored.
-export function buildXrplTrustSetTx(
-  prerequisite: XrplChangeTrustLinePrerequisite,
-): Extract<Transaction, { type: TransactionType.XRPL }> {
-  const { wallet, currency, issuer } = prerequisite
-  return {
-    type: TransactionType.XRPL,
-    blockChain: 'XRPL',
-    data: {
-      TransactionType: 'TrustSet',
-      Account: wallet,
-      LimitAmount: {
-        currency,
-        issuer,
-        value: TRUSTLINE_LIMIT_BY_BLOCKCHAIN.XRPL,
-      },
-    },
-    prerequisites: [],
-  }
 }
 
 function getTronTxStatus(info: {

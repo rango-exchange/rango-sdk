@@ -364,7 +364,7 @@ describe('after a reload', () => {
     expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
   })
 
-  test('a signed EVM approve resumes at its status poll and allowance confirmation, with no gate and no sign', async () => {
+  test('a signed EVM approve resumes at its status poll and allowance confirmation, with no gate, no build and no sign', async () => {
     httpClient.createTransaction.mockResolvedValue(
       createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
     )
@@ -402,6 +402,7 @@ describe('after a reload', () => {
       'getChainId',
       'sign:0xcontract',
     ])
+    expect(port.wallet.evm.buildTransaction).not.toHaveBeenCalled()
     expect(httpClient.createTransaction).not.toHaveBeenCalled()
     const view = await historyOf(loaded)
     expect(view?._queue.status).toBe('SUCCESS')

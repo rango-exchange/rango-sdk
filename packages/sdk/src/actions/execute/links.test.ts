@@ -50,6 +50,7 @@ import {
   XRPL_INFO,
   xrplChain,
   xrplTrustline,
+  xrplTrustSetTx,
   xrplTx,
 } from '../../../tests/support.js'
 
@@ -577,10 +578,9 @@ describe('transaction links', () => {
       [
         'an XRPL trustline',
         () => ({
-          // v14 has no XRPL build: the SDK builds the TrustSet, so no namespace is given a build.
           port: buildingNamespaces(
             approvingNamespaces(recordingNamespaces(), { granted: [null] }),
-            {},
+            { xrpl: [xrplTrustSetTx()] },
           ),
           tx: xrplTx({ prerequisites: [xrplTrustline()] }),
           chains: [...evmBlockchains, linkedChain(xrplChain(), SCAN)],

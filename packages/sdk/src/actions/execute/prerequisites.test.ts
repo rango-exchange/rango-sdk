@@ -1,4 +1,4 @@
-// EVM approve Prerequisites: the met test, the built approve, its gate, proof and allowance confirmation, driven through the public client over fake-indexeddb, with the timers faked.
+// EVM approve Prerequisites: the met test, the approve the port builds, its gate, proof and allowance confirmation, driven through the public client over fake-indexeddb, with the timers faked.
 import 'fake-indexeddb/auto'
 
 import type {
@@ -10,12 +10,12 @@ import type {
 import type * as Sdk from '../../mod.js'
 
 import { IDBFactory } from 'fake-indexeddb'
-import * as LegacySdk from 'rango-sdk'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   advance,
   approvingNamespaces,
+  buildingNamespaces,
   callOf,
   confirmQuote,
   createExecutionClient,
@@ -24,6 +24,7 @@ import {
   describedChain,
   EVM_INFO,
   evmApprove,
+  evmApproveTx,
   evmChain,
   evmTx,
   EXECUTION_OPTIONS,
@@ -53,8 +54,6 @@ const READS_TO_TIME_OUT =
   1 + ALLOWANCE_TIMEOUT_MS / ALLOWANCE_READ_INTERVAL_MS + 1
 // How long a slow node takes to answer a read.
 const READ_TIME = 1_000
-// An ABI word, in hex characters.
-const ABI_WORD_HEX_LENGTH = 64
 
 // What every evm request names besides its own fields: v14's evm namespace takes the blockchain, and no address.
 const ON_ETH = { blockchain: 'ETH' }
@@ -119,12 +118,14 @@ describe('EVM approve Prerequisites', () => {
     expect(port.requests.map(callOf)).toEqual([
       'getChainId',
       'read:0xtoken0',
+      'build:0xtoken0',
       'sign:0xtoken0',
       'info:0xhash1',
       'read:0xtoken0',
       'read:0xtoken0',
       'getChainId',
       'read:0xtoken1',
+      'build:0xtoken1',
       'sign:0xtoken1',
       'info:0xhash2',
       'read:0xtoken1',
@@ -179,6 +180,7 @@ describe('EVM approve Prerequisites', () => {
         'getAllowance',
         { ...ON_ETH, prerequisite: evmApprove({ amount }) },
       ])
+      expect(port.wallet.evm.buildTransaction).not.toHaveBeenCalled()
       expect(port.wallet.evm.getTransactionInfo).not.toHaveBeenCalled()
       const view = await historyOf(client)
       expect(view?._queue.status).toBe('SUCCESS')
@@ -198,66 +200,49 @@ describe('EVM approve Prerequisites', () => {
   ]
 
   test.each(unmetAnswers)(
-    'getAllowance answering %s signs the approve',
+    'getAllowance answering %s builds and signs the approve',
     async (_name, amount, granted) => {
       const port = approvingNamespaces(recordingNamespaces(), {
         granted: [granted, UNLIMITED],
       })
       await start(port, [evmApprove({ amount })])
 
-      const calls = ['getChainId', 'read:0xtoken', 'sign:0xtoken']
+      const calls = [
+        'getChainId',
+        'read:0xtoken',
+        'build:0xtoken',
+        'sign:0xtoken',
+      ]
       expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
     },
   )
 
-  const SPENDER = 'abcdef0123456789abcdef0123456789abcdef01'
-  const spenders: [string, string][] = [
-    ['without 0x', SPENDER],
-    ['with 0x', `0x${SPENDER}`],
-    ['in upper case', `0x${SPENDER.toUpperCase()}`],
-    ['in upper case with 0X', `0X${SPENDER.toUpperCase()}`],
-  ]
+  test('the approve is built once by the port between the met test and the sign, signed as built, and never stored', async () => {
+    const built = evmApproveTx({ to: '0xusdt', data: '0xbuilt' })
+    const port = buildingNamespaces(
+      approvingNamespaces(recordingNamespaces()),
+      {
+        evm: [built],
+      },
+    )
+    const prerequisite = evmApprove({ token: '0xusdt' })
+    const { client } = await start(port, [prerequisite])
 
-  test.each(spenders)(
-    'the signed approve is the ERC-20 approve call, with the spender given %s',
-    async (_name, spender) => {
-      const port = approvingNamespaces(recordingNamespaces())
-      const prerequisite = evmApprove({
-        spender,
-        amount: LARGE_AMOUNT,
-        token: '0xusdt',
-      })
-      const { client } = await start(port, [prerequisite])
+    const calls = ['getChainId', 'read:0xusdt', 'build:0xusdt', 'sign:0xusdt']
+    expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
+    expect(port.wallet.evm.buildTransaction.mock.calls).toEqual([
+      [{ ...ON_ETH, prerequisite }],
+    ])
+    expect(signsOf(port.requests)[0]).toEqual({ ...ON_ETH, tx: built })
 
-      const [approve] = signsOf(port.requests)
-      expect(approve).toEqual({
-        ...ON_ETH,
-        tx: {
-          type: LegacySdk.TransactionType.EVM,
-          blockChain: 'ETH',
-          from: '0xfrom',
-          to: '0xusdt',
-          data: `0x095ea7b3${SPENDER.padStart(ABI_WORD_HEX_LENGTH, '0')}${'20000000000001'.padStart(ABI_WORD_HEX_LENGTH, '0')}`,
-          value: null,
-          nonce: null,
-          gasLimit: null,
-          gasPrice: null,
-          maxPriorityFeePerGas: null,
-          maxFeePerGas: null,
-          isApprovalTx: true,
-          prerequisites: [],
-        },
-      })
-
-      await advance(ALLOWANCE_READ_INTERVAL_MS)
-      const view = await historyOf(client)
-      expect(view?._storage.transactions['s1.p0']?.data).toEqual({
-        type: 'prerequisite',
-        value: prerequisite,
-      })
-      expect(JSON.stringify(view)).not.toContain('095ea7b3')
-    },
-  )
+    await advance(ALLOWANCE_READ_INTERVAL_MS)
+    const view = await historyOf(client)
+    expect(view?._storage.transactions['s1.p0']?.data).toEqual({
+      type: 'prerequisite',
+      value: prerequisite,
+    })
+    expect(JSON.stringify(view)).not.toContain('0xbuilt')
+  })
 
   test('the approve is gated on its connection: getAccount answering null blocks NOT_CONNECTED before the met test', async () => {
     const port = approvingNamespaces(
@@ -310,6 +295,7 @@ describe('EVM approve Prerequisites', () => {
       'switchChain',
       'getChainId',
       'read:0xtoken',
+      'build:0xtoken',
       'sign:0xtoken',
     ]
     expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
@@ -566,6 +552,24 @@ describe('EVM approve Prerequisites', () => {
 
       await expectFailed(client, port, failure)
       expect(signsOf(port.requests)).toEqual([])
+    },
+  )
+
+  test.each(portRejections('Could not build the EVM approve transaction.'))(
+    'a buildTransaction rejected with %s ends the swap with its failure, and nothing is signed',
+    async (_, error, failure) => {
+      const port = buildingNamespaces(
+        approvingNamespaces(recordingNamespaces()),
+        { evm: [error] },
+      )
+      const { client } = await start(port)
+
+      await expectFailed(client, port, failure)
+      expect(signsOf(port.requests)).toEqual([])
+      expect(
+        (await historyOf(client))?._storage.transactions['s1.p0']?.execution
+          .status,
+      ).toBe('not_started')
     },
   )
 })

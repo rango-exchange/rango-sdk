@@ -169,6 +169,8 @@ const wallet: WalletPort = {
       evm(req.blockchain).signAndSend(req.tx, chainIdOf(req.blockchain)),
     getAllowance: async (req) =>
       evm(req.blockchain).allowance(req.prerequisite),
+    buildTransaction: async (req) =>
+      evm(req.blockchain).buildApprove(req.prerequisite),
     getTransactionInfo: async (req) => {
       const receipt = await evm(req.blockchain).getTransactionReceipt(req.hash)
       if (receipt === null) return 'pending' // an ethers receipt
@@ -182,15 +184,15 @@ const wallet: WalletPort = {
 }
 ```
 
-| Namespace                          | Methods                                                                                          | Signs                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| `evm`                              | `getAccount`, `getChainId`, `switchChain`, `sign`, `wait?`, `getAllowance`, `getTransactionInfo` | EVM transactions and EVM approves, on every EVM blockchain.   |
-| `hyperliquid`                      | `getAccount`, `getChainId`, `switchChain`, `signTypedData`                                       | Hyperliquid actions, on their `signatureChainId`.             |
-| `tron`                             | `getAccount`, `sign`, `getAllowance`, `buildTransaction`, `getTransactionInfo`                   | TRON transactions and TRON approves.                          |
-| `xrpl`                             | `getAccount`, `sign`, `getTrustline`, `getTransactionInfo`                                       | XRPL payments and trustlines (the SDK builds the `TrustSet`). |
-| `stellar`                          | `getAccount`, `sign`, `getTrustline`, `buildTransaction`                                         | Stellar transactions and trustlines.                          |
-| `bip122`                           | `getAccount`, `sign`                                                                             | Transfers on every UTXO blockchain.                           |
-| `solana`, `starknet`, `ton`, `sui` | `getAccount`, `sign`                                                                             | Their own transactions.                                       |
+| Namespace                          | Methods                                                                                                              | Signs                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `evm`                              | `getAccount`, `getChainId`, `switchChain`, `sign`, `wait?`, `getAllowance`, `buildTransaction`, `getTransactionInfo` | EVM transactions and EVM approves, on every EVM blockchain. |
+| `hyperliquid`                      | `getAccount`, `getChainId`, `switchChain`, `signTypedData`                                                           | Hyperliquid actions, on their `signatureChainId`.           |
+| `tron`                             | `getAccount`, `sign`, `getAllowance`, `buildTransaction`, `getTransactionInfo`                                       | TRON transactions and TRON approves.                        |
+| `xrpl`                             | `getAccount`, `sign`, `getTrustline`, `buildTransaction`, `getTransactionInfo`                                       | XRPL payments and trustlines.                               |
+| `stellar`                          | `getAccount`, `sign`, `getTrustline`, `buildTransaction`                                                             | Stellar transactions and trustlines.                        |
+| `bip122`                           | `getAccount`, `sign`                                                                                                 | Transfers on every UTXO blockchain.                         |
+| `solana`, `starknet`, `ton`, `sui` | `getAccount`, `sign`                                                                                                 | Their own transactions.                                     |
 
 No request carries the address: sign with the wallet's active account. Only `evm` and `bip122` requests carry `blockchain`, the `selectedWallets` key. A method that fails rejects with a `SignerError` (exported with `SignerErrorCode`), whose `code` and `getErrorDetail()` make the stored failure.
 
@@ -201,7 +203,7 @@ No request carries the address: sign with the wallet's active account. Only `evm
 - `signTypedData`: sign ethers' `{ domain, types, value }` on `chainId` and answer the `0x` signature.
 - `wait`: resolve with the hash to follow, or the same `hash` when you have no signer for it, such as after a reload.
 - `getAllowance` and `getTrustline`: answer what the wallet already grants as a decimal string, or `null` for nothing.
-- `buildTransaction`: build the approve or trustline as plain data, without prompting.
+- `buildTransaction`: on `evm` and `tron`, build the approve; on `xrpl` and `stellar`, build the trustline with the `limit` given. Build it as plain data, without prompting.
 - `getTransactionInfo`: on `evm`, answer `'pending'`, `'success'` or `'failed'` from the receipt; on `tron` and `xrpl`, answer what the chain says, as it is.
 
 ### `execute()`
