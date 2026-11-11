@@ -7,6 +7,8 @@
 - `warnings.ts` describes each warning by its `type`.
 - `invalid-input.ts` points at the `field` of an `INVALID_INPUT`.
 
+Execution (`execute()` and the other [execution methods](../../../packages/sdk/README.md#execution)) is browser only, so this example doesn't run swaps.
+
 Each module handles `SdkError` by `type`. For what the client caches, see [`client.cache`](../../../packages/sdk/README.md#clientcache).
 
 ### Requirements:

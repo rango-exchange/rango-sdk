@@ -1,6 +1,9 @@
 import type {
   ConfirmOptions,
   ConfirmResult,
+  ExecutionEngine,
+  ExecutionHistory,
+  ExecutionOptions,
   QuoteRequest,
   QuoteResult,
   QuotesOptions,
@@ -8,16 +11,33 @@ import type {
   SelectedWallets,
 } from './actions/mod.js'
 import type { RangoClientConfig, ResolvedConfig } from './configs.js'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- for `{@link SdkError}` in the TSDoc
-import type { SdkError } from './errors/mod.js'
-import type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
+import type {
+  CacheSchema,
+  ClientState,
+  LegacyClient,
+  ReadonlyCache,
+  RequestOptions,
+} from './types.js'
 import type { Asset } from 'rango-sdk'
 
 import { RangoClient as LegacyRangoClient } from 'rango-sdk'
 
-import { confirmQuote, fetchQuote, fetchQuotes } from './actions/mod.js'
+import {
+  cancelExecution,
+  confirmQuote,
+  createExecutionEngine,
+  deleteExecution,
+  fetchQuote,
+  fetchQuotes,
+  getAllExecutions,
+  getExecution,
+  pauseExecutions,
+  resumeExecutions,
+  startOrUnblockExecution,
+} from './actions/mod.js'
 import { Cache } from './cache/mod.js'
 import { resolveConfig } from './configs.js'
+import { throwSdkError } from './errors/mod.js'
 
 export class RangoClient {
   /**
@@ -27,12 +47,34 @@ export class RangoClient {
    */
   readonly cache: ReadonlyCache
 
+  /**
+   * The Executions stored in this browser, each as a `HistoryItem`.
+   *
+   * @returns `get()`: the Execution's `HistoryItem`, or `undefined` for an unknown request ID. `getAll()`: one
+   * `HistoryItem` per Execution the execution engine loaded.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * const item = await client.history.get(route.requestId) // a HistoryItem, or undefined
+   * const items = await client.history.getAll()
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#history
+   */
+  readonly history: ExecutionHistory
+
   readonly #config: ResolvedConfig
-  readonly #httpClient: LegacyRangoClient
+  readonly #httpClient: LegacyClient
   readonly #cache: Cache<CacheSchema>
+  /*
+   * The execution engine's build, started by the first execution call. A failed build is not kept: the next execution
+   * call builds again.
+   */
+  #executionEnginePromise: Promise<ExecutionEngine> | undefined
 
   /**
-   * @param config - Your `apiKey`, and a `baseUrl` that defaults to `https://api.rango.exchange`.
+   * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the `execution`
+   * config: the `wallet` that `execute()` and the other execution methods need, with an optional `emitter`,
+   * `pauseOnStart` and `beforeResume`.
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#usage
    */
   constructor(config: RangoClientConfig) {
@@ -43,6 +85,10 @@ export class RangoClient {
     )
     this.#cache = new Cache()
     this.cache = { get: (key) => this.#cache.get(key) }
+    this.history = {
+      get: async (requestId) => getExecution(this.#state(), requestId),
+      getAll: async () => getAllExecutions(this.#state()),
+    }
   }
 
   /**
@@ -68,7 +114,7 @@ export class RangoClient {
     request: QuoteRequest,
     opts?: RequestOptions,
   ): Promise<QuoteResult> {
-    return fetchQuote(this.#httpClient, this.#cache, request, opts)
+    return fetchQuote(this.#state(), request, opts)
   }
 
   /**
@@ -99,13 +145,14 @@ export class RangoClient {
     amount: string,
     options?: QuotesOptions,
   ): Promise<QuotesResult> {
-    return fetchQuotes(this.#httpClient, this.#cache, from, to, amount, options)
+    return fetchQuotes(this.#state(), from, to, amount, options)
   }
 
   /**
    * Turns the cached Quote with this request ID into a Route for the user's wallets.
    *
-   * A set `req.destination` is checked as in `quote()`.
+   * A set `req.destination` is checked as in `quote()`. A copy of the result is kept in the cache's
+   * `confirmed` slot for `execute()`, for the last 10 confirms; confirming the same Quote again replaces it.
    *
    * @param requestId - The `requestId` of a Quote cached by `quotes()`.
    * @returns `data`: a Route, and the `warnings` that apply.
@@ -113,7 +160,10 @@ export class RangoClient {
    * @example
    * ```ts
    * const chosen = data.quotes.find((entry) => !entry.error)
-   * const selectedWallets = { ETH: '0x...', BSC: '0x...' }
+   * const selectedWallets = {
+   *   ETH: { address: '0x...', walletId: 'metamask' },
+   *   BSC: { address: '0x...', walletId: 'metamask' },
+   * }
    * const { data: route, warnings } = await client.confirm(
    *   chosen.data.requestId,
    *   selectedWallets,
@@ -126,12 +176,117 @@ export class RangoClient {
     selectedWallets: SelectedWallets,
     options?: ConfirmOptions,
   ): Promise<ConfirmResult> {
-    return confirmQuote(
+    return confirmQuote(this.#state(), requestId, selectedWallets, options)
+  }
+
+  /**
+   * Runs a confirmed Route to its end, or unblocks its stored Execution.
+   *
+   * @param requestId - The `requestId` of a Route that `confirm()` returned, or of a stored Execution.
+   * @returns Once the Execution is stored and its first task has started.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await client.execute(route.requestId, {
+   *   transactionOptions: {
+   *     slippage: '1',
+   *     validations: { balance: true, fee: true },
+   *   },
+   * })
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#execute
+   */
+  async execute(requestId: string, options?: ExecutionOptions): Promise<void> {
+    return startOrUnblockExecution(this.#state(), requestId, options)
+  }
+
+  /**
+   * Ends a `PENDING`, `RUNNING` or `BLOCKED` Execution `CANCELED`, with a `USER_CANCEL` failure.
+   *
+   * @returns Once the cancel is stored.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await client.cancel(route.requestId)
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#cancel
+   */
+  async cancel(requestId: string): Promise<void> {
+    return cancelExecution(this.#state(), requestId)
+  }
+
+  /**
+   * Removes an ended Execution (`SUCCESS`, `FAILED` or `CANCELED`) from storage.
+   *
+   * @returns Once it's gone from `history`.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await client.delete(route.requestId)
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#delete
+   */
+  async delete(requestId: string): Promise<void> {
+    return deleteExecution(this.#state(), requestId)
+  }
+
+  /**
+   * Pauses this client's Executions, in a tab that isn't the active tab.
+   *
+   * @returns Once the execution engine is built and paused.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await (isActiveTab ? client.resume() : client.pause()) // at mount
+   * onElectionChange((isActive) => (isActive ? client.resume() : client.pause()))
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#pause-and-resume
+   */
+  async pause(): Promise<void> {
+    return pauseExecutions(this.#state())
+  }
+
+  /**
+   * Resumes this client's Executions, in the active tab.
+   *
+   * @returns Once the execution engine is built and resumed.
+   * @throws {@link SdkError}
+   * @example
+   * ```ts
+   * await (isActiveTab ? client.resume() : client.pause()) // at mount
+   * onElectionChange((isActive) => (isActive ? client.resume() : client.pause()))
+   * ```
+   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#pause-and-resume
+   */
+  async resume(): Promise<void> {
+    return resumeExecutions(this.#state())
+  }
+
+  #state(): ClientState {
+    return {
+      httpClient: this.#httpClient,
+      cache: this.#cache,
+      executionEngine: this.#executionEngine.bind(this),
+    }
+  }
+
+  /*
+   * Built by the first execution call, with core loaded only then, and shared by the calls made while it is in
+   * flight. A failed build is not kept: the calls waiting on it get its error, and the next execution call builds
+   * again. With no wallet it is built all the same: each gated entry Blocks `NOT_CONNECTED` until one is set.
+   */
+  async #executionEngine(): Promise<ExecutionEngine> {
+    if (this.#executionEnginePromise) {
+      return this.#executionEnginePromise
+    }
+    this.#executionEnginePromise = createExecutionEngine(
+      this.#config.execution,
       this.#httpClient,
       this.#cache,
-      requestId,
-      selectedWallets,
-      options,
-    )
+    ).catch((cause: unknown) => throwSdkError(cause))
+    this.#executionEnginePromise.catch(() => {
+      this.#executionEnginePromise = undefined
+    })
+    return this.#executionEnginePromise
   }
 }

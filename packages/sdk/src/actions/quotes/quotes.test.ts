@@ -3,31 +3,19 @@ import type * as Sdk from '../../mod.js'
 import * as LegacySdk from 'rango-sdk'
 import { beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest'
 
-const legacy = vi.hoisted(() => {
-  const constructorArgs: unknown[][] = []
-  return { constructorArgs, getAllRoutes: vi.fn() }
-})
-
-vi.mock('rango-sdk', async (importOriginal) => ({
-  ...(await importOriginal<typeof LegacySdk>()),
-  RangoClient: class {
-    getAllRoutes = legacy.getAllRoutes
-    constructor(...args: unknown[]) {
-      legacy.constructorArgs.push(args)
-    }
-  },
-}))
-
-async function loadSdk(): Promise<typeof Sdk> {
-  return import('../../mod.js')
-}
-
-const ETH = { blockchain: 'ETH', symbol: 'ETH', address: null }
-const USDC = {
-  blockchain: 'BSC',
-  symbol: 'USDC',
-  address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-}
+import {
+  BAD_REQUEST,
+  ETH,
+  httpClient,
+  httpError,
+  loadSdk,
+  resetHttpClient,
+  SERVER_ERROR,
+  swap as sharedSwap,
+  TOO_MANY_REQUESTS,
+  UNAUTHORIZED,
+  USDC,
+} from '../../../tests/support.js'
 
 const req: Sdk.QuotesReq = { slippage: '1.5', swappers: ['Across'] }
 
@@ -39,40 +27,13 @@ const request: LegacySdk.MultiRouteRequest = {
   ...req,
 }
 
+// The shared swap, with the inclusive limits and recommended slippage this suite asserts on.
 function swap(overrides: Partial<Sdk.SwapResult> = {}): Sdk.SwapResult {
-  const asset = {
-    blockchain: 'ETH',
-    address: null,
-    symbol: 'ETH',
-    logo: '',
-    blockchainLogo: '',
-    decimals: 18,
-    usdPrice: 3000,
-  }
-  return {
-    swapperId: 'Across',
-    swapperLogo: '',
-    swapperType: 'BRIDGE',
-    swapChainType: 'INTER_CHAIN',
-    from: asset,
-    to: { ...asset, blockchain: 'BSC', symbol: 'USDC', usdPrice: 1 },
-    toAmount: '3000',
-    fromAmount: '1',
-    fromAmountMaxValue: '10',
-    fromAmountMinValue: '0.1',
-    fromAmountPrecision: null,
+  return sharedSwap({
     fromAmountRestrictionType: 'INCLUSIVE',
-    routes: null,
-    internalSwaps: null,
-    fee: [],
-    estimatedTimeInSeconds: 60,
-    timeStat: null,
-    includesDestinationTx: false,
-    maxRequiredSign: 1,
     recommendedSlippage: { error: false, slippage: '1' },
-    warnings: [],
     ...overrides,
-  }
+  })
 }
 
 const result: LegacySdk.MultiRouteSimulationResult = {
@@ -101,27 +62,15 @@ function response(overrides: Partial<LegacySdk.MultiRouteResponse> = {}) {
   } satisfies LegacySdk.MultiRouteResponse
 }
 
-const BAD_REQUEST = 400
-const UNAUTHORIZED = 401
-const TOO_MANY_REQUESTS = 429
-const SERVER_ERROR = 500
-
-function httpError(status: number, data: unknown) {
-  return Object.assign(new Error(`Request failed with ${status}`), {
-    response: { status, data },
-  })
-}
-
 function sentBody() {
-  return legacy.getAllRoutes.mock.lastCall?.[0]
+  return httpClient.getAllRoutes.mock.lastCall?.[0]
 }
 
 describe('quotes', () => {
   beforeEach(() => {
     vi.resetModules()
-    legacy.constructorArgs.length = 0
-    legacy.getAllRoutes.mockReset()
-    legacy.getAllRoutes.mockResolvedValue(response())
+    resetHttpClient()
+    httpClient.getAllRoutes.mockResolvedValue(response())
   })
 
   test('builds the legacy client with the configured API key and base URL', async () => {
@@ -132,7 +81,7 @@ describe('quotes', () => {
       baseUrl: 'https://example.test',
     })
 
-    expect(legacy.constructorArgs).toEqual([
+    expect(httpClient.constructorArgs).toEqual([
       ['test-key', 'https://example.test'],
     ])
   })
@@ -142,7 +91,7 @@ describe('quotes', () => {
 
     new RangoClient({ apiKey: 'test-key' })
 
-    expect(legacy.constructorArgs).toEqual([
+    expect(httpClient.constructorArgs).toEqual([
       ['test-key', 'https://api.rango.exchange'],
     ])
   })
@@ -165,7 +114,7 @@ describe('quotes', () => {
     })
 
     expect(sentBody()).toEqual({ ...request, ...affiliate })
-    expect(legacy.getAllRoutes.mock.lastCall?.[1]).toEqual({
+    expect(httpClient.getAllRoutes.mock.lastCall?.[1]).toEqual({
       signal: controller.signal,
     })
   })
@@ -178,7 +127,7 @@ describe('quotes', () => {
 
     await client.quotes(ETH, USDC, '1')
 
-    expect(legacy.getAllRoutes.mock.lastCall).toEqual([
+    expect(httpClient.getAllRoutes.mock.lastCall).toEqual([
       { from: ETH, to: USDC, amount: '1' },
       { signal: undefined },
     ])
@@ -240,7 +189,7 @@ describe('quotes', () => {
       diagnosisMessages: ['Some swappers are down'],
       traceId: 12,
     })
-    legacy.getAllRoutes.mockResolvedValue(success)
+    httpClient.getAllRoutes.mockResolvedValue(success)
 
     const quotes = await client.quotes(ETH, USDC, '1', { req })
 
@@ -289,7 +238,7 @@ describe('quotes', () => {
       requestAmount: _amount,
       ...partial
     } = response()
-    legacy.getAllRoutes.mockResolvedValue(partial)
+    httpClient.getAllRoutes.mockResolvedValue(partial)
 
     const { data } = await client.quotes(ETH, USDC, '1', { req })
 
@@ -305,7 +254,7 @@ describe('quotes', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         requestAmount: '2',
         results: [
@@ -380,7 +329,7 @@ describe('quotes', () => {
       requestId: 'both',
       swaps: [flaggedTooSmall],
     }
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         results: [
           { ...result, requestId: 'ok', swaps: [baseSwap] },
@@ -444,7 +393,7 @@ describe('quotes', () => {
     })
     const unpriced = swap()
     unpriced.to = { ...unpriced.to, usdPrice: null }
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         results: [
           { ...result, requestId: 'clean' },
@@ -566,7 +515,7 @@ describe('quotes', () => {
       price: 3,
       meta: null,
     }
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         results: [
           {
@@ -602,7 +551,7 @@ describe('quotes', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         results: [
           {
@@ -628,7 +577,7 @@ describe('quotes', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         results: [
           { ...result, requestId: 'empty', swaps: [] },
@@ -668,7 +617,7 @@ describe('quotes', () => {
         throw unexpected
       },
     })
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({ results: [{ ...result, swaps: [unreadable] }] }),
     )
 
@@ -685,7 +634,7 @@ describe('quotes', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValue(null)
+    httpClient.getAllRoutes.mockResolvedValue(null)
 
     const error = await client
       .quotes(ETH, USDC, '1', { req })
@@ -702,7 +651,7 @@ describe('quotes', () => {
       apiKey: 'test-key',
     })
     const controller = new AbortController()
-    legacy.getAllRoutes.mockImplementation(async () => {
+    httpClient.getAllRoutes.mockImplementation(async () => {
       controller.abort()
       return null
     })
@@ -723,7 +672,7 @@ describe('quotes', () => {
     })
     const controller = new AbortController()
     const raised = new SdkError('NO_RESULT', 'Raised inside', { metadata: {} })
-    legacy.getAllRoutes.mockImplementation(async () => {
+    httpClient.getAllRoutes.mockImplementation(async () => {
       controller.abort()
       throw raised
     })
@@ -742,7 +691,7 @@ describe('quotes', () => {
     })
     const controller = new AbortController()
     const empty = response({ results: [] })
-    legacy.getAllRoutes.mockImplementation(async () => {
+    httpClient.getAllRoutes.mockImplementation(async () => {
       controller.abort()
       return empty
     })
@@ -801,7 +750,7 @@ describe('quotes', () => {
         type: 'INVALID_INPUT',
         metadata: { field, reason },
       })
-      expect(legacy.getAllRoutes).not.toHaveBeenCalled()
+      expect(httpClient.getAllRoutes).not.toHaveBeenCalled()
     },
   )
 
@@ -817,7 +766,7 @@ describe('quotes', () => {
 
     await client.quotes(ETH, to, '1', { req })
 
-    expect(legacy.getAllRoutes).toHaveBeenCalledOnce()
+    expect(httpClient.getAllRoutes).toHaveBeenCalledOnce()
   })
 
   test.each(['abc', '0', '100'])(
@@ -830,7 +779,7 @@ describe('quotes', () => {
 
       await client.quotes(ETH, USDC, '1', { req: { ...req, slippage } })
 
-      expect(legacy.getAllRoutes).toHaveBeenCalledWith(
+      expect(httpClient.getAllRoutes).toHaveBeenCalledWith(
         { ...request, slippage },
         expect.anything(),
       )
@@ -847,7 +796,7 @@ describe('quotes', () => {
       errorCode: 1,
       traceId: 2,
     })
-    legacy.getAllRoutes.mockRejectedValue(badRequest)
+    httpClient.getAllRoutes.mockRejectedValue(badRequest)
 
     const error = await client
       .quotes(ETH, USDC, '1', { req })
@@ -876,7 +825,7 @@ describe('quotes', () => {
         results: results as LegacySdk.MultiRouteSimulationResult[],
         diagnosisMessages: ['No route', 'Try another amount'],
       })
-      legacy.getAllRoutes.mockResolvedValue(noResults)
+      httpClient.getAllRoutes.mockResolvedValue(noResults)
 
       const error = await client
         .quotes(ETH, USDC, '1', { req })
@@ -901,7 +850,7 @@ describe('quotes', () => {
       const client = new RangoClient({
         apiKey: 'test-key',
       })
-      legacy.getAllRoutes.mockResolvedValue(
+      httpClient.getAllRoutes.mockResolvedValue(
         response({
           results: results as LegacySdk.MultiRouteSimulationResult[],
           diagnosisMessages: [],
@@ -926,7 +875,7 @@ describe('quotes', () => {
     })
     const controller = new AbortController()
     const canceled = httpError(BAD_REQUEST, { error: 'canceled' })
-    legacy.getAllRoutes.mockImplementation(async () => {
+    httpClient.getAllRoutes.mockImplementation(async () => {
       controller.abort()
       throw canceled
     })
@@ -955,7 +904,7 @@ describe('quotes', () => {
         errorCode: 42,
         traceId: 7,
       })
-      legacy.getAllRoutes.mockRejectedValue(failure)
+      httpClient.getAllRoutes.mockRejectedValue(failure)
 
       const error = await client
         .quotes(ETH, USDC, '1', { req })
@@ -978,7 +927,7 @@ describe('quotes', () => {
       apiKey: 'test-key',
     })
     const networkError = new Error('Network Error')
-    legacy.getAllRoutes.mockRejectedValue(networkError)
+    httpClient.getAllRoutes.mockRejectedValue(networkError)
 
     const error = await client
       .quotes(ETH, USDC, '1', { req })
@@ -1002,7 +951,7 @@ describe('quotes', () => {
       errorCode: 1001,
       traceId: 99,
     })
-    legacy.getAllRoutes.mockResolvedValue(failed)
+    httpClient.getAllRoutes.mockResolvedValue(failed)
 
     const error = await client
       .quotes(ETH, USDC, '1', { req })
@@ -1022,7 +971,7 @@ describe('quotes', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockRejectedValue(new Error('Network Error'))
+    httpClient.getAllRoutes.mockRejectedValue(new Error('Network Error'))
 
     let type: unknown
     try {
@@ -1050,6 +999,7 @@ describe('quotes', () => {
           | 'TOO_MANY_REQUESTS'
           | 'SERVER_ERROR'
           | 'UNKNOWN_SLIPPAGE'
+          | 'CLIENT_PAUSED'
         >()
         expectTypeOf(error.metadata).toEqualTypeOf<undefined>()
       }
@@ -1062,7 +1012,7 @@ describe('quotes', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockRejectedValue(new Error('Network Error'))
+    httpClient.getAllRoutes.mockRejectedValue(new Error('Network Error'))
 
     const error = await client
       .quotes(ETH, USDC, '1', { req })
@@ -1087,7 +1037,7 @@ describe('quotes', () => {
 describe('quotes cache', () => {
   beforeEach(() => {
     vi.resetModules()
-    legacy.getAllRoutes.mockReset()
+    httpClient.getAllRoutes.mockReset()
   })
 
   test('has no quotes map before the first successful call', async () => {
@@ -1104,7 +1054,7 @@ describe('quotes cache', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         routeId: 'route-a',
         results: [
@@ -1140,7 +1090,7 @@ describe('quotes cache', () => {
       apiKey: 'test-key',
     })
     // Objects of its own, since the returned Quote shares them with the response.
-    legacy.getAllRoutes.mockResolvedValue(
+    httpClient.getAllRoutes.mockResolvedValue(
       response({
         to: { ...USDC },
         results: [{ ...result, swaps: [swap()], scores: [...result.scores] }],
@@ -1172,14 +1122,15 @@ describe('quotes cache', () => {
     [
       'NO_RESULT',
       () =>
-        legacy.getAllRoutes.mockResolvedValue(
+        httpClient.getAllRoutes.mockResolvedValue(
           response({ routeId: 'route-thrown', results: [] }),
         ),
       '1',
     ],
     [
       'REQUEST_FAILED',
-      () => legacy.getAllRoutes.mockRejectedValue(new Error('Network Error')),
+      () =>
+        httpClient.getAllRoutes.mockRejectedValue(new Error('Network Error')),
       '1',
     ],
   ])(
@@ -1189,7 +1140,7 @@ describe('quotes cache', () => {
       const client = new RangoClient({
         apiKey: 'test-key',
       })
-      legacy.getAllRoutes.mockResolvedValue(
+      httpClient.getAllRoutes.mockResolvedValue(
         response({
           routeId: 'route-kept',
           results: [{ ...result, requestId: 'kept' }],
@@ -1197,7 +1148,7 @@ describe('quotes cache', () => {
       )
       const { data } = await client.quotes(ETH, USDC, '1', { req })
       const before = client.cache.get('quotes')
-      legacy.getAllRoutes.mockResolvedValue(
+      httpClient.getAllRoutes.mockResolvedValue(
         response({
           routeId: 'route-thrown',
           results: [{ ...result, requestId: 'thrown' }],
@@ -1224,13 +1175,13 @@ describe('quotes cache', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-a',
         results: [{ ...result, requestId: 'first' }],
       }),
     )
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-b',
         results: [{ ...result, requestId: 'second' }],
@@ -1257,7 +1208,7 @@ describe('quotes cache', () => {
     })
     const routeIds = Array.from({ length: 11 }, (_, index) => `route-${index}`)
     for (const routeId of routeIds) {
-      legacy.getAllRoutes.mockResolvedValueOnce(
+      httpClient.getAllRoutes.mockResolvedValueOnce(
         response({ routeId, results: [{ ...result, requestId: routeId }] }),
       )
       await client.quotes(ETH, USDC, '1', { req })
@@ -1273,16 +1224,16 @@ describe('quotes cache', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-a',
         results: [{ ...result, requestId: 'old' }],
       }),
     )
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({ routeId: 'route-b', results: [result] }),
     )
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-a',
         results: [{ ...result, requestId: 'new' }],
@@ -1306,13 +1257,13 @@ describe('quotes cache', () => {
     const client = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-a',
         results: [{ ...result, requestId: 'first' }],
       }),
     )
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-b',
         results: [{ ...result, requestId: 'second' }],
@@ -1339,8 +1290,8 @@ describe('quotes cache', () => {
       apiKey: 'test-key',
     })
     const slowResponse = Promise.withResolvers<LegacySdk.MultiRouteResponse>()
-    legacy.getAllRoutes.mockReturnValueOnce(slowResponse.promise)
-    legacy.getAllRoutes.mockResolvedValueOnce(
+    httpClient.getAllRoutes.mockReturnValueOnce(slowResponse.promise)
+    httpClient.getAllRoutes.mockResolvedValueOnce(
       response({
         routeId: 'route-fast',
         results: [{ ...result, requestId: 'fast' }],
@@ -1371,7 +1322,7 @@ describe('quotes cache', () => {
     const second = new RangoClient({
       apiKey: 'test-key',
     })
-    legacy.getAllRoutes.mockResolvedValue(response())
+    httpClient.getAllRoutes.mockResolvedValue(response())
 
     await first.quotes(ETH, USDC, '1', { req })
 

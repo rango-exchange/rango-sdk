@@ -823,6 +823,14 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.3.6.tgz#3569708bd4be4d8870ba32bf1c456dac81600d97"
   integrity sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA==
 
+"@rango-dev/queue-manager-core@0.0.0-experimental-c7c15d53-20261107":
+  version "0.0.0-experimental-c7c15d53-20261107"
+  resolved "https://registry.yarnpkg.com/@rango-dev/queue-manager-core/-/queue-manager-core-0.0.0-experimental-c7c15d53-20261107.tgz#409c50b2c885f191e9ae8a6031a9731cbc22cc8b"
+  integrity sha512-69zJ8oFzI1t1mkV0pJjSBsNMuCTq3Mv1jezi+Pj5oSrVuaDND/MaDTl7mPpAQnqfkJ0eQ6BQ/n4UrBfe8ODnXQ==
+  dependencies:
+    idb "^7.1.1"
+    uuid "^9.0.0"
+
 "@rango-dev/signer-solana@^0.31.0":
   version "0.31.0"
   resolved "https://registry.yarnpkg.com/@rango-dev/signer-solana/-/signer-solana-0.31.0.tgz#be0734fffb1d53a115d11d1c3741d0cb63c644f3"
@@ -2721,6 +2729,11 @@ eyes@^0.1.8:
   resolved "https://registry.yarnpkg.com/eyes/-/eyes-0.1.8.tgz#62cf120234c683785d902348a800ef3e0cc20bc0"
   integrity sha512-GipyPsXO1anza0AOZdy69Im7hGFCNB7Y/NGjDlZGJ3GJJLtwNSb2vrzYrTYJRrRloVx7pl+bhUaTB8yiccPvFQ==
 
+fake-indexeddb@^6.2.6:
+  version "6.2.6"
+  resolved "https://registry.yarnpkg.com/fake-indexeddb/-/fake-indexeddb-6.2.6.tgz#eba99fc1dbca1be605dc765a8f67826191cc4b51"
+  integrity sha512-ihhmr0KoET51jT8R4YhbUYuLLvr1qqO6INISygtN16i8loR8kAxtAUr4+EKHTSMjL+lggaAn4OC7DRqzrNgnuQ==
+
 fast-copy@^4.0.0:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/fast-copy/-/fast-copy-4.0.3.tgz#935adef81c26276dcbe8892347af307b5090206a"
@@ -3144,6 +3157,11 @@ husky@^9.1.7:
   version "9.1.7"
   resolved "https://registry.yarnpkg.com/husky/-/husky-9.1.7.tgz#d46a38035d101b46a70456a850ff4201344c0b2d"
   integrity sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==
+
+idb@^7.1.1:
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/idb/-/idb-7.1.1.tgz#d910ded866d32c7ced9befc5bfdf36f572ced72b"
+  integrity sha512-gchesWBzyvGHRO9W8tzUWFDycow5gwjvFKfyV9FF32Y7F50yZMp7mP+T2mJIWFx49zicqyC4uefHM17o6xKIVQ==
 
 ieee754@^1.2.1:
   version "1.2.1"
@@ -5158,6 +5176,11 @@ uuid@^8.3.2:
   version "8.3.2"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
   integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
+
+uuid@^9.0.0:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-9.0.1.tgz#e188d4c8853cc722220392c424cd637f32293f30"
+  integrity sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==
 
 valibot@^0.37.0:
   version "0.37.0"

@@ -1,7 +1,6 @@
-import type { ConfirmOptions, ConfirmResult, SelectedWallets } from './types.js'
-import type { Cache } from '../../cache/mod.js'
-import type { CacheSchema } from '../../types.js'
-import type { RangoClient as LegacyRangoClient } from 'rango-sdk'
+import type { ConfirmOptions, ConfirmResult } from './types.js'
+import type { ClientState } from '../../types.js'
+import type { SelectedWallets } from '../quote/mod.js'
 
 import { throwRequestError } from '../../errors/mod.js'
 import { getBlockchainsAndValidateDestination } from '../quote/mod.js'
@@ -12,15 +11,16 @@ import {
   checkWarnings,
   generateResult,
   getCachedQuote,
+  keepAndReturnResult,
 } from './helpers.js'
 
 export async function confirmQuote(
-  httpClient: LegacyRangoClient,
-  cache: Cache<CacheSchema>,
+  state: ClientState,
   requestId: string,
   selectedWallets: SelectedWallets,
   options: ConfirmOptions = {},
 ): Promise<ConfirmResult> {
+  const { httpClient, cache } = state
   const quote = getCachedQuote(cache, requestId)
   const destination = options.req?.destination
   await getBlockchainsAndValidateDestination(
@@ -39,5 +39,6 @@ export async function confirmQuote(
     .then(checkErrors)
     .then(checkWarnings(quote))
     .then(generateResult(selectedWallets, quote.slippage))
+    .then(keepAndReturnResult(cache))
     .catch((cause: unknown) => throwRequestError(cause, options.signal))
 }

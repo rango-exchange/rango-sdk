@@ -14,6 +14,8 @@ export function describeInvalidInput({
       return reason === 'NOT_POSITIVE'
         ? 'Enter an amount greater than 0.'
         : 'Enter a valid amount.'
+    case 'options':
+      return 'Pass `options` to start a new execution.'
     case 'destination':
       switch (reason) {
         case 'NO_ADDRESS_PATTERNS':
