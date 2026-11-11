@@ -209,6 +209,53 @@ No request carries the address: sign with the wallet's active account. A method 
 - `buildTransaction`: on `evm` and `tron`, build the approve; on `xrpl` and `stellar`, build the trustline with the `limit` given. Build it as plain data, without prompting.
 - `getTransactionInfo`: on `evm`, answer `'pending'`, `'success'` or `'failed'` from the receipt; on `tron` and `xrpl`, answer what the chain says, as it is.
 
+### Hub3 adapters
+
+If your wallets run on hub3 (`@hub3js/*`), build each [Wallet port](#wallet-port) entry from a hub3 provider with its adapter instead of writing it. Each adapter takes the provider `hub.get(providerId)` answers, which is `undefined` for an unknown ID. `bip122` also takes the UTXO blockchain it serves, so build one per blockchain inside a `bip122` map:
+
+```ts
+import type { WalletPort } from '@rango-dev/sdk'
+import type { Hub } from '@hub3js/core'
+
+import { hub3Bip122Adapter } from '@rango-dev/sdk/adapters/hub3/bip122'
+import { hub3EvmAdapter } from '@rango-dev/sdk/adapters/hub3/evm'
+import { hub3SolanaAdapter } from '@rango-dev/sdk/adapters/hub3/solana'
+
+function walletOf(hub: Hub, providerId: string): WalletPort {
+  const provider = hub.get(providerId)
+  if (provider === undefined) throw new Error(`No hub3 provider ${providerId}`)
+  return {
+    // One EVM wallet for every EVM blockchain, Hyperliquid included.
+    evm: hub3EvmAdapter(provider),
+    solana: hub3SolanaAdapter(provider),
+    bip122: { BTC: hub3Bip122Adapter(provider, 'BTC') },
+  }
+}
+```
+
+Each entry may come from a different provider. Supported namespaces:
+
+| Namespace  | Import from                             | Adapter               | Reads the hub3 namespace | Install                                   |
+| ---------- | --------------------------------------- | --------------------- | ------------------------ | ----------------------------------------- |
+| `evm`      | `@rango-dev/sdk/adapters/hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`                             |
+| `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`                          |
+| `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet`                        |
+| `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`                             |
+| `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`                             |
+| `bip122`   | `@rango-dev/sdk/adapters/hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`                          |
+| `tron`     | `@rango-dev/sdk/adapters/hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`                            |
+| `xrpl`     | `@rango-dev/sdk/adapters/hub3/xrpl`     | `hub3XrplAdapter`     | `xrpl`                   | `@hub3js/xrpl`, `xrpl`                    |
+| `stellar`  | `@rango-dev/sdk/adapters/hub3/stellar`  | `hub3StellarAdapter`  | `stellar`                | `@hub3js/stellar`, `@stellar/stellar-sdk` |
+
+The `@hub3js/*` packages, `caip`, `xrpl` and `@stellar/stellar-sdk` are optional peer dependencies: install `@hub3js/core` and `caip`, plus the Install column of each adapter you import. The main `@rango-dev/sdk` entry never loads them.
+
+- An adapter never connects: connect the wallet through hub3, or the **Execution** is `BLOCKED` `NOT_CONNECTED`.
+- An adapter stays bound to its provider. To change wallets, give new adapters in [`beforeResume`](#beforeresume).
+- A user rejection in the wallet fails with `REJECTED_BY_USER`.
+- `bip122` answers the provider's account on the blockchain it was built for, which is `BTC`, `LTC`, `DOGE`, `BCH` or `ZCASH`. Put each adapter under its own blockchain: under another, its address doesn't match the **Route**'s, so the **Execution** is `BLOCKED` `ACCOUNT_MISMATCH` and nothing is signed.
+- `evm` adds a chain the wallet doesn't know, so the user may be asked to add the network.
+- Hyperliquid has no adapter of its own: give `hub3EvmAdapter` under `evm`'s `HYPERLIQUID` key, or as the one or `default` `evm` wallet. It signs Hyperliquid actions with the provider's EVM signer, which needs `signTypedData`, or the action fails with `UNEXPECTED_BEHAVIOUR`.
+
 ### `execute()`
 
 Runs a confirmed **Route** to its end, or unblocks its stored **Execution**.
