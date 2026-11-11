@@ -218,6 +218,7 @@ import type { WalletPort } from '@rango-dev/sdk'
 import type { Hub } from '@hub3js/core'
 
 import { hub3EvmAdapter } from '@rango-dev/sdk/adapters/hub3/evm'
+import { hub3SolanaAdapter } from '@rango-dev/sdk/adapters/hub3/solana'
 
 function walletOf(hub: Hub, providerId: string): WalletPort {
   const provider = hub.get(providerId)
@@ -225,15 +226,20 @@ function walletOf(hub: Hub, providerId: string): WalletPort {
   return {
     // One EVM wallet for every EVM blockchain, Hyperliquid included.
     evm: hub3EvmAdapter(provider),
+    solana: hub3SolanaAdapter(provider),
   }
 }
 ```
 
 Each entry may come from a different provider. Supported namespaces:
 
-| Namespace | Import from                        | Adapter          | Reads the hub3 namespace | Install       |
-| --------- | ---------------------------------- | ---------------- | ------------------------ | ------------- |
-| `evm`     | `@rango-dev/sdk/adapters/hub3/evm` | `hub3EvmAdapter` | `evm`                    | `@hub3js/evm` |
+| Namespace  | Import from                             | Adapter               | Reads the hub3 namespace | Install            |
+| ---------- | --------------------------------------- | --------------------- | ------------------------ | ------------------ |
+| `evm`      | `@rango-dev/sdk/adapters/hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`      |
+| `solana`   | `@rango-dev/sdk/adapters/hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`   |
+| `starknet` | `@rango-dev/sdk/adapters/hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
+| `ton`      | `@rango-dev/sdk/adapters/hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
+| `sui`      | `@rango-dev/sdk/adapters/hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
 
 The `@hub3js/*` packages and `caip` are optional peer dependencies: install `@hub3js/core` and `caip`, plus the Install column of each adapter you import. The main `@rango-dev/sdk` entry never loads them.
 
