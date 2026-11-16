@@ -1,5 +1,5 @@
-import type { SignAndSendResult } from '../../mod.js'
 import type { FindProxiedNamespace, Namespace, Provider } from '@hub3js/core'
+import type { SignAndSendResult } from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, TransactionType } from 'rango-types'
 
 import { AccountId } from 'caip'

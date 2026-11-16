@@ -2,8 +2,8 @@
 import 'fake-indexeddb/auto'
 
 import type { Bip122Provider } from './bip122.js'
-import type * as Sdk from '../../mod.js'
 import type { Bip122NetworkName, UtxoActions } from '@hub3js/bip122'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 
 import {
@@ -35,7 +35,7 @@ import {
   SELECTED_WALLETS,
   settle,
   succeeded,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
 import { hub3Bip122Adapter } from './bip122.js'
 

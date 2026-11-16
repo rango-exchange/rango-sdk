@@ -1,6 +1,6 @@
-import type { StarknetWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { StarknetActions } from '@hub3js/starknet'
+import type { StarknetWallet } from '@rango-dev/sdk'
 
 import { TransactionType } from 'rango-types'
 

@@ -1,6 +1,6 @@
-import type { TronWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { TronActions } from '@hub3js/tron'
+import type { TronWallet } from '@rango-dev/sdk'
 import type { mainAPI } from 'rango-types'
 
 import { TransactionType } from 'rango-types'

@@ -1,6 +1,6 @@
-import type { TonWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { TonActions } from '@hub3js/tvm'
+import type { TonWallet } from '@rango-dev/sdk'
 
 import { TransactionType } from 'rango-types'
 

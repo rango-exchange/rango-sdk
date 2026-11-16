@@ -1,18 +1,19 @@
 /*
- * The built package: each hub3 subpath resolves and loads only its own hub3 packages and chain library, plus the shared
- * peers, and the main entry loads none of them.
+ * The built package: each subpath resolves and loads only its own hub3 packages and chain library, plus the shared
+ * peers, and none of them bundles `@rango-dev/sdk`.
  * It reads `dist`, so it needs a build first: run it with `yarn test:build`, which builds and then runs it.
  */
 import type { Metafile } from 'esbuild'
 
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { build } from 'esbuild'
 import { describe, expect, test } from 'vitest'
 
-const PACKAGE_NAME = '@rango-dev/sdk'
+const PACKAGE_NAME = '@rango-dev/sdk-adapter-hub3'
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HUB3_SCOPE = '@hub3js/'
 // The peers every hub3 subpath may load, whatever its namespace.
@@ -65,10 +66,10 @@ const resolveFromPackage = createRequire(
 ).resolve
 
 /*
- * Static and dynamic imports, from the entry and every chunk of the package it reaches. Packages stay external, so
- * this counts the SDK's output, not hub3's own imports.
+ * The entry and every chunk of the package it reaches, through static and dynamic imports. Packages stay external, so
+ * this is the package's own output, not hub3's.
  */
-async function hub3ImportsOf(entry: string): Promise<string[]> {
+async function metafileOf(entry: string): Promise<Metafile> {
   const { metafile } = await build({
     entryPoints: [entry],
     bundle: true,
@@ -78,9 +79,15 @@ async function hub3ImportsOf(entry: string): Promise<string[]> {
     format: 'esm',
     platform: 'browser',
     logLevel: 'silent',
+    absWorkingDir: PACKAGE_ROOT,
   })
 
-  return externalImportsOf(metafile)
+  return metafile
+}
+
+// Static and dynamic imports of the hub3 packages, shared peers and chain libraries, from the entry and its chunks.
+async function hub3ImportsOf(entry: string): Promise<string[]> {
+  return externalImportsOf(await metafileOf(entry))
     .filter(
       (path) =>
         path.startsWith(HUB3_SCOPE) ||
@@ -106,17 +113,40 @@ function externalImportsOf(metafile: Metafile): string[] {
   return [...new Set(imports)]
 }
 
+/*
+ * The sources the entry and every chunk it reaches were built from, read from their source maps, relative to the
+ * package root. A bundled `@rango-dev/sdk` would show up here as a source outside the package's own `src`.
+ */
+async function bundledSourcesOf(entry: string): Promise<string[]> {
+  const files = Object.keys((await metafileOf(entry)).inputs).map((input) =>
+    resolve(PACKAGE_ROOT, input),
+  )
+  const sources = files.flatMap((file) => {
+    const map: { sources: string[] } = JSON.parse(
+      readFileSync(`${file}.map`, 'utf8'),
+    )
+
+    return map.sources.map((source) =>
+      relative(PACKAGE_ROOT, resolve(dirname(file), source))
+        .split('\\')
+        .join('/'),
+    )
+  })
+
+  return [...new Set(sources)].sort()
+}
+
 describe('the built package', () => {
   describe.each(NAMESPACES)(
     'the $namespace subpath',
     ({ namespace, adapter, hub3Package, chainLibrary }) => {
-      const subpath = `${PACKAGE_NAME}/adapters/hub3/${namespace}`
+      const subpath = `${PACKAGE_NAME}/${namespace}`
 
       test('resolves through the exports map to its own built entry', () => {
         const resolved = resolveFromPackage(subpath)
 
         expect(relative(PACKAGE_ROOT, resolved).split('\\').join('/')).toBe(
-          `dist/adapters/hub3/${namespace}.js`,
+          `dist/${namespace}.js`,
         )
       })
 
@@ -141,12 +171,15 @@ describe('the built package', () => {
           ),
         ).toEqual([])
       })
+
+      test("bundles no `@rango-dev/sdk`, through its chunks either: everything it reaches is built from the package's own source", async () => {
+        const sources = await bundledSourcesOf(resolveFromPackage(subpath))
+
+        expect(sources).toContain(`src/${namespace}.ts`)
+        expect(sources.filter((source) => !source.startsWith('src/'))).toEqual(
+          [],
+        )
+      })
     },
   )
-
-  test('the main entry imports no hub3 package, shared peer or chain library, through its chunks either', async () => {
-    const hub3Imports = await hub3ImportsOf(resolveFromPackage(PACKAGE_NAME))
-
-    expect(hub3Imports).toEqual([])
-  })
 })

@@ -1,9 +1,9 @@
-// The hub3 TON adapter, driven through the public client over real hub3 providers with stubbed actions.
+// The hub3 Solana adapter, driven through the public client over real hub3 providers with stubbed actions.
 import 'fake-indexeddb/auto'
 
 import type { StatefulNamespace } from './utils.js'
-import type * as Sdk from '../../mod.js'
-import type { TonActions } from '@hub3js/tvm'
+import type { SolanaActions } from '@hub3js/solana'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 
 import {
@@ -35,9 +35,9 @@ import {
   SELECTED_WALLETS,
   settle,
   succeeded,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
-import { hub3TonAdapter } from './ton.js'
+import { hub3SolanaAdapter } from './solana.js'
 
 type Transaction = mainAPI.Transaction
 type SingleChainType =
@@ -110,46 +110,49 @@ function recordConnect(wallet: Wallet) {
   }
 }
 
-const TON_TX: Extract<Transaction, { type: TransactionType.TON }> = {
-  type: LegacySdk.TransactionType.TON,
-  blockChain: 'TON',
+const SOLANA_TX: Extract<Transaction, { type: TransactionType.SOLANA }> = {
+  type: LegacySdk.TransactionType.SOLANA,
+  blockChain: 'SOLANA',
   prerequisites: [],
-  validUntil: 1_700_000_000,
-  messages: [],
+  txType: 'LEGACY',
+  from: 'SoLfrom',
+  identifier: 'solana-tx',
+  recentBlockhash: null,
+  signatures: [],
+  serializedMessage: null,
+  instructions: [],
 }
 
 // The namespace's state is set once the provider is built, as that is what gives the namespace its store.
-function tonAdapter(wallet: Wallet): Sdk.TonWallet {
-  const namespace = new NamespaceBuilder<TonActions>('tvm', PROVIDER_ID)
+function solanaAdapter(wallet: Wallet): Sdk.SolanaWallet {
+  const namespace = new NamespaceBuilder<SolanaActions>('solana', PROVIDER_ID)
     .action('connect', recordConnect(wallet))
     .build()
-  const provider = providerBuilder(wallet).add('ton', namespace).build()
+  const provider = providerBuilder(wallet).add('solana', namespace).build()
   connect(namespace, wallet)
-  return hub3TonAdapter(provider)
+  return hub3SolanaAdapter(provider)
 }
 
 const CASE: Case = {
-  type: TransactionType.TON,
-  tx: TON_TX,
-  blockchain: 'TON',
-  address: 'UQton',
-  accountIds: ['tvm:-239:UQton', 'tvm:-239:UQother'],
-  buildPort: (wallet) => ({ ton: tonAdapter(wallet) }),
-  signAlone: async (wallet) => tonAdapter(wallet).signAndSend({ tx: TON_TX }),
+  type: TransactionType.SOLANA,
+  tx: SOLANA_TX,
+  blockchain: 'SOLANA',
+  address: 'SoLfrom',
+  accountIds: [
+    'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SoLfrom',
+    'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SoLother',
+  ],
+  buildPort: (wallet) => ({ solana: solanaAdapter(wallet) }),
+  signAlone: async (wallet) =>
+    solanaAdapter(wallet).signAndSend({ tx: SOLANA_TX }),
 }
 
 const WALLETS = {
   ...SELECTED_WALLETS,
-  [CASE.blockchain]: CASE.address,
-}
-const OPTIONS: Sdk.ExecutionOptions = {
-  ...EXECUTION_OPTIONS,
-  walletTypes: Object.fromEntries(
-    Object.keys(WALLETS).map((blockchain) => [
-      blockchain,
-      { walletType: `${blockchain.toLowerCase()}-wallet` },
-    ]),
-  ),
+  [CASE.blockchain]: {
+    address: CASE.address,
+    walletId: `${CASE.blockchain.toLowerCase()}-wallet`,
+  },
 }
 const CHAINS = [chain(CASE.blockchain, [])]
 
@@ -195,14 +198,14 @@ async function start(
   await cacheQuote(client)
   httpClient.confirmRoute.mockResolvedValueOnce(confirmResponse('request-1'))
   await client.confirm('request-1', WALLETS)
-  await client.execute('request-1', OPTIONS)
+  await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
   return client
 }
 
 let factory = new IDBFactory()
 
-describe('hub3TonAdapter', () => {
+describe('hub3SolanaAdapter', () => {
   const { type, tx, blockchain, address, accountIds, buildPort, signAlone } =
     CASE
 
@@ -372,7 +375,7 @@ describe('hub3TonAdapter', () => {
   )
 })
 
-describe('hub3TonAdapter’s parameter', () => {
+describe('hub3SolanaAdapter’s parameter', () => {
   test('a provider without the hub3 namespace an adapter reads does not compile', () => {
     const provider = new ProviderBuilder('evm-only', { store: createStore() })
       .config('metadata', { name: 'EVM only', icon: '', extensions: {} })
@@ -387,22 +390,7 @@ describe('hub3TonAdapter’s parameter', () => {
       )
       .build()
 
-    // @ts-expect-error The adapter needs a `ton` hub3 namespace.
-    expect(() => hub3TonAdapter(provider)).not.toThrow()
-  })
-
-  test('a TON provider whose namespace is registered as `tvm`, not hub3’s `ton`, does not compile', () => {
-    const provider = new ProviderBuilder('tvm-key', { store: createStore() })
-      .config('metadata', { name: 'TVM key', icon: '', extensions: {} })
-      .add(
-        'tvm',
-        new NamespaceBuilder<TonActions>('tvm', 'tvm-key')
-          .action('connect', async () => [])
-          .build(),
-      )
-      .build()
-
-    // @ts-expect-error The adapter reads hub3's `ton` namespace.
-    expect(() => hub3TonAdapter(provider)).not.toThrow()
+    // @ts-expect-error The adapter needs a `solana` hub3 namespace.
+    expect(() => hub3SolanaAdapter(provider)).not.toThrow()
   })
 })

@@ -1,9 +1,9 @@
 // The hub3 Tron adapter, driven through the public client over real hub3 providers with stubbed actions.
 import 'fake-indexeddb/auto'
 
-import type { TronApprove, TronInfo } from '../../../tests/support.js'
-import type * as Sdk from '../../mod.js'
+import type { TronApprove, TronInfo } from '../tests/support.js'
 import type { TronActions } from '@hub3js/tron'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 
 import {
@@ -39,7 +39,7 @@ import {
   tronChain,
   tronTx,
   UNLIMITED,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
 import { hub3TronAdapter } from './tron.js'
 

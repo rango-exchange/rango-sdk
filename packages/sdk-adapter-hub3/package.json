@@ -1,0 +1,158 @@
+{
+  "name": "@rango-dev/sdk-adapter-hub3",
+  "version": "0.0.1",
+  "description": "Hub3 wallet adapters for the Rango Exchange SDK",
+  "license": "GPL-3.0",
+  "author": "rango.exchange",
+  "type": "module",
+  "exports": {
+    "./evm": {
+      "types": "./dist/evm.d.ts",
+      "default": "./dist/evm.js"
+    },
+    "./solana": {
+      "types": "./dist/solana.d.ts",
+      "default": "./dist/solana.js"
+    },
+    "./starknet": {
+      "types": "./dist/starknet.d.ts",
+      "default": "./dist/starknet.js"
+    },
+    "./ton": {
+      "types": "./dist/ton.d.ts",
+      "default": "./dist/ton.js"
+    },
+    "./sui": {
+      "types": "./dist/sui.d.ts",
+      "default": "./dist/sui.js"
+    },
+    "./bip122": {
+      "types": "./dist/bip122.d.ts",
+      "default": "./dist/bip122.js"
+    },
+    "./tron": {
+      "types": "./dist/tron.d.ts",
+      "default": "./dist/tron.js"
+    },
+    "./xrpl": {
+      "types": "./dist/xrpl.d.ts",
+      "default": "./dist/xrpl.js"
+    },
+    "./stellar": {
+      "types": "./dist/stellar.d.ts",
+      "default": "./dist/stellar.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rango-exchange/rango-sdk.git",
+    "directory": "packages/sdk-adapter-hub3"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "bugs": {
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
+  },
+  "scripts": {
+    "build": "yarn run rangutopia library build --inputs src/evm.ts,src/solana.ts,src/starknet.ts,src/ton.ts,src/sui.ts,src/bip122.ts,src/tron.ts,src/xrpl.ts,src/stellar.ts --splitting",
+    "clean": "rm -rf ./dist",
+    "test": "vitest run",
+    "test:build": "yarn build && vitest run --config vitest.build.config.ts",
+    "lint": "eslint src --fix",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
+  },
+  "dependencies": {
+    "rango-types": "^0.6.0"
+  },
+  "peerDependencies": {
+    "@hub3js/bip122": "^0.4",
+    "@hub3js/core": "^0.64.0",
+    "@hub3js/evm": "^0.8.1 || 0.8.1-next.2",
+    "@hub3js/solana": "^0.7",
+    "@hub3js/starknet": "^0.6",
+    "@hub3js/stellar": "^0.6",
+    "@hub3js/sui": "^0.6",
+    "@hub3js/tron": "^0.3.1 || 0.3.1-next.0",
+    "@hub3js/tvm": "^0.6",
+    "@hub3js/xrpl": "^0.6",
+    "@rango-dev/sdk": "^0.0.1-next.1",
+    "@stellar/stellar-sdk": "^15.0.1",
+    "caip": "^1.1.1",
+    "xrpl": "^4.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@hub3js/bip122": {
+      "optional": true
+    },
+    "@hub3js/core": {
+      "optional": true
+    },
+    "@hub3js/evm": {
+      "optional": true
+    },
+    "@hub3js/solana": {
+      "optional": true
+    },
+    "@hub3js/starknet": {
+      "optional": true
+    },
+    "@hub3js/stellar": {
+      "optional": true
+    },
+    "@hub3js/sui": {
+      "optional": true
+    },
+    "@hub3js/tron": {
+      "optional": true
+    },
+    "@hub3js/tvm": {
+      "optional": true
+    },
+    "@hub3js/xrpl": {
+      "optional": true
+    },
+    "@stellar/stellar-sdk": {
+      "optional": true
+    },
+    "caip": {
+      "optional": true
+    },
+    "xrpl": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@hub3js/bip122": "^0.4",
+    "@hub3js/core": "^0.64.0",
+    "@hub3js/evm": "0.8.1-next.2",
+    "@hub3js/solana": "0.7.1-next.1",
+    "@hub3js/starknet": "^0.6",
+    "@hub3js/stellar": "^0.6",
+    "@hub3js/sui": "^0.6",
+    "@hub3js/tron": "0.3.1-next.0",
+    "@hub3js/tvm": "^0.6",
+    "@hub3js/xrpl": "^0.6",
+    "@rango-dev/sdk": "0.0.1-next.1",
+    "@stellar/stellar-sdk": "^15.0.1",
+    "@total-typescript/shoehorn": "^0.1.2",
+    "caip": "^1.1.1",
+    "fake-indexeddb": "^6.2.6",
+    "rango-sdk": "^0.6.0",
+    "viem": "^2.56.8",
+    "vitest": "^4.1.5",
+    "xrpl": "^4.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

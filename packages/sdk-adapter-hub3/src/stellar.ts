@@ -1,6 +1,6 @@
-import type { StellarWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { StellarActions } from '@hub3js/stellar'
+import type { StellarWallet } from '@rango-dev/sdk'
 
 import { Asset, Operation } from '@stellar/stellar-sdk'
 import { TransactionType } from 'rango-types'

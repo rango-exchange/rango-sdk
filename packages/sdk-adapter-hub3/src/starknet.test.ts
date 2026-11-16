@@ -2,8 +2,8 @@
 import 'fake-indexeddb/auto'
 
 import type { StatefulNamespace } from './utils.js'
-import type * as Sdk from '../../mod.js'
 import type { StarknetActions } from '@hub3js/starknet'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 
 import {
@@ -35,7 +35,7 @@ import {
   SELECTED_WALLETS,
   settle,
   succeeded,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
 import { hub3StarknetAdapter } from './starknet.js'
 
@@ -144,16 +144,10 @@ const CASE: Case = {
 
 const WALLETS = {
   ...SELECTED_WALLETS,
-  [CASE.blockchain]: CASE.address,
-}
-const OPTIONS: Sdk.ExecutionOptions = {
-  ...EXECUTION_OPTIONS,
-  walletTypes: Object.fromEntries(
-    Object.keys(WALLETS).map((blockchain) => [
-      blockchain,
-      { walletType: `${blockchain.toLowerCase()}-wallet` },
-    ]),
-  ),
+  [CASE.blockchain]: {
+    address: CASE.address,
+    walletId: `${CASE.blockchain.toLowerCase()}-wallet`,
+  },
 }
 const CHAINS = [chain(CASE.blockchain, [])]
 
@@ -199,7 +193,7 @@ async function start(
   await cacheQuote(client)
   httpClient.confirmRoute.mockResolvedValueOnce(confirmResponse('request-1'))
   await client.confirm('request-1', WALLETS)
-  await client.execute('request-1', OPTIONS)
+  await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
   return client
 }

@@ -1,9 +1,9 @@
-// The hub3 Solana adapter, driven through the public client over real hub3 providers with stubbed actions.
+// The hub3 Sui adapter, driven through the public client over real hub3 providers with stubbed actions.
 import 'fake-indexeddb/auto'
 
 import type { StatefulNamespace } from './utils.js'
-import type * as Sdk from '../../mod.js'
-import type { SolanaActions } from '@hub3js/solana'
+import type { SuiActions } from '@hub3js/sui'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 
 import {
@@ -35,9 +35,9 @@ import {
   SELECTED_WALLETS,
   settle,
   succeeded,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
-import { hub3SolanaAdapter } from './solana.js'
+import { hub3SuiAdapter } from './sui.js'
 
 type Transaction = mainAPI.Transaction
 type SingleChainType =
@@ -110,55 +110,39 @@ function recordConnect(wallet: Wallet) {
   }
 }
 
-const SOLANA_TX: Extract<Transaction, { type: TransactionType.SOLANA }> = {
-  type: LegacySdk.TransactionType.SOLANA,
-  blockChain: 'SOLANA',
+const SUI_TX: Extract<Transaction, { type: TransactionType.SUI }> = {
+  type: LegacySdk.TransactionType.SUI,
+  blockChain: 'SUI',
   prerequisites: [],
-  txType: 'LEGACY',
-  from: 'SoLfrom',
-  identifier: 'solana-tx',
-  recentBlockhash: null,
-  signatures: [],
-  serializedMessage: null,
-  instructions: [],
+  unsignedPtbBase64: 'AAAA',
 }
 
 // The namespace's state is set once the provider is built, as that is what gives the namespace its store.
-function solanaAdapter(wallet: Wallet): Sdk.SolanaWallet {
-  const namespace = new NamespaceBuilder<SolanaActions>('solana', PROVIDER_ID)
+function suiAdapter(wallet: Wallet): Sdk.SuiWallet {
+  const namespace = new NamespaceBuilder<SuiActions>('sui', PROVIDER_ID)
     .action('connect', recordConnect(wallet))
     .build()
-  const provider = providerBuilder(wallet).add('solana', namespace).build()
+  const provider = providerBuilder(wallet).add('sui', namespace).build()
   connect(namespace, wallet)
-  return hub3SolanaAdapter(provider)
+  return hub3SuiAdapter(provider)
 }
 
 const CASE: Case = {
-  type: TransactionType.SOLANA,
-  tx: SOLANA_TX,
-  blockchain: 'SOLANA',
-  address: 'SoLfrom',
-  accountIds: [
-    'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SoLfrom',
-    'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SoLother',
-  ],
-  buildPort: (wallet) => ({ solana: solanaAdapter(wallet) }),
-  signAlone: async (wallet) =>
-    solanaAdapter(wallet).signAndSend({ tx: SOLANA_TX }),
+  type: TransactionType.SUI,
+  tx: SUI_TX,
+  blockchain: 'SUI',
+  address: '0xsui',
+  accountIds: ['sui:mainnet:0xsui', 'sui:mainnet:0xother'],
+  buildPort: (wallet) => ({ sui: suiAdapter(wallet) }),
+  signAlone: async (wallet) => suiAdapter(wallet).signAndSend({ tx: SUI_TX }),
 }
 
 const WALLETS = {
   ...SELECTED_WALLETS,
-  [CASE.blockchain]: CASE.address,
-}
-const OPTIONS: Sdk.ExecutionOptions = {
-  ...EXECUTION_OPTIONS,
-  walletTypes: Object.fromEntries(
-    Object.keys(WALLETS).map((blockchain) => [
-      blockchain,
-      { walletType: `${blockchain.toLowerCase()}-wallet` },
-    ]),
-  ),
+  [CASE.blockchain]: {
+    address: CASE.address,
+    walletId: `${CASE.blockchain.toLowerCase()}-wallet`,
+  },
 }
 const CHAINS = [chain(CASE.blockchain, [])]
 
@@ -204,14 +188,14 @@ async function start(
   await cacheQuote(client)
   httpClient.confirmRoute.mockResolvedValueOnce(confirmResponse('request-1'))
   await client.confirm('request-1', WALLETS)
-  await client.execute('request-1', OPTIONS)
+  await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
   return client
 }
 
 let factory = new IDBFactory()
 
-describe('hub3SolanaAdapter', () => {
+describe('hub3SuiAdapter', () => {
   const { type, tx, blockchain, address, accountIds, buildPort, signAlone } =
     CASE
 
@@ -381,7 +365,7 @@ describe('hub3SolanaAdapter', () => {
   )
 })
 
-describe('hub3SolanaAdapter’s parameter', () => {
+describe('hub3SuiAdapter’s parameter', () => {
   test('a provider without the hub3 namespace an adapter reads does not compile', () => {
     const provider = new ProviderBuilder('evm-only', { store: createStore() })
       .config('metadata', { name: 'EVM only', icon: '', extensions: {} })
@@ -396,7 +380,7 @@ describe('hub3SolanaAdapter’s parameter', () => {
       )
       .build()
 
-    // @ts-expect-error The adapter needs a `solana` hub3 namespace.
-    expect(() => hub3SolanaAdapter(provider)).not.toThrow()
+    // @ts-expect-error The adapter needs a `sui` hub3 namespace.
+    expect(() => hub3SuiAdapter(provider)).not.toThrow()
   })
 })

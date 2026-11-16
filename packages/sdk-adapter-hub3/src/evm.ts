@@ -1,6 +1,6 @@
-import type { EvmWallet, SignAndSendResult } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { EvmActions } from '@hub3js/evm'
+import type { EvmWallet, SignAndSendResult } from '@rango-dev/sdk'
 import type { mainAPI } from 'rango-types'
 
 import { utils } from '@hub3js/evm'

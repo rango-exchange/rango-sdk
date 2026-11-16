@@ -1,8 +1,8 @@
 // The hub3 EVM adapter, driven through the public client over real hub3 providers with stubbed actions.
 import 'fake-indexeddb/auto'
 
-import type * as Sdk from '../../mod.js'
 import type { AllowanceParams, EvmActions } from '@hub3js/evm'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 import type { TransactionReceipt } from 'viem'
 
@@ -55,7 +55,7 @@ import {
   succeeded,
   swap,
   UNLIMITED,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
 import { hub3EvmAdapter } from './evm.js'
 

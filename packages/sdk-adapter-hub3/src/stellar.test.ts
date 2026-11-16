@@ -1,9 +1,9 @@
 // The hub3 Stellar adapter, driven through the public client over real hub3 providers with stubbed actions.
 import 'fake-indexeddb/auto'
 
-import type { StellarTrustline, StellarTx } from '../../../tests/support.js'
-import type * as Sdk from '../../mod.js'
+import type { StellarTrustline, StellarTx } from '../tests/support.js'
 import type { StellarActions } from '@hub3js/stellar'
+import type * as Sdk from '@rango-dev/sdk'
 import type { Horizon } from '@stellar/stellar-sdk'
 import type { GenericSigner, SignerFactory } from 'rango-types'
 
@@ -37,7 +37,7 @@ import {
   stellarTrustline,
   stellarTx,
   succeeded,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
 import { hub3StellarAdapter } from './stellar.js'
 

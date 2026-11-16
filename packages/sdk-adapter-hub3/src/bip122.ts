@@ -1,6 +1,6 @@
-import type { Bip122Wallet } from '../../mod.js'
 import type { Bip122NetworkName, UtxoActions } from '@hub3js/bip122'
 import type { Provider } from '@hub3js/core'
+import type { Bip122Wallet } from '@rango-dev/sdk'
 import type { AccountId } from 'caip'
 
 import { NETWORKS } from '@hub3js/bip122'

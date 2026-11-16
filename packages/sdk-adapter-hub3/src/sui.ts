@@ -1,6 +1,6 @@
-import type { SuiWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { SuiActions } from '@hub3js/sui'
+import type { SuiWallet } from '@rango-dev/sdk'
 
 import { TransactionType } from 'rango-types'
 

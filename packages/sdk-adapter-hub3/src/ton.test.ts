@@ -1,9 +1,9 @@
-// The hub3 Sui adapter, driven through the public client over real hub3 providers with stubbed actions.
+// The hub3 TON adapter, driven through the public client over real hub3 providers with stubbed actions.
 import 'fake-indexeddb/auto'
 
 import type { StatefulNamespace } from './utils.js'
-import type * as Sdk from '../../mod.js'
-import type { SuiActions } from '@hub3js/sui'
+import type { TonActions } from '@hub3js/tvm'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
 
 import {
@@ -35,9 +35,9 @@ import {
   SELECTED_WALLETS,
   settle,
   succeeded,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
-import { hub3SuiAdapter } from './sui.js'
+import { hub3TonAdapter } from './ton.js'
 
 type Transaction = mainAPI.Transaction
 type SingleChainType =
@@ -110,45 +110,40 @@ function recordConnect(wallet: Wallet) {
   }
 }
 
-const SUI_TX: Extract<Transaction, { type: TransactionType.SUI }> = {
-  type: LegacySdk.TransactionType.SUI,
-  blockChain: 'SUI',
+const TON_TX: Extract<Transaction, { type: TransactionType.TON }> = {
+  type: LegacySdk.TransactionType.TON,
+  blockChain: 'TON',
   prerequisites: [],
-  unsignedPtbBase64: 'AAAA',
+  validUntil: 1_700_000_000,
+  messages: [],
 }
 
 // The namespace's state is set once the provider is built, as that is what gives the namespace its store.
-function suiAdapter(wallet: Wallet): Sdk.SuiWallet {
-  const namespace = new NamespaceBuilder<SuiActions>('sui', PROVIDER_ID)
+function tonAdapter(wallet: Wallet): Sdk.TonWallet {
+  const namespace = new NamespaceBuilder<TonActions>('tvm', PROVIDER_ID)
     .action('connect', recordConnect(wallet))
     .build()
-  const provider = providerBuilder(wallet).add('sui', namespace).build()
+  const provider = providerBuilder(wallet).add('ton', namespace).build()
   connect(namespace, wallet)
-  return hub3SuiAdapter(provider)
+  return hub3TonAdapter(provider)
 }
 
 const CASE: Case = {
-  type: TransactionType.SUI,
-  tx: SUI_TX,
-  blockchain: 'SUI',
-  address: '0xsui',
-  accountIds: ['sui:mainnet:0xsui', 'sui:mainnet:0xother'],
-  buildPort: (wallet) => ({ sui: suiAdapter(wallet) }),
-  signAlone: async (wallet) => suiAdapter(wallet).signAndSend({ tx: SUI_TX }),
+  type: TransactionType.TON,
+  tx: TON_TX,
+  blockchain: 'TON',
+  address: 'UQton',
+  accountIds: ['tvm:-239:UQton', 'tvm:-239:UQother'],
+  buildPort: (wallet) => ({ ton: tonAdapter(wallet) }),
+  signAlone: async (wallet) => tonAdapter(wallet).signAndSend({ tx: TON_TX }),
 }
 
 const WALLETS = {
   ...SELECTED_WALLETS,
-  [CASE.blockchain]: CASE.address,
-}
-const OPTIONS: Sdk.ExecutionOptions = {
-  ...EXECUTION_OPTIONS,
-  walletTypes: Object.fromEntries(
-    Object.keys(WALLETS).map((blockchain) => [
-      blockchain,
-      { walletType: `${blockchain.toLowerCase()}-wallet` },
-    ]),
-  ),
+  [CASE.blockchain]: {
+    address: CASE.address,
+    walletId: `${CASE.blockchain.toLowerCase()}-wallet`,
+  },
 }
 const CHAINS = [chain(CASE.blockchain, [])]
 
@@ -194,14 +189,14 @@ async function start(
   await cacheQuote(client)
   httpClient.confirmRoute.mockResolvedValueOnce(confirmResponse('request-1'))
   await client.confirm('request-1', WALLETS)
-  await client.execute('request-1', OPTIONS)
+  await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
   return client
 }
 
 let factory = new IDBFactory()
 
-describe('hub3SuiAdapter', () => {
+describe('hub3TonAdapter', () => {
   const { type, tx, blockchain, address, accountIds, buildPort, signAlone } =
     CASE
 
@@ -371,7 +366,7 @@ describe('hub3SuiAdapter', () => {
   )
 })
 
-describe('hub3SuiAdapter’s parameter', () => {
+describe('hub3TonAdapter’s parameter', () => {
   test('a provider without the hub3 namespace an adapter reads does not compile', () => {
     const provider = new ProviderBuilder('evm-only', { store: createStore() })
       .config('metadata', { name: 'EVM only', icon: '', extensions: {} })
@@ -386,7 +381,22 @@ describe('hub3SuiAdapter’s parameter', () => {
       )
       .build()
 
-    // @ts-expect-error The adapter needs a `sui` hub3 namespace.
-    expect(() => hub3SuiAdapter(provider)).not.toThrow()
+    // @ts-expect-error The adapter needs a `ton` hub3 namespace.
+    expect(() => hub3TonAdapter(provider)).not.toThrow()
+  })
+
+  test('a TON provider whose namespace is registered as `tvm`, not hub3’s `ton`, does not compile', () => {
+    const provider = new ProviderBuilder('tvm-key', { store: createStore() })
+      .config('metadata', { name: 'TVM key', icon: '', extensions: {} })
+      .add(
+        'tvm',
+        new NamespaceBuilder<TonActions>('tvm', 'tvm-key')
+          .action('connect', async () => [])
+          .build(),
+      )
+      .build()
+
+    // @ts-expect-error The adapter reads hub3's `ton` namespace.
+    expect(() => hub3TonAdapter(provider)).not.toThrow()
   })
 })

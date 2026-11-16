@@ -770,7 +770,7 @@ export function xrplTrustline(
   }
 }
 
-export type StellarTx = Extract<
+type StellarTx = Extract<
   LegacySdk.Transaction,
   { type: LegacySdk.TransactionType.STELLAR }
 >
@@ -1176,7 +1176,7 @@ type TronTx = TxOf<LegacySdk.TransactionType.TRON>
 
 // What `getTransactionInfo` answers on each namespace: the Host's judgement on `evm`, else the chain's raw answer.
 export type EvmInfo = 'pending' | 'success' | 'failed'
-export type TronInfo = { blockNumber?: number; receipt?: { result?: string } }
+type TronInfo = { blockNumber?: number; receipt?: { result?: string } }
 export type XrplInfo = {
   validated: boolean
   meta?: { TransactionResult: string }

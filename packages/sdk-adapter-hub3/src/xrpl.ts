@@ -1,6 +1,6 @@
-import type { XrplWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { XRPLActions } from '@hub3js/xrpl'
+import type { XrplWallet } from '@rango-dev/sdk'
 
 import { TransactionType } from 'rango-types'
 import { Client } from 'xrpl'

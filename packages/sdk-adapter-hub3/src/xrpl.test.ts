@@ -1,9 +1,9 @@
 // The hub3 XRPL adapter, driven through the public client over real hub3 providers with stubbed actions and node.
 import 'fake-indexeddb/auto'
 
-import type { XrplTrustline, XrplTx } from '../../../tests/support.js'
-import type * as Sdk from '../../mod.js'
+import type { XrplTrustline, XrplTx } from '../tests/support.js'
 import type { XRPLActions } from '@hub3js/xrpl'
+import type * as Sdk from '@rango-dev/sdk'
 import type { GenericSigner, SignerFactory } from 'rango-types'
 import type * as Xrpl from 'xrpl'
 
@@ -38,7 +38,7 @@ import {
   xrplChain,
   xrplTrustline,
   xrplTx,
-} from '../../../tests/support.js'
+} from '../tests/support.js'
 
 import { hub3XrplAdapter } from './xrpl.js'
 

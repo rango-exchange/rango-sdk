@@ -1,6 +1,6 @@
-import type { SolanaWallet } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { SolanaActions } from '@hub3js/solana'
+import type { SolanaWallet } from '@rango-dev/sdk'
 
 import { TransactionType } from 'rango-types'
 
