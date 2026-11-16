@@ -732,14 +732,6 @@ describe('hub3EvmAdapter', () => {
       test.each<[string, Error, string]>([
         ['a plain Error', new Error('RPC down'), 'RPC down'],
         [
-          'hub3’s user-rejected error',
-          new Hub3Error(
-            'PROVIDER_USER_REJECTED_REQUEST',
-            'The wallet said no.',
-          ),
-          'The wallet said no.',
-        ],
-        [
           'another hub3 error',
           new Hub3Error('PROVIDER_LOCKED', 'The wallet is locked.'),
           'The wallet is locked.',
@@ -767,6 +759,27 @@ describe('hub3EvmAdapter', () => {
           )
         },
       )
+
+      test('that is hub3’s user-rejected error fails the Execution USER_REJECT and reports it', async () => {
+        const view = await runThrowing(
+          new Hub3Error(
+            'PROVIDER_USER_REJECTED_REQUEST',
+            'The wallet said no.',
+          ),
+        )
+
+        expect(view?._storage.failure).toEqual({
+          reasonCode: 'USER_REJECT',
+          message: 'User rejected the transaction',
+          detail: 'User rejected the transaction',
+        })
+        expect(httpClient.reportFailure).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventType: 'USER_REJECT',
+            reason: 'User rejected the transaction',
+          }),
+        )
+      })
     },
   )
 
@@ -1371,36 +1384,38 @@ describe('hub3EvmAdapter', () => {
         })
       })
 
-      test.each<[string, Error]>([
-        [
-          'hub3’s user-rejected error',
+      test('hub3’s user-rejected error fails the Execution USER_REJECT and reports it', async () => {
+        const view = await runThrowing(
           new Hub3Error(
             'PROVIDER_USER_REJECTED_REQUEST',
             'The wallet said no.',
           ),
-        ],
-        ['anything else', new Error('RPC down')],
-      ])(
-        '%s fails the Execution CLIENT_UNEXPECTED_BEHAVIOUR',
-        async (_, error) => {
-          const view = await runThrowing(error)
+        )
 
-          expect(view?._storage.failure).toMatchObject({
-            reasonCode: 'CLIENT_UNEXPECTED_BEHAVIOUR',
-          })
-        },
-      )
+        expect(view?._storage.failure).toEqual({
+          reasonCode: 'USER_REJECT',
+          message: 'User rejected the transaction',
+          detail: 'User rejected the transaction',
+        })
+        expect(httpClient.reportFailure).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventType: 'USER_REJECT',
+            reason: 'User rejected the transaction',
+          }),
+        )
+      })
+
+      test('anything else fails the Execution CLIENT_UNEXPECTED_BEHAVIOUR', async () => {
+        const view = await runThrowing(new Error('RPC down'))
+
+        expect(view?._storage.failure).toMatchObject({
+          reasonCode: 'CLIENT_UNEXPECTED_BEHAVIOUR',
+        })
+      })
 
       test.each<[string, unknown]>([
         ['an Error', new Error('RPC down')],
         ['a string', 'RPC down'],
-        [
-          'hub3’s user-rejected error',
-          new Hub3Error(
-            'PROVIDER_USER_REJECTED_REQUEST',
-            'The wallet said no.',
-          ),
-        ],
       ])(
         '%s rejects as a SignerError UNEXPECTED_BEHAVIOUR whose root and cause are the original',
         async (_, error) => {
@@ -1426,6 +1441,31 @@ describe('hub3EvmAdapter', () => {
           })
         },
       )
+
+      test('hub3’s user-rejected error rejects as a SignerError REJECTED_BY_USER whose cause is the original', async () => {
+        const error = new Hub3Error(
+          'PROVIDER_USER_REJECTED_REQUEST',
+          'The wallet said no.',
+        )
+        const { signer, signTypedData } = buildTypedDataSigner()
+        signTypedData.mockRejectedValue(error)
+        const adapter = hub3EvmAdapter(
+          buildProvider(
+            buildHyperliquidWallet({ signers: buildSigners(signer) }),
+          ),
+        )
+
+        const rejection: unknown = await adapter
+          .signTypedData?.(request())
+          .catch((error: unknown) => error)
+
+        expect(rejection).toBeInstanceOf(SignerError)
+        expect(rejection).toMatchObject({
+          code: SignerErrorCode.REJECTED_BY_USER,
+          root: undefined,
+          cause: error,
+        })
+      })
     })
   })
 })

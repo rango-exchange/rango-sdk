@@ -315,7 +315,7 @@ describe('hub3TronAdapter', () => {
     ])
   })
 
-  test('hub3’s user-rejected error, thrown by the signer, fails the Execution CLIENT_UNEXPECTED_BEHAVIOUR', async () => {
+  test('hub3’s user-rejected error, thrown by the signer, fails the Execution USER_REJECT and reports it', async () => {
     const error = new Hub3Error(
       'PROVIDER_USER_REJECTED_REQUEST',
       'The wallet said no.',
@@ -328,10 +328,16 @@ describe('hub3TronAdapter', () => {
     const view = await historyOf(client)
     expect(view?._queue.status).toBe('FAILED')
     expect(view?._storage.failure).toEqual({
-      reasonCode: 'CLIENT_UNEXPECTED_BEHAVIOUR',
-      message: 'Unexpected error',
-      detail: 'The wallet said no.',
+      reasonCode: 'USER_REJECT',
+      message: 'User rejected the transaction',
+      detail: 'User rejected the transaction',
     })
+    expect(httpClient.reportFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'USER_REJECT',
+        reason: 'User rejected the transaction',
+      }),
+    )
   })
 
   describe('a TRC-20 swap', () => {

@@ -357,7 +357,7 @@ describe('hub3XrplAdapter', () => {
     ])
   })
 
-  test('hub3’s user-rejected error, thrown by the signer, fails the Execution CLIENT_UNEXPECTED_BEHAVIOUR', async () => {
+  test('hub3’s user-rejected error, thrown by the signer, fails the Execution USER_REJECT and reports it', async () => {
     const error = new Hub3Error(
       'PROVIDER_USER_REJECTED_REQUEST',
       'The wallet said no.',
@@ -370,10 +370,16 @@ describe('hub3XrplAdapter', () => {
     const view = await historyOf(client)
     expect(view?._queue.status).toBe('FAILED')
     expect(view?._storage.failure).toEqual({
-      reasonCode: 'CLIENT_UNEXPECTED_BEHAVIOUR',
-      message: 'Unexpected error',
-      detail: 'The wallet said no.',
+      reasonCode: 'USER_REJECT',
+      message: 'User rejected the transaction',
+      detail: 'User rejected the transaction',
     })
+    expect(httpClient.reportFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'USER_REJECT',
+        reason: 'User rejected the transaction',
+      }),
+    )
   })
 
   test('a sign while the provider has no connected account rejects as a SignerError UNEXPECTED_BEHAVIOUR, without asking the signer', async () => {
