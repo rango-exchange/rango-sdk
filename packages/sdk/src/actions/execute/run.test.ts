@@ -157,8 +157,8 @@ describe('execute() runs an EVM Route', () => {
       { requestId: 'request-1', step: 1, txId: '0xhash1' },
       { requestId: 'request-1', step: 2, txId: '0xhash2' },
     ])
-    expect(eth.sign).toHaveBeenCalledTimes(1)
-    expect(bsc.sign).toHaveBeenCalledTimes(1)
+    expect(eth.signAndSend).toHaveBeenCalledTimes(1)
+    expect(bsc.signAndSend).toHaveBeenCalledTimes(1)
     expect(signsOf(requests).map((req) => 'chainId' in req)).toEqual([
       false,
       false,
@@ -388,8 +388,8 @@ describe('execute() runs an EVM Route', () => {
       SELECTED_WALLETS.ETH,
     )
     expect(view?._storage.data.requestAmount).toBe('1')
-    // v14's sign takes no address: the stored one passed the Wallet gate, as `0xchanged` would not have.
-    expect(wallet.evm.sign).toHaveBeenCalledTimes(1)
+    // v14's `signAndSend` takes no address: the stored one passed the Wallet gate, as `0xchanged` would not have.
+    expect(wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
   })
 
   test('re-confirming the Quote before execute() runs the newest Route', async () => {
@@ -433,7 +433,7 @@ describe('execute() runs an EVM Route', () => {
 
     expect(requests).toEqual([
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
   })
 
@@ -451,7 +451,7 @@ describe('execute() runs an EVM Route', () => {
       await client.execute('request-1', EXECUTION_OPTIONS)
       await settle()
 
-      expect(wallet.evm.sign).toHaveBeenCalledTimes(1)
+      expect(wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
       expect((await client.history.get('request-1'))?._queue.status).toBe(
         'SUCCESS',
       )
@@ -462,7 +462,7 @@ describe('execute() runs an EVM Route', () => {
     const { client, wallet } = await createExecutionClient()
     await confirmQuote(client)
     const seen: unknown[] = []
-    wallet.evm.sign.mockImplementationOnce(async () => {
+    wallet.evm.signAndSend.mockImplementationOnce(async () => {
       const view = await client.history.get('request-1')
       seen.push(structuredClone(view?._storage.transactions.s1?.execution))
       return { hash: '0xsigned' }

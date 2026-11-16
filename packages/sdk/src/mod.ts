@@ -30,7 +30,7 @@ export type {
   RouteResponse,
   SelectedWallet,
   SelectedWallets,
-  SignResult,
+  SignAndSendResult,
   SolanaWallet,
   StarknetWallet,
   StellarWallet,

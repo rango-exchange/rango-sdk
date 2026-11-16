@@ -32,7 +32,7 @@ export function hub3Bip122Adapter(
         )?.address ?? null
       )
     },
-    async sign({ tx }) {
+    async signAndSend({ tx }) {
       return tryRunAndRejectWithSignerError(async () => {
         const address =
           getParsedAccounts(getNamespace(provider, NAMESPACE_KEY)).find(

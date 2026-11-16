@@ -102,7 +102,10 @@ function freshStart(on: IDBFactory): void {
   httpClient.reportFailure.mockResolvedValue(undefined)
 }
 
-// A port on `signatureChainId` with `signTypedData` on its HYPERLIQUID wallet and `wait` on its default one, whose `sign` and `wait` must stay unused; `withHyperliquid` wires it.
+/*
+ * A port on `signatureChainId` with `signTypedData` on its HYPERLIQUID wallet and `wait` on its default one, whose
+ * `signAndSend` and `wait` must stay unused; `withHyperliquid` wires it.
+ */
 function hyperliquidWallet(
   signatures?: Parameters<typeof typedSigningNamespaces>[1],
 ) {
@@ -196,7 +199,7 @@ describe('Hyperliquid', () => {
         step: 1,
         txId: HASH,
       })
-      expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+      expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
       expect(port.wallet.evm.wait).not.toHaveBeenCalled()
       const view = await historyOf(client)
       expect(view?._queue.status).toBe('SUCCESS')

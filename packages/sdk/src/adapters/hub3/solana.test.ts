@@ -78,7 +78,7 @@ type Case = {
   address: string
   accountIds: [string, string]
   buildPort: (wallet: Wallet) => Sdk.WalletPort
-  signAlone: (wallet: Wallet) => Promise<Sdk.SignResult>
+  signAlone: (wallet: Wallet) => Promise<Sdk.SignAndSendResult>
 }
 
 // A provider builder whose `signers` metadata property answers `wallet.signers`, read on each call.
@@ -143,7 +143,8 @@ const CASE: Case = {
     'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SoLother',
   ],
   buildPort: (wallet) => ({ solana: solanaAdapter(wallet) }),
-  signAlone: async (wallet) => solanaAdapter(wallet).sign({ tx: SOLANA_TX }),
+  signAlone: async (wallet) =>
+    solanaAdapter(wallet).signAndSend({ tx: SOLANA_TX }),
 }
 
 const WALLETS = {
@@ -340,7 +341,7 @@ describe('hub3SolanaAdapter', () => {
     })
   })
 
-  test('a sign answers the signer’s hash and response as the SignResult', async () => {
+  test('a sign answers the signer’s hash and response as the SignAndSendResult', async () => {
     const { signer, signAndSendTx } = buildSigner('0xhash1')
     signAndSendTx.mockResolvedValue({
       hash: '0xhash1',

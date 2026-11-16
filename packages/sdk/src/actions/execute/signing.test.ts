@@ -46,13 +46,16 @@ async function confirmAndExecute(client: Sdk.RangoClient): Promise<void> {
   await settle()
 }
 
-// Runs a one-Step Route whose `sign` rejects with this error, and returns what is stored after and the events emitted.
-async function runRejectedSign(
+/*
+ * Runs a one-Step Route whose `signAndSend` rejects with this error, and returns what is stored after and the events
+ * emitted.
+ */
+async function runRejectedSignAndSend(
   error: unknown,
 ): Promise<{ view: Sdk.HistoryItem; events: RecordedEvent[] }> {
   const port = recordingNamespaces()
   const { client, events } = await createExecutionClient(port)
-  port.wallet.evm.sign.mockRejectedValueOnce(error)
+  port.wallet.evm.signAndSend.mockRejectedValueOnce(error)
   await confirmAndExecute(client)
   const view = await client.history.get('request-1')
   if (view === undefined) {
@@ -119,7 +122,7 @@ describe('a sign rejection', () => {
   ])(
     'a SignerError coded %s is stored and reported as %s with its getErrorDetail message and detail, and the entry stays sign_requested',
     async (code, reasonCode, message, detail) => {
-      const { view } = await runRejectedSign(signerError(code))
+      const { view } = await runRejectedSignAndSend(signerError(code))
 
       expect(view._queue.status).toBe('FAILED')
       expect(view._storage.failure).toEqual({ reasonCode, message, detail })
@@ -150,7 +153,7 @@ describe('a sign rejection', () => {
     root.self = root
     expect(() => error.getErrorDetail()).toThrow()
 
-    const { view } = await runRejectedSign(error)
+    const { view } = await runRejectedSignAndSend(error)
 
     expect(view._queue.status).toBe('FAILED')
     expect(view._storage.failure).toEqual({
@@ -194,7 +197,7 @@ describe('a sign rejection', () => {
   ])(
     '%s rejection is stored as CLIENT_UNEXPECTED_BEHAVIOUR with its message and a null detail, and is not reported',
     async (_, error, message) => {
-      const { view, events } = await runRejectedSign(error)
+      const { view, events } = await runRejectedSignAndSend(error)
 
       expect(view._queue.status).toBe('FAILED')
       expect(view._storage.failure).toEqual({
@@ -213,7 +216,7 @@ describe('a sign rejection', () => {
     const error = signerError(SignerErrorCode.SEND_TX_ERROR, 'Wallet said no', {
       message: 'nonce too low',
     })
-    const { view } = await runRejectedSign(error)
+    const { view } = await runRejectedSignAndSend(error)
 
     expect(view._storage.failure).toEqual({
       reasonCode: 'SEND_TX_FAILED',
@@ -231,7 +234,7 @@ describe('a sign rejection', () => {
   })
 
   test("a user rejection with a cause reports the detail, not the cause's message", async () => {
-    const { view } = await runRejectedSign(
+    const { view } = await runRejectedSignAndSend(
       signerError(SignerErrorCode.REJECTED_BY_USER, 'unused', {
         message: 'User denied transaction signature',
       }),
@@ -259,7 +262,7 @@ describe('a sign rejection', () => {
   ])('%s reports the detail, or an empty reason', async (_, cause, reason) => {
     // No root, no detail: `getErrorDetail()` answers none.
     const root = reason === '' ? undefined : reason
-    await runRejectedSign(
+    await runRejectedSignAndSend(
       new SignerError(
         SignerErrorCode.SIGN_TX_ERROR,
         undefined,
@@ -294,11 +297,14 @@ describe("the port's wait", () => {
     const port = waitingNamespaces()
     const { client } = await createExecutionClient(port)
     const response = { nonce: 7 }
-    port.wallet.evm.sign.mockResolvedValueOnce({ hash: '0xsigned', response })
+    port.wallet.evm.signAndSend.mockResolvedValueOnce({
+      hash: '0xsigned',
+      response,
+    })
     let polled = false
     port.wallet.evm.wait.mockImplementationOnce(async (req) => {
       polled = httpClient.checkStatus.mock.calls.length > 0
-      // The same object `sign` resolved with, not a copy.
+      // The same object `signAndSend` resolved with, not a copy.
       expect(req.response).toBe(response)
       return { hash: req.hash }
     })
@@ -360,7 +366,7 @@ describe("the port's wait", () => {
 
     expect(port.requests.map(([, method]) => method)).toEqual([
       'getChainId',
-      'sign',
+      'signAndSend',
       'wait',
     ])
     expect(httpClient.checkStatus).toHaveBeenCalledTimes(1)
@@ -455,7 +461,7 @@ describe("the port's wait", () => {
     const { client } = await createExecutionClient(port)
     let polledAtSign = -1
     httpClient.checkStatus.mockImplementationOnce(async () => {
-      polledAtSign = port.wallet.evm.sign.mock.calls.length
+      polledAtSign = port.wallet.evm.signAndSend.mock.calls.length
       return succeeded
     })
 
@@ -500,7 +506,7 @@ describe("the port's wait", () => {
     httpClient.checkStatus.mockReturnValue(new Promise(() => undefined))
     const first = waitingNamespaces()
     const { client } = await createExecutionClient(first)
-    first.wallet.evm.sign.mockResolvedValueOnce({
+    first.wallet.evm.signAndSend.mockResolvedValueOnce({
       hash: '0xsigned',
       response: { live: true },
     })
@@ -516,7 +522,7 @@ describe("the port's wait", () => {
     await loaded.history.getAll()
     await settle()
 
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(port.requests).toEqual([
       [
         'evm',

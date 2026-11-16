@@ -1,5 +1,5 @@
 import type { CheckResult, SdkActions, SignedEntryResult } from './types.js'
-import type { SignResult } from '../mod.js'
+import type { SignAndSendResult } from '../mod.js'
 import type { BlockchainMeta } from 'rango-sdk'
 
 import { loadBlockchainMetaOf } from './blockchainMeta.js'
@@ -53,12 +53,12 @@ export async function signEntryAndStoreSignedHash<
 }
 
 // A provisional hash (`hashRequiringUpdate`) gets no link, and the flag goes no further.
-export async function awaitSignResultAndBuildExplorerLink(
-  pendingSignResult: Promise<SignResult>,
+export async function awaitSignAndSendResultAndBuildExplorerLink(
+  pendingSignAndSendResult: Promise<SignAndSendResult>,
   blockchainMeta: BlockchainMeta,
   explorerLinkDescription: 'Approve' | 'Swap',
 ): Promise<SignedEntryResult & { checkResult: CheckResult | null }> {
-  const { hash, response, hashRequiringUpdate } = await pendingSignResult
+  const { hash, response, hashRequiringUpdate } = await pendingSignAndSendResult
   const checkResult =
     hashRequiringUpdate === true
       ? null
@@ -76,7 +76,7 @@ export async function awaitSignResultAndBuildExplorerLink(
  */
 export function buildMainTransactionSigner(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
-  signWithNamespaceWallet: () => Promise<SignResult>,
+  signWithNamespaceWallet: () => Promise<SignAndSendResult>,
 ): () => Promise<
   (SignedEntryResult & { checkResult: CheckResult | null }) | null
 > {
@@ -102,7 +102,7 @@ export function buildMainTransactionSigner(
       return null
     }
     return signEntryAndStoreSignedHash(actions, transactionId, async () =>
-      awaitSignResultAndBuildExplorerLink(
+      awaitSignAndSendResultAndBuildExplorerLink(
         signWithNamespaceWallet(),
         blockchainMeta,
         'Swap',

@@ -126,7 +126,7 @@ describe('the network gate', () => {
     expect(port.wallet.evm.switchChain).not.toHaveBeenCalled()
     expect(port.requests.map(([, method]) => method)).toEqual([
       'getChainId',
-      'sign',
+      'signAndSend',
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
@@ -151,7 +151,7 @@ describe('the network gate', () => {
       await start(client)
 
       expect(port.wallet.evm.switchChain).not.toHaveBeenCalled()
-      expect(port.wallet.evm.sign).toHaveBeenCalledWith({
+      expect(port.wallet.evm.signAndSend).toHaveBeenCalledWith({
         tx: evmTx(),
       })
       expect((await client.history.get('request-1'))?._queue.status).toBe(
@@ -195,7 +195,7 @@ describe('the network gate', () => {
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'RUNNING',
     )
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
 
     chainIds.ETH = '0x1'
     pending.resolve()
@@ -204,7 +204,7 @@ describe('the network gate', () => {
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'SUCCESS',
     )
-    expect(port.wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     expect(
       events.filter((event) => nameOf(event) === SWITCH_EVENT),
     ).toHaveLength(1)
@@ -224,7 +224,7 @@ describe('the network gate', () => {
         { chainId: '0x1', chain: DEFAULT_ETH_CHAIN_DESCRIPTION },
       ],
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
@@ -264,7 +264,7 @@ describe('the network gate', () => {
 
     await start(client)
 
-    expect(port.wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
     expect(view?._storage.failure).toBeNull()
@@ -281,7 +281,7 @@ describe('the network gate', () => {
     expect(view?._queue.blocked).toEqual(MISMATCH)
     expect(view?._storage.failure).toBeNull()
     expect(view?._storage.transactions.s1?.execution.status).toBe('not_started')
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(httpClient.reportFailure).not.toHaveBeenCalled()
 
     const blocked = events.find((event) => nameOf(event) === BLOCKED_EVENT)
@@ -342,7 +342,7 @@ describe('the network gate', () => {
       expect(view?._queue.status).toBe('BLOCKED')
       expect(view?._queue.blocked).toEqual(MISMATCH)
       expect(view?._storage.failure).toBeNull()
-      expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+      expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
       expect(httpClient.reportFailure).not.toHaveBeenCalled()
     },
   )
@@ -409,7 +409,7 @@ describe('the network gate', () => {
       expect(view?._queue.status).toBe('BLOCKED')
       expect(view?._queue.blocked).toEqual(MISMATCH)
       expect(view?._storage.failure).toBeNull()
-      expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+      expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
       expect(httpClient.reportFailure).not.toHaveBeenCalled()
     },
   )
@@ -429,7 +429,7 @@ describe('the network gate', () => {
         { chainId: '0x1', chain: DEFAULT_ETH_CHAIN_DESCRIPTION },
       ],
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
     expect(
       events.filter((event) => nameOf(event) === SWITCH_EVENT),
@@ -461,7 +461,7 @@ describe('the network gate', () => {
         { chainId: '0x1', chain: DEFAULT_ETH_CHAIN_DESCRIPTION },
       ],
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
@@ -494,7 +494,7 @@ describe('the network gate', () => {
 
     await start(client)
 
-    expect(port.requests).toEqual([['bip122', 'sign', { tx: transfer }]])
+    expect(port.requests).toEqual([['bip122', 'signAndSend', { tx: transfer }]])
     expect(port.wallet.bip122.getAccount.mock.calls).toEqual([[]])
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'SUCCESS',
@@ -539,7 +539,7 @@ describe('the network gate', () => {
     await start(client)
 
     expect(doge.getAccount.mock.calls).toEqual([[]])
-    expect(port.requests).toEqual([['bip122', 'sign', { tx: transfer }]])
+    expect(port.requests).toEqual([['bip122', 'signAndSend', { tx: transfer }]])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
     expect(view?._storage.data.selectedWallets).not.toHaveProperty('DOGE')
@@ -653,7 +653,7 @@ describe('execute() on a stored Execution', () => {
 
     expect(port.requests).toEqual([
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
@@ -677,7 +677,7 @@ describe('execute() on a stored Execution', () => {
     expect(view?._storage.options).toEqual(EXECUTION_OPTIONS)
     expect(port.requests).toEqual([
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
   })
 
@@ -693,7 +693,7 @@ describe('execute() on a stored Execution', () => {
     expect(view?._queue.status).toBe('BLOCKED')
     expect(view?._queue.blocked).toEqual(MISMATCH)
     expect(port.wallet.evm.switchChain).toHaveBeenCalledTimes(2)
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(
       events.map(nameOf).filter((name) => name === BLOCKED_EVENT),
     ).toHaveLength(2)
@@ -713,7 +713,9 @@ describe('execute() on a stored Execution', () => {
     [
       'a FAILED',
       (port) => {
-        port.wallet.evm.sign.mockRejectedValueOnce(new Error('wallet exploded'))
+        port.wallet.evm.signAndSend.mockRejectedValueOnce(
+          new Error('wallet exploded'),
+        )
       },
       'FAILED',
     ],
@@ -840,7 +842,7 @@ describe('execute() on a BLOCKED Execution in a paused tab', () => {
 
     expect(requests).toEqual([
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')
@@ -962,7 +964,7 @@ describe('the connection and account gate', () => {
 
     await start(client)
 
-    expect(port.wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'SUCCESS',
     )
@@ -1001,7 +1003,7 @@ describe('the connection and account gate', () => {
 
       expect(port.requests).toEqual([
         ['evm', 'getChainId', undefined],
-        ['evm', 'sign', { tx: evmTx() }],
+        ['evm', 'signAndSend', { tx: evmTx() }],
       ])
       const view = await client.history.get('request-1')
       expect(view?._queue.status).toBe('SUCCESS')
@@ -1021,7 +1023,7 @@ describe('the connection and account gate', () => {
     expect(view?._queue.status).toBe('BLOCKED')
     expect(view?._queue.blocked).toEqual(NOT_CONNECTED)
     expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(2)
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(
       events.map(nameOf).filter((name) => name === NOT_CONNECTED_EVENT),
     ).toHaveLength(2)
@@ -1050,7 +1052,7 @@ describe('the connection and account gate', () => {
       )
       expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
       expect(port.wallet.evm.getChainId).not.toHaveBeenCalled()
-      expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+      expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
       expect(port.requests).toEqual([])
       expect(httpClient.reportFailure).not.toHaveBeenCalled()
       expect(
@@ -1093,7 +1095,7 @@ describe('the connection and account gate', () => {
     expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(2)
     expect(port.requests).toEqual([
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx: evmTx() }],
+      ['evm', 'signAndSend', { tx: evmTx() }],
     ])
     const view = await client.history.get('request-1')
     expect(view?._queue.status).toBe('SUCCESS')

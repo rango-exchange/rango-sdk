@@ -1,4 +1,4 @@
-import type { SignResult } from '../../mod.js'
+import type { SignAndSendResult } from '../../mod.js'
 import type { FindProxiedNamespace, Namespace, Provider } from '@hub3js/core'
 import type { GenericSigner, mainAPI, TransactionType } from 'rango-types'
 
@@ -74,7 +74,7 @@ export async function findSigner<TNS, Tx extends mainAPI.Transaction>(
 
 type SingleChainWallet<Tx> = {
   getAccount(): Promise<string | null>
-  sign(req: { tx: Tx }): Promise<SignResult>
+  signAndSend(req: { tx: Tx }): Promise<SignAndSendResult>
 }
 
 export function buildSingleChainWallet<
@@ -90,7 +90,7 @@ export function buildSingleChainWallet<
     async getAccount() {
       return getFirstAccount(provider.get(key))
     },
-    async sign({ tx }) {
+    async signAndSend({ tx }) {
       return tryRunAndRejectWithSignerError(async () => {
         const address = getFirstAccount(getNamespace(provider, key))
         if (address === null) {

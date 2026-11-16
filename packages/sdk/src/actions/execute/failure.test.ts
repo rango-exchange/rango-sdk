@@ -80,13 +80,16 @@ function signFailed(): SignerError {
   return signerError(SignerErrorCode.SIGN_TX_ERROR, SIGN_FAILED)
 }
 
-// Runs a one-Step Route whose `sign` rejects with `error`, a plain error by default, and returns what is stored after.
-async function runRejectedSign(
+/*
+ * Runs a one-Step Route whose `signAndSend` rejects with `error`, a plain error by default, and returns what is stored
+ * after.
+ */
+async function runRejectedSignAndSend(
   client: Sdk.RangoClient,
   port: ReturnType<typeof recordingNamespaces>,
   error: unknown = new Error(SIGN_FAILED),
 ): Promise<Sdk.HistoryItem | undefined> {
-  port.wallet.evm.sign.mockRejectedValueOnce(error)
+  port.wallet.evm.signAndSend.mockRejectedValueOnce(error)
   await confirmQuote(client)
   await client.execute('request-1', EXECUTION_OPTIONS)
   await settle()
@@ -116,7 +119,7 @@ describe('an Execution failure', () => {
   test('a sign that rejects with a plain error is stored, not thrown, and ends the Execution FAILED', async () => {
     const port = recordingNamespaces()
     const { client } = await createExecutionClient(port)
-    port.wallet.evm.sign.mockRejectedValueOnce(new Error(SIGN_FAILED))
+    port.wallet.evm.signAndSend.mockRejectedValueOnce(new Error(SIGN_FAILED))
     await confirmQuote(client)
 
     await expect(
@@ -154,7 +157,7 @@ describe('an Execution failure', () => {
   test('reports the failure once, at the step it failed at', async () => {
     const port = recordingNamespaces()
     const { client } = await createExecutionClient(port)
-    await runRejectedSign(client, port, signFailed())
+    await runRejectedSignAndSend(client, port, signFailed())
 
     expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
     expect(httpClient.reportFailure).toHaveBeenCalledWith({
@@ -173,7 +176,7 @@ describe('an Execution failure', () => {
       swap(),
       swap({ from: BSC_ASSET, to: BSC_ASSET }),
     ])
-    port.bsc.sign.mockRejectedValueOnce(signFailed())
+    port.bsc.signAndSend.mockRejectedValueOnce(signFailed())
 
     await client.execute('request-1', EXECUTION_OPTIONS)
     await settle()
@@ -200,7 +203,7 @@ describe('an Execution failure', () => {
   test('a signer error is stored by its code, with its detail reported as the reason', async () => {
     const port = recordingNamespaces()
     const { client } = await createExecutionClient(port)
-    port.wallet.evm.sign.mockRejectedValueOnce(
+    port.wallet.evm.signAndSend.mockRejectedValueOnce(
       signerError(SignerErrorCode.SIGN_TX_ERROR, 'User said no'),
     )
     await confirmQuote(client)
@@ -229,13 +232,17 @@ describe('an Execution failure', () => {
     try {
       const port = recordingNamespaces()
       const { client } = await createExecutionClient(port)
-      const reported = await runRejectedSign(client, port, signFailed())
+      const reported = await runRejectedSignAndSend(client, port, signFailed())
 
       freshStart()
       httpClient.reportFailure.mockRejectedValue(new Error('report failed'))
       const failingPort = recordingNamespaces()
       const { client: failing } = await createExecutionClient(failingPort)
-      const view = await runRejectedSign(failing, failingPort, signFailed())
+      const view = await runRejectedSignAndSend(
+        failing,
+        failingPort,
+        signFailed(),
+      )
       await settle()
 
       expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
@@ -252,7 +259,7 @@ describe('an Execution failure', () => {
   test('emits step failed then route failed, after the change that shows FAILED', async () => {
     const port = recordingNamespaces()
     const { client, events } = await createExecutionClient(port)
-    await runRejectedSign(client, port)
+    await runRejectedSignAndSend(client, port)
 
     const tail = events.slice(-FAILURE_TAIL)
     expect(tail.map(nameOf)).toEqual([
@@ -278,8 +285,8 @@ describe('an Execution failure', () => {
   test('after FAILED, advancing the timers sends no request and calls no port method', async () => {
     const port = recordingNamespaces()
     const { client, events } = await createExecutionClient(port)
-    await runRejectedSign(client, port, signFailed())
-    const signCalls = port.wallet.evm.sign.mock.calls.length
+    await runRejectedSignAndSend(client, port, signFailed())
+    const signCalls = port.wallet.evm.signAndSend.mock.calls.length
     const chainIdCalls = port.wallet.evm.getChainId.mock.calls.length
     const createCalls = httpClient.createTransaction.mock.calls.length
     const eventCount = events.length
@@ -289,7 +296,7 @@ describe('an Execution failure', () => {
 
     expect(httpClient.checkStatus).not.toHaveBeenCalled()
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(createCalls)
-    expect(port.wallet.evm.sign).toHaveBeenCalledTimes(signCalls)
+    expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(signCalls)
     expect(port.wallet.evm.getChainId).toHaveBeenCalledTimes(chainIdCalls)
     expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
     expect(events).toHaveLength(eventCount)
@@ -348,7 +355,7 @@ describe("the failure report's wallet tag", () => {
       swap(),
       swap({ from: BSC_ASSET, to: BSC_ASSET }),
     ])
-    port.bsc.sign.mockRejectedValueOnce(signFailed())
+    port.bsc.signAndSend.mockRejectedValueOnce(signFailed())
 
     await client.execute('request-1', EXECUTION_OPTIONS)
     await settle()
@@ -366,7 +373,7 @@ describe("the failure report's wallet tag", () => {
       ...evmBlockchains,
       chain('BTC', ['^bc1']),
     ])
-    port.wallet.bip122.sign.mockRejectedValueOnce(signFailed())
+    port.wallet.bip122.signAndSend.mockRejectedValueOnce(signFailed())
 
     await startWith(client, BTC_TRANSFER, {
       ...SELECTED_WALLETS,
@@ -416,7 +423,7 @@ describe("the failure report's wallet tag", () => {
       ...evmBlockchains,
       chain('DOGE', ['^D']),
     ])
-    doge.sign.mockRejectedValueOnce(signFailed())
+    doge.signAndSend.mockRejectedValueOnce(signFailed())
 
     await startWith(client, {
       ...BTC_TRANSFER,

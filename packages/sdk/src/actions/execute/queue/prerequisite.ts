@@ -1,5 +1,10 @@
 import type { SdkActions, TaskResult } from './types.js'
-import type { EvmWallet, SignResult, TronWallet, XrplWallet } from '../mod.js'
+import type {
+  EvmWallet,
+  SignAndSendResult,
+  TronWallet,
+  XrplWallet,
+} from '../mod.js'
 import type { BlockchainMeta } from 'rango-sdk'
 import type {
   EvmApprovePrerequisite,
@@ -26,7 +31,7 @@ import {
 import { ErrorToReport, isCanceledOrPaused } from './executionFailure.js'
 import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
 import {
-  awaitSignResultAndBuildExplorerLink,
+  awaitSignAndSendResultAndBuildExplorerLink,
   signEntryAndStoreSignedHash,
 } from './sign.js'
 import { sleep } from './utils.js'
@@ -38,8 +43,8 @@ import {
 type OnChainTxStatus = 'pending' | 'success' | 'failed'
 
 /*
- * A signed one resumes its on-chain proof with no account or chain gate. No `sign` gets a chain ID, as its chain was
- * checked first. It is never handed to `wait`.
+ * A signed one resumes its on-chain proof with no account or chain gate. No `signAndSend` gets a chain ID, as its
+ * chain was checked first. It is never handed to `wait`.
  */
 export async function gateSignAndProvePrerequisite(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
@@ -132,7 +137,7 @@ async function gateSignAndProveEvmApprove(
         async () => evm.buildTransaction({ prerequisite }),
         'Could not build the EVM approve transaction.',
       ),
-    async (prerequisiteTx) => evm.sign({ tx: prerequisiteTx }),
+    async (prerequisiteTx) => evm.signAndSend({ tx: prerequisiteTx }),
   )
   return signedPrerequisiteHash === null
     ? []
@@ -198,7 +203,7 @@ async function gateSignAndProveTronApprove(
         async () => tron.buildTransaction({ prerequisite }),
         'Could not build the Tron approve transaction.',
       ),
-    async (prerequisiteTx) => tron.sign({ tx: prerequisiteTx }),
+    async (prerequisiteTx) => tron.signAndSend({ tx: prerequisiteTx }),
   )
   return signedPrerequisiteHash === null
     ? []
@@ -267,7 +272,7 @@ async function gateSignAndProveXrplTrustline(
           }),
         'Could not build the XRPL trustline transaction.',
       ),
-    async (prerequisiteTx) => xrpl.sign({ tx: prerequisiteTx }),
+    async (prerequisiteTx) => xrpl.signAndSend({ tx: prerequisiteTx }),
   )
   return signedPrerequisiteHash === null
     ? []
@@ -279,7 +284,7 @@ async function gateSignAndProveXrplTrustline(
       )
 }
 
-// Its resolved `sign` proved it, so a signed one is completed with no port call.
+// Its resolved `signAndSend` proved it, so a signed one is completed with no port call.
 async function gateAndSignStellarTrustline(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   transactionId: string,
@@ -335,7 +340,7 @@ async function gateAndSignStellarTrustline(
           }),
         'Could not build the Stellar trustline transaction.',
       ),
-    async (prerequisiteTx) => stellar.sign({ tx: prerequisiteTx }),
+    async (prerequisiteTx) => stellar.signAndSend({ tx: prerequisiteTx }),
   )
   return signedPrerequisiteHash === null
     ? []
@@ -350,7 +355,9 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
   blockchainMeta: BlockchainMeta,
   readGrantedAmount: () => Promise<string | null>,
   buildPrerequisiteTx: () => Promise<PrerequisiteTx>,
-  signPrerequisiteTx: (prerequisiteTx: PrerequisiteTx) => Promise<SignResult>,
+  signPrerequisiteTx: (
+    prerequisiteTx: PrerequisiteTx,
+  ) => Promise<SignAndSendResult>,
 ): Promise<string | null> {
   let grantedAmount: string | null
   try {
@@ -388,7 +395,7 @@ async function signPrerequisiteUnlessAlreadyGranted<PrerequisiteTx>(
     actions,
     transactionId,
     async () =>
-      awaitSignResultAndBuildExplorerLink(
+      awaitSignAndSendResultAndBuildExplorerLink(
         signPrerequisiteTx(prerequisiteTx),
         blockchainMeta,
         'Approve',
@@ -527,7 +534,7 @@ async function tryWaitUntilProvedOnChain(
 }
 
 /*
- * An approve emits `approval_tx_succeeded`. A Stellar trustline needs no proof: its `sign`
+ * An approve emits `approval_tx_succeeded`. A Stellar trustline needs no proof: its `signAndSend`
  * resolves only once the network accepted it.
  */
 function storeEntryCompletedAndEmitApprovalSucceeded(

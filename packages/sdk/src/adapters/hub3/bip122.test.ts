@@ -499,7 +499,7 @@ describe('hub3Bip122Adapter', () => {
 
       await expect(adapter.getAccount()).resolves.toBeNull()
       const rejection: unknown = await adapter
-        .sign({ tx: transfer('LTC', 'ltc1from') })
+        .signAndSend({ tx: transfer('LTC', 'ltc1from') })
         .catch((error: unknown) => error)
 
       expect(rejection).toBeInstanceOf(SignerError)

@@ -78,7 +78,7 @@ type Case = {
   address: string
   accountIds: [string, string]
   buildPort: (wallet: Wallet) => Sdk.WalletPort
-  signAlone: (wallet: Wallet) => Promise<Sdk.SignResult>
+  signAlone: (wallet: Wallet) => Promise<Sdk.SignAndSendResult>
 }
 
 // A provider builder whose `signers` metadata property answers `wallet.signers`, read on each call.
@@ -139,7 +139,7 @@ const CASE: Case = {
   accountIds: ['starknet:SN_MAIN:0xstarknet', 'starknet:SN_MAIN:0xother'],
   buildPort: (wallet) => ({ starknet: starknetAdapter(wallet) }),
   signAlone: async (wallet) =>
-    starknetAdapter(wallet).sign({ tx: STARKNET_TX }),
+    starknetAdapter(wallet).signAndSend({ tx: STARKNET_TX }),
 }
 
 const WALLETS = {
@@ -336,7 +336,7 @@ describe('hub3StarknetAdapter', () => {
     })
   })
 
-  test('a sign answers the signer’s hash and response as the SignResult', async () => {
+  test('a sign answers the signer’s hash and response as the SignAndSendResult', async () => {
     const { signer, signAndSendTx } = buildSigner('0xhash1')
     signAndSendTx.mockResolvedValue({
       hash: '0xhash1',

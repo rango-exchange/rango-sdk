@@ -71,10 +71,10 @@ async function start(
   await settle()
 }
 
-// Holds the port's next `sign` open until the test resolves it.
+// Holds the port's next `signAndSend` open until the test resolves it.
 function holdSign(port: ReturnType<typeof recordingNamespaces>) {
   const held = Promise.withResolvers<{ hash: string }>()
-  port.wallet.evm.sign.mockImplementationOnce(async () => held.promise)
+  port.wallet.evm.signAndSend.mockImplementationOnce(async () => held.promise)
   return held
 }
 
@@ -190,14 +190,14 @@ describe('cancel()', () => {
     expect(view?._storage.failure).toEqual(USER_CANCEL)
     expect(view?._storage.finishedAt).toEqual(expect.any(Number))
     expect(port.wallet.evm.switchChain).toHaveBeenCalledTimes(switches)
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(failedTransactionOf(events)).toBeNull()
   })
 
   test('reports USER_CANCEL with the step the swap was at and the cancel sentence as the reason', async () => {
     const port = recordingNamespaces()
     const { client } = await createExecutionClient(port)
-    port.wallet.evm.sign.mockResolvedValueOnce({ hash: '0xhash1' })
+    port.wallet.evm.signAndSend.mockResolvedValueOnce({ hash: '0xhash1' })
     holdSign(port)
     await start(client, [swap(), swap({ from: BSC_ASSET, to: BSC_ASSET })])
     expect((await historyOf(client))?._storage.finishedSwapSteps).toBe(1)
@@ -314,7 +314,7 @@ describe('cancel()', () => {
     expect(view?._queue.status).toBe('CANCELED')
     expect(switches()).toHaveLength(1)
     expect(port.wallet.evm.switchChain).toHaveBeenCalledTimes(1)
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
   })
 
   test('a Hyperliquid action signed after the cancel is never posted', async () => {
@@ -345,14 +345,16 @@ describe('cancel()', () => {
     expect(httpClient.checkStatus).not.toHaveBeenCalled()
   })
 
-  // Runs `request-1` to the given end, through a `sign` that rejects for FAILED or a first cancel for CANCELED.
+  // Runs `request-1` to the given end, through a `signAndSend` that rejects for FAILED or a first cancel for CANCELED.
   async function endAs(
     client: Sdk.RangoClient,
     port: ReturnType<typeof recordingNamespaces>,
     status: 'SUCCESS' | 'FAILED' | 'CANCELED',
   ): Promise<void> {
     if (status === 'FAILED') {
-      port.wallet.evm.sign.mockRejectedValueOnce(new Error('wallet exploded'))
+      port.wallet.evm.signAndSend.mockRejectedValueOnce(
+        new Error('wallet exploded'),
+      )
     }
     if (status === 'CANCELED') {
       holdSign(port)
@@ -425,7 +427,7 @@ describe('cancel()', () => {
     await cancel(client)
     const before = await historyOf(client)
     const eventCount = events.length
-    const signs = port.wallet.evm.sign.mock.calls.length
+    const signs = port.wallet.evm.signAndSend.mock.calls.length
 
     await client.execute('request-1', EXECUTION_OPTIONS)
     await settle()
@@ -433,7 +435,7 @@ describe('cancel()', () => {
 
     expect(await historyOf(client)).toEqual(before)
     expect(events).toHaveLength(eventCount)
-    expect(port.wallet.evm.sign).toHaveBeenCalledTimes(signs)
+    expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(signs)
     expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
   })
 })

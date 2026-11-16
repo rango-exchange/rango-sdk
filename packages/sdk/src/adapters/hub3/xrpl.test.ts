@@ -349,7 +349,7 @@ describe('hub3XrplAdapter', () => {
     const adapter = hub3XrplAdapter(buildProvider(wallet))
     wallet.signers = buildSigners(second.signer)
 
-    await adapter.sign({ tx: xrplTx() })
+    await adapter.signAndSend({ tx: xrplTx() })
 
     expect(first.signAndSendTx).not.toHaveBeenCalled()
     expect(second.signAndSendTx.mock.calls).toEqual([
@@ -385,7 +385,7 @@ describe('hub3XrplAdapter', () => {
     )
 
     const rejection: unknown = await adapter
-      .sign({ tx: xrplTx() })
+      .signAndSend({ tx: xrplTx() })
       .catch((error: unknown) => error)
 
     expect(rejection).toMatchObject({

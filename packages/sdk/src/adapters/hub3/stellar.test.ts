@@ -330,7 +330,7 @@ describe('hub3StellarAdapter', () => {
     const adapter = hub3StellarAdapter(buildProvider(wallet))
     wallet.signers = buildSigners(second.signer)
 
-    await adapter.sign({ tx: stellarTx() })
+    await adapter.signAndSend({ tx: stellarTx() })
 
     expect(first.signAndSendTx).not.toHaveBeenCalled()
     expect(second.signAndSendTx.mock.calls).toEqual([
@@ -366,7 +366,7 @@ describe('hub3StellarAdapter', () => {
     )
 
     const rejection: unknown = await adapter
-      .sign({ tx: stellarTx() })
+      .signAndSend({ tx: stellarTx() })
       .catch((error: unknown) => error)
 
     expect(rejection).toMatchObject({
@@ -384,7 +384,7 @@ describe('hub3StellarAdapter', () => {
     )
 
     const rejection: unknown = await adapter
-      .sign({ tx: stellarTx() })
+      .signAndSend({ tx: stellarTx() })
       .catch((error: unknown) => error)
 
     expect(rejection).toMatchObject({

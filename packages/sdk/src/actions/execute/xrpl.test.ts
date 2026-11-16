@@ -104,7 +104,7 @@ describe('XRPL', () => {
       const port = switchingNamespaces()
       const { client } = await start(port)
 
-      expect(port.requests).toEqual([['xrpl', 'sign', { tx: xrplTx() }]])
+      expect(port.requests).toEqual([['xrpl', 'signAndSend', { tx: xrplTx() }]])
       expect(port.wallet.evm.getChainId).not.toHaveBeenCalled()
       expect(port.wallet.evm.switchChain).not.toHaveBeenCalled()
       expect(httpClient.checkStatus).toHaveBeenCalledWith({
@@ -160,7 +160,7 @@ describe('XRPL', () => {
       const port = waitingNamespaces()
       const { client } = await start(port)
 
-      expect(port.requests.map(callOf)).toEqual(['sign:Payment'])
+      expect(port.requests.map(callOf)).toEqual(['signAndSend:Payment'])
       expect(port.wallet.evm.wait).not.toHaveBeenCalled()
       expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     })
@@ -192,7 +192,10 @@ describe('XRPL', () => {
         const port = xrplWallet({ granted: [granted] })
         const { client, events } = await start(port, [xrplTrustline()])
 
-        expect(port.requests.map(callOf)).toEqual(['read:USD', 'sign:Payment'])
+        expect(port.requests.map(callOf)).toEqual([
+          'read:USD',
+          'signAndSend:Payment',
+        ])
         expect(port.requests[0]).toEqual([
           'xrpl',
           'getTrustline',
@@ -224,9 +227,9 @@ describe('XRPL', () => {
         expect(port.requests.map(callOf)).toEqual([
           'read:USD',
           'build:USD',
-          'sign:TrustSet',
+          'signAndSend:TrustSet',
           'info:0xhash1',
-          'sign:Payment',
+          'signAndSend:Payment',
         ])
         expect(port.wallet.xrpl.buildTransaction.mock.calls).toEqual([
           [{ prerequisite, limit: TRUSTLINE_LIMIT }],
@@ -307,7 +310,12 @@ describe('XRPL', () => {
       })
       const { client } = await start(port, [xrplTrustline()])
 
-      const proof = ['read:USD', 'build:USD', 'sign:TrustSet', 'info:0xhash1']
+      const proof = [
+        'read:USD',
+        'build:USD',
+        'signAndSend:TrustSet',
+        'info:0xhash1',
+      ]
       expect(port.requests.map(callOf)).toEqual(proof)
 
       await advance(POLL_INTERVAL_MS - 1)
@@ -320,7 +328,7 @@ describe('XRPL', () => {
       expect(port.requests.map(callOf).slice(proof.length)).toEqual([
         'info:0xhash1',
         'info:0xhash1',
-        'sign:Payment',
+        'signAndSend:Payment',
       ])
       expect(port.wallet.xrpl.getTransactionInfo).toHaveBeenCalledWith({
         hash: '0xhash1',
@@ -344,7 +352,7 @@ describe('XRPL', () => {
       expect(port.requests.map(callOf)).toEqual([
         'read:USD',
         'build:USD',
-        'sign:TrustSet',
+        'signAndSend:TrustSet',
         'info:0xhash1',
       ])
       expect(httpClient.reportFailure).toHaveBeenCalledWith(

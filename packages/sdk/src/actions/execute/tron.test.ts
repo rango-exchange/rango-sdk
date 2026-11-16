@@ -92,7 +92,7 @@ async function expectFailed(
   failure: PrerequisiteFailure,
 ): Promise<void> {
   await expectPrerequisiteFailed(client, failure)
-  expect(port.requests.map(callOf)).not.toContain('sign:main-tx')
+  expect(port.requests.map(callOf)).not.toContain('signAndSend:main-tx')
 }
 
 describe('TRON', () => {
@@ -126,7 +126,9 @@ describe('TRON', () => {
         const port = switchingNamespaces()
         const { client } = await start(port, [], blockchains)
 
-        expect(port.requests).toEqual([['tron', 'sign', { tx: tronTx() }]])
+        expect(port.requests).toEqual([
+          ['tron', 'signAndSend', { tx: tronTx() }],
+        ])
         expect(port.wallet.evm.getChainId).not.toHaveBeenCalled()
         expect(port.wallet.evm.switchChain).not.toHaveBeenCalled()
         expect(httpClient.checkStatus).toHaveBeenCalledWith({
@@ -157,7 +159,7 @@ describe('TRON', () => {
       const port = waitingNamespaces()
       const { client } = await start(port)
 
-      expect(port.requests.map(callOf)).toEqual(['sign:main-tx'])
+      expect(port.requests.map(callOf)).toEqual(['signAndSend:main-tx'])
       expect(port.wallet.evm.wait).not.toHaveBeenCalled()
       expect(httpClient.checkStatus).toHaveBeenCalledWith({
         requestId: 'request-1',
@@ -207,7 +209,7 @@ describe('TRON', () => {
 
       expect(port.requests.map(callOf)).toEqual([
         'read:0xtrc20',
-        'sign:main-tx',
+        'signAndSend:main-tx',
       ])
       expect(port.requests[0]).toEqual([
         'tron',
@@ -228,7 +230,7 @@ describe('TRON', () => {
       const port = tronWallet()
       const { client } = await start(port, [tronApprove()])
 
-      const calls = ['read:0xtrc20', 'build:0xtrc20', 'sign:approve-tx']
+      const calls = ['read:0xtrc20', 'build:0xtrc20', 'signAndSend:approve-tx']
       expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
       expect(port.wallet.tron.buildTransaction).toHaveBeenCalledTimes(1)
       expect(port.requests[1]).toEqual([
@@ -255,7 +257,7 @@ describe('TRON', () => {
       const proof = [
         'read:0xtrc20',
         'build:0xtrc20',
-        'sign:approve-tx',
+        'signAndSend:approve-tx',
         'info:0xhash1',
         'read:0xtrc20',
       ]
@@ -272,7 +274,7 @@ describe('TRON', () => {
       await advance(ALLOWANCE_READ_INTERVAL_MS)
       expect(port.requests.map(callOf).slice(proof.length)).toEqual([
         'read:0xtrc20',
-        'sign:main-tx',
+        'signAndSend:main-tx',
       ])
       const names = events.map(nameOf)
       const succeededAt = names.indexOf('step1:approval_tx_succeeded')
@@ -320,7 +322,7 @@ describe('TRON', () => {
 
         await expectFailed(client, port, failure)
         expect(port.wallet.tron.buildTransaction).not.toHaveBeenCalled()
-        expect(port.wallet.tron.sign).not.toHaveBeenCalled()
+        expect(port.wallet.tron.signAndSend).not.toHaveBeenCalled()
       },
     )
 
@@ -331,7 +333,7 @@ describe('TRON', () => {
         const { client } = await start(port, [tronApprove()])
 
         await expectFailed(client, port, failure)
-        expect(port.wallet.tron.sign).not.toHaveBeenCalled()
+        expect(port.wallet.tron.signAndSend).not.toHaveBeenCalled()
         expect(
           (await historyOf(client))?._storage.transactions['s1.p0']?.execution
             .status,

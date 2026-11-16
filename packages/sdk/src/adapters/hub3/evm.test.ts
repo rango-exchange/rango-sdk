@@ -686,7 +686,7 @@ describe('hub3EvmAdapter', () => {
     },
   )
 
-  describe.each<['sign' | 'wait']>([['sign'], ['wait']])(
+  describe.each<['signAndSend' | 'wait']>([['signAndSend'], ['wait']])(
     'an error thrown by the signer’s %s',
     (call) => {
       async function runThrowing(error: unknown) {
@@ -694,7 +694,7 @@ describe('hub3EvmAdapter', () => {
           '0xhash1',
           '0xfinal',
         )
-        const thrower = call === 'sign' ? signAndSendTx : wait
+        const thrower = call === 'signAndSend' ? signAndSendTx : wait
         thrower.mockImplementation(async () => {
           throw error
         })
@@ -790,7 +790,7 @@ describe('hub3EvmAdapter', () => {
       )
 
       const rejections = await Promise.all([
-        adapter.sign({ tx: evmTx() }).catch((error: unknown) => error),
+        adapter.signAndSend({ tx: evmTx() }).catch((error: unknown) => error),
         adapter.wait?.({ hash: '0xhash1' }).catch((error: unknown) => error),
       ])
 
@@ -820,7 +820,7 @@ describe('hub3EvmAdapter', () => {
       )
 
       const rejection: unknown = await adapter
-        .sign({ tx: evmTx() })
+        .signAndSend({ tx: evmTx() })
         .catch((error: unknown) => error)
 
       expect(rejection).toBeInstanceOf(SignerError)
@@ -846,7 +846,7 @@ describe('hub3EvmAdapter', () => {
     )
     const tx = evmTx({ from: null })
 
-    await adapter.sign({ tx })
+    await adapter.signAndSend({ tx })
 
     expect(signAndSendTx.mock.calls).toEqual([[tx, '0xfirst', '0x1']])
   })

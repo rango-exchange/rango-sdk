@@ -1,4 +1,4 @@
-// Stellar: the main transaction signed with no network gate, and the port-built trustline with its met test, proved by its `sign`, driven through the public client over fake-indexeddb, with the timers faked.
+// Stellar: the main transaction signed with no network gate, and the port-built trustline with its met test, proved by its `signAndSend`, driven through the public client over fake-indexeddb, with the timers faked.
 import 'fake-indexeddb/auto'
 
 import type {
@@ -101,7 +101,7 @@ async function expectFailed(
     'not_started',
   )
   expect(
-    port.requests.map(callOf).filter((call) => call.startsWith('sign')),
+    port.requests.map(callOf).filter((call) => call.startsWith('signAndSend')),
   ).toEqual([])
 }
 
@@ -125,7 +125,9 @@ describe('Stellar', () => {
       const port = switchingNamespaces()
       const { client } = await start(port)
 
-      expect(port.requests).toEqual([['stellar', 'sign', { tx: stellarTx() }]])
+      expect(port.requests).toEqual([
+        ['stellar', 'signAndSend', { tx: stellarTx() }],
+      ])
       expect(port.wallet.evm.getChainId).not.toHaveBeenCalled()
       expect(port.wallet.evm.switchChain).not.toHaveBeenCalled()
       expect(httpClient.checkStatus).toHaveBeenCalledWith({
@@ -167,7 +169,7 @@ describe('Stellar', () => {
       const port = waitingNamespaces()
       const { client } = await start(port)
 
-      expect(port.requests.map(callOf)).toEqual(['sign:payment-op'])
+      expect(port.requests.map(callOf)).toEqual(['signAndSend:payment-op'])
       expect(port.wallet.evm.wait).not.toHaveBeenCalled()
       expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     })
@@ -219,7 +221,7 @@ describe('Stellar', () => {
 
         expect(port.requests.map(callOf)).toEqual([
           'read:USDC',
-          'sign:payment-op',
+          'signAndSend:payment-op',
         ])
         expect(port.requests[0]).toEqual([
           'stellar',
@@ -251,8 +253,8 @@ describe('Stellar', () => {
         expect(port.requests.map(callOf)).toEqual([
           'read:USDC',
           'build:USDC',
-          'sign:change-trust-op',
-          'sign:payment-op',
+          'signAndSend:change-trust-op',
+          'signAndSend:payment-op',
         ])
         expect(port.wallet.evm.getChainId).not.toHaveBeenCalled()
         expect(port.wallet.stellar.buildTransaction).toHaveBeenCalledTimes(1)

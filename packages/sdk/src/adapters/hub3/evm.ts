@@ -1,4 +1,4 @@
-import type { EvmWallet, SignResult } from '../../mod.js'
+import type { EvmWallet, SignAndSendResult } from '../../mod.js'
 import type { Provider } from '@hub3js/core'
 import type { EvmActions } from '@hub3js/evm'
 import type { mainAPI } from 'rango-types'
@@ -31,7 +31,7 @@ export function hub3EvmAdapter(provider: EvmProvider): EvmWallet {
         chain === undefined ? chainId : { chainId, ...chain },
       )
     },
-    async sign({ tx }) {
+    async signAndSend({ tx }) {
       return tryRunAndRejectWithSignerError(async () => {
         const namespace = getNamespace(provider, NAMESPACE_KEY)
         const address = getFirstAccount(namespace)
@@ -49,7 +49,7 @@ export function hub3EvmAdapter(provider: EvmProvider): EvmWallet {
           address,
           await namespace.getChainId(),
         )
-        return buildSignResult(hash, response)
+        return buildSignAndSendResult(hash, response)
       })
     },
     async wait({ hash, response }) {
@@ -148,7 +148,10 @@ function isReceiptNotFound(error: unknown): boolean {
 }
 
 // A signer may answer a provisional hash (`hashRequiringUpdate: true` in `response`); `wait` then answers the real one.
-function buildSignResult(hash: string, response: unknown): SignResult {
+function buildSignAndSendResult(
+  hash: string,
+  response: unknown,
+): SignAndSendResult {
   const isHashRequiringUpdate =
     typeof response === 'object' &&
     response !== null &&
