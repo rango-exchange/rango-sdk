@@ -56,10 +56,10 @@ async function start(
   await settle()
 }
 
-// Holds the port's next `sign` open until the test resolves it.
+// Holds the port's next `signAndSend` open until the test resolves it.
 function holdSign(port: ReturnType<typeof recordingNamespaces>) {
   const held = Promise.withResolvers<{ hash: string }>()
-  port.wallet.evm.sign.mockImplementationOnce(async () => held.promise)
+  port.wallet.evm.signAndSend.mockImplementationOnce(async () => held.promise)
   return held
 }
 
@@ -108,7 +108,10 @@ describe('pause() and resume()', () => {
     await settle()
 
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(1)
-    expect(requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
@@ -121,7 +124,10 @@ describe('pause() and resume()', () => {
     await client.history.getAll()
     await settle()
 
-    expect(requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
@@ -140,7 +146,7 @@ describe('pause() and resume()', () => {
     )
     await other.pause()
     await start(active, TWO_STEPS)
-    expect(first.wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(first.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     held.resolve({ hash: '0xhash1' })
     await settle()
 
@@ -156,12 +162,12 @@ describe('pause() and resume()', () => {
     await settle()
 
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(2)
-    expect(first.wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(first.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     expect(second.requests.map(callOf)).toEqual([
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
-    expect(second.bsc.sign).toHaveBeenCalledTimes(1)
+    expect(second.bsc.signAndSend).toHaveBeenCalledTimes(1)
     expect(signsOf(second.requests)[0]).toMatchObject({
       tx: { blockChain: 'BSC', data: '0xdata2' },
     })
@@ -273,7 +279,7 @@ describe('pause() and resume()', () => {
     'resume() called %i times on a client that isn’t paused, with an Execution in flight, makes no port call, emits no event and leaves history as it was',
     async (times) => {
       const port = recordingNamespaces()
-      port.wallet.evm.sign.mockImplementation(hang)
+      port.wallet.evm.signAndSend.mockImplementation(hang)
       const { client, all } = await createExecutionClient(port)
       await start(client)
       const before = await historyOf(client)
@@ -287,7 +293,7 @@ describe('pause() and resume()', () => {
       await settle()
 
       expect(port.requests).toHaveLength(requestCount)
-      expect(port.wallet.evm.sign).toHaveBeenCalledTimes(1)
+      expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
       expect(all).toHaveLength(eventCount)
       expect(await historyOf(client)).toEqual(before)
     },
@@ -315,8 +321,8 @@ describe('pause() and resume()', () => {
     await settle()
 
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(2)
-    expect(port.eth.sign).toHaveBeenCalledTimes(1)
-    expect(port.bsc.sign).toHaveBeenCalledTimes(1)
+    expect(port.eth.signAndSend).toHaveBeenCalledTimes(1)
+    expect(port.bsc.signAndSend).toHaveBeenCalledTimes(1)
     expect(signsOf(port.requests)).toMatchObject([
       { tx: { blockChain: 'BSC', data: '0xdata2' } },
     ])
@@ -331,7 +337,7 @@ describe('pause() and resume()', () => {
     port.wallet.evm.getChainId.mockImplementationOnce(async () => held.promise)
     const { client, events } = await createExecutionClient(port)
     await start(client)
-    expect(port.wallet.evm.sign).not.toHaveBeenCalled()
+    expect(port.wallet.evm.signAndSend).not.toHaveBeenCalled()
 
     await client.pause()
     await client.resume()
@@ -340,7 +346,7 @@ describe('pause() and resume()', () => {
     held.resolve('0x1')
     await settle()
 
-    expect(port.wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(port.wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     expect(
       events.map(nameOf).filter((name) => name === 'route:succeeded'),

@@ -35,7 +35,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build",
+    "build": "yarn run rangutopia library build --inputs src/mod.ts",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "lint": "eslint src --fix",

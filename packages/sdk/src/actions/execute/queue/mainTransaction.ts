@@ -6,7 +6,7 @@ import type {
   TaskResult,
   TransferTransaction,
 } from './types.js'
-import type { SignResult } from '../mod.js'
+import type { SignAndSendResult } from '../mod.js'
 import type { Transaction } from 'rango-sdk'
 
 import { TransactionType } from 'rango-types'
@@ -28,7 +28,7 @@ import {
 /*
  * No gate prompts once the Execution is canceled, so one cancel check after the gate is enough.
  * `buildMainTransactionSigner` reads the meta after the gate, a Cache read for an EVM entry; Hyperliquid reads it only
- * once its hash is found. No `sign` gets a chain ID, as the chain was checked first.
+ * once its hash is found. No `signAndSend` gets a chain ID, as the chain was checked first.
  */
 export async function gateSignAndProveMainTransaction(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
@@ -211,7 +211,7 @@ async function gateAndBuildEvmMainTransactionSigner(
     ? {
         blockReason,
         signMainTransaction: buildMainTransactionSigner(actions, async () =>
-          evm.sign({ tx: mainTx }),
+          evm.signAndSend({ tx: mainTx }),
         ),
       }
     : { blockReason }
@@ -239,7 +239,7 @@ async function gateAndBuildBip122MainTransactionSigner(
     ? {
         blockReason,
         signMainTransaction: buildMainTransactionSigner(actions, async () =>
-          bip122.sign({ tx: mainTx }),
+          bip122.signAndSend({ tx: mainTx }),
         ),
       }
     : { blockReason }
@@ -253,7 +253,7 @@ async function gateAccountAndBuildMainTransactionSigner<
   namespace:
     | {
         getAccount(): Promise<string | null>
-        sign(request: { tx: EntryTx }): Promise<SignResult>
+        signAndSend(request: { tx: EntryTx }): Promise<SignAndSendResult>
       }
     | undefined,
   mainTx: EntryTx,
@@ -272,7 +272,7 @@ async function gateAccountAndBuildMainTransactionSigner<
     ? {
         blockReason,
         signMainTransaction: buildMainTransactionSigner(actions, async () =>
-          namespace.sign({ tx: mainTx }),
+          namespace.signAndSend({ tx: mainTx }),
         ),
       }
     : { blockReason }

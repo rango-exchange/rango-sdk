@@ -193,11 +193,11 @@ type PrerequisiteOf<T extends TransactionPrerequisite['type']> = Extract<
 >
 
 /**
- * What a namespace's `sign` resolves with.
+ * What a namespace's `signAndSend` resolves with.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
-export type SignResult = {
+export type SignAndSendResult = {
   /** The sent transaction's hash. */
   hash: string
   /** A live response that `wait` gets back in the same page. */
@@ -234,7 +234,9 @@ export interface EvmWallet {
     chain?: EvmChainDescription
   }): Promise<void>
   /** Sign and send `tx`, an approve `buildTransaction` built included, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.EVM> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.EVM>
+  }): Promise<SignAndSendResult>
   /** Resolve with the hash to follow, or the same `hash` when you have no signer for it. */
   wait?(req: {
     hash: string
@@ -265,7 +267,9 @@ export interface TronWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, an approve `buildTransaction` built included, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.TRON> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.TRON>
+  }): Promise<SignAndSendResult>
   /** Answer the allowance the wallet already grants as a decimal string, or `null` for nothing. */
   getAllowance(req: {
     prerequisite: PrerequisiteOf<'TRON_APPROVE'>
@@ -289,7 +293,9 @@ export interface XrplWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, a trustline `buildTransaction` built included, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.XRPL> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.XRPL>
+  }): Promise<SignAndSendResult>
   /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
   getTrustline(req: {
     prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
@@ -314,7 +320,9 @@ export interface StellarWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, a trustline `buildTransaction` built included, and resolve once the network accepted it. */
-  sign(req: { tx: TxOf<TransactionType.STELLAR> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.STELLAR>
+  }): Promise<SignAndSendResult>
   /** Answer the trustline's limit the wallet already holds as a decimal string, or `null` for none. */
   getTrustline(req: {
     prerequisite: PrerequisiteOf<'STELLAR_CHANGE_TRUSTLINE'>
@@ -335,7 +343,9 @@ export interface Bip122Wallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.TRANSFER> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.TRANSFER>
+  }): Promise<SignAndSendResult>
 }
 
 /**
@@ -347,7 +357,9 @@ export interface SolanaWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.SOLANA> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.SOLANA>
+  }): Promise<SignAndSendResult>
 }
 
 /**
@@ -359,7 +371,9 @@ export interface StarknetWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.STARKNET> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.STARKNET>
+  }): Promise<SignAndSendResult>
 }
 
 /**
@@ -371,7 +385,9 @@ export interface TonWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.TON> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.TON>
+  }): Promise<SignAndSendResult>
 }
 
 /**
@@ -383,7 +399,9 @@ export interface SuiWallet {
   /** Answer the active account, the one the wallet will sign with, or `null` when it isn't connected, without prompting. */
   getAccount(): Promise<string | null>
   /** Sign and send `tx`, and resolve with its hash. */
-  sign(req: { tx: TxOf<TransactionType.SUI> }): Promise<SignResult>
+  signAndSend(req: {
+    tx: TxOf<TransactionType.SUI>
+  }): Promise<SignAndSendResult>
 }
 
 /**

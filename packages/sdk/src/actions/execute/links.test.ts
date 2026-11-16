@@ -207,7 +207,7 @@ describe('transaction links', () => {
 
   test('the hash goes into the link as the wallet gave it, case kept', async () => {
     const port = recordingNamespaces()
-    port.wallet.evm.sign.mockResolvedValueOnce({ hash: '0xAbC' })
+    port.wallet.evm.signAndSend.mockResolvedValueOnce({ hash: '0xAbC' })
     const { events } = await start(port, evmTx(), linkedEvm)
 
     expect(
@@ -252,7 +252,7 @@ describe('transaction links', () => {
 
   test('a sign resolving hashRequiringUpdate seeds no link, and the flag is never stored', async () => {
     const port = recordingNamespaces()
-    port.wallet.evm.sign.mockResolvedValueOnce({
+    port.wallet.evm.signAndSend.mockResolvedValueOnce({
       hash: '0xprovisional',
       hashRequiringUpdate: true,
     })
@@ -438,7 +438,7 @@ describe('transaction links', () => {
 
     test('adds no link in the page run whose sign resolved hashRequiringUpdate', async () => {
       const port = replacingWallet('0xreal')
-      port.wallet.evm.sign.mockResolvedValueOnce({
+      port.wallet.evm.signAndSend.mockResolvedValueOnce({
         hash: '0xprovisional',
         hashRequiringUpdate: true,
       })
@@ -461,7 +461,7 @@ describe('transaction links', () => {
 
     test("after a reload, overwrites the last link of a status answer's list, though the first sign resolved hashRequiringUpdate", async () => {
       const first = waitingNamespaces()
-      first.wallet.evm.sign.mockResolvedValueOnce({
+      first.wallet.evm.signAndSend.mockResolvedValueOnce({
         hash: '0xhash1',
         hashRequiringUpdate: true,
       })

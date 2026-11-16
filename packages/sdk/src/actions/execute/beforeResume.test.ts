@@ -109,7 +109,10 @@ describe('beforeResume', () => {
       },
       _queue: { id: 'request-1', status: 'PENDING', blocked: null },
     })
-    expect(port.requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(port.requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
@@ -126,7 +129,7 @@ describe('beforeResume', () => {
     expect(other.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(other.requests.map(callOf)).toEqual([
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
@@ -143,7 +146,7 @@ describe('beforeResume', () => {
 
     expect(other.requests.map(callOf)).toEqual([
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     expect(httpClient.createTransaction).toHaveBeenCalledTimes(1)
     expect(httpClient.checkStatus).toHaveBeenCalled()
@@ -216,7 +219,7 @@ describe('beforeResume', () => {
     expect(callCount(port)).toBe(0)
     expect(other.requests.map(callOf)).toEqual([
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
@@ -243,7 +246,10 @@ describe('beforeResume', () => {
       id: 'request-1',
       status: 'RUNNING',
     })
-    expect(port.requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(port.requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
@@ -276,7 +282,7 @@ describe('beforeResume', () => {
     expect(other.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
     expect(other.requests.map(callOf)).toEqual([
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })

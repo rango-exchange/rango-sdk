@@ -164,7 +164,7 @@ function evmWallet(wallet: MyEvmWallet): EvmWallet {
     getAccount: async () => wallet.account(), // null when not connected
     getChainId: async () => wallet.getChainId(),
     switchChain: async (req) => wallet.switchChain(req.chainId, req.chain),
-    sign: async (req) => wallet.signAndSend(req.tx),
+    signAndSend: async (req) => wallet.signAndSend(req.tx),
     getAllowance: async (req) => wallet.allowance(req.prerequisite),
     buildTransaction: async (req) => wallet.buildApprove(req.prerequisite),
     getTransactionInfo: async (req) => {
@@ -172,7 +172,8 @@ function evmWallet(wallet: MyEvmWallet): EvmWallet {
       if (receipt === null) return 'pending' // an ethers receipt
       return receipt.status === 1 ? 'success' : 'failed'
     },
-    signTypedData: async (req) => wallet.signTypedData(req.typedData, req.chainId), // optional, Hyperliquid actions
+    signTypedData: async (req) =>
+      wallet.signTypedData(req.typedData, req.chainId), // optional, Hyperliquid actions
   }
 }
 
@@ -181,19 +182,19 @@ const wallet: WalletPort = {
   evm: { default: evmWallet(metamask), BSC: evmWallet(bscWallet) },
   solana: {
     getAccount: async () => solana.account(),
-    sign: async (req) => solana.signAndSend(req.tx),
+    signAndSend: async (req) => solana.signAndSend(req.tx),
   },
 }
 ```
 
-| Namespace                          | Methods                                                                                                                                | Signs                                                                                                             |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `evm`                              | `getAccount`, `getChainId`, `switchChain`, `sign`, `wait?`, `getAllowance`, `buildTransaction`, `getTransactionInfo`, `signTypedData?` | EVM transactions and EVM approves, on every EVM blockchain, and Hyperliquid actions, on their `signatureChainId`. |
-| `tron`                             | `getAccount`, `sign`, `getAllowance`, `buildTransaction`, `getTransactionInfo`                                                         | TRON transactions and TRON approves.                                                                              |
-| `xrpl`                             | `getAccount`, `sign`, `getTrustline`, `buildTransaction`, `getTransactionInfo`                                                         | XRPL payments and trustlines.                                                                                     |
-| `stellar`                          | `getAccount`, `sign`, `getTrustline`, `buildTransaction`                                                                               | Stellar transactions and trustlines.                                                                              |
-| `bip122`                           | `getAccount`, `sign`                                                                                                                   | Transfers on every UTXO blockchain.                                                                               |
-| `solana`, `starknet`, `ton`, `sui` | `getAccount`, `sign`                                                                                                                   | Their own transactions.                                                                                           |
+| Namespace                          | Methods                                                                                                                                       | Signs                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `evm`                              | `getAccount`, `getChainId`, `switchChain`, `signAndSend`, `wait?`, `getAllowance`, `buildTransaction`, `getTransactionInfo`, `signTypedData?` | EVM transactions and EVM approves, on every EVM blockchain, and Hyperliquid actions, on their `signatureChainId`. |
+| `tron`                             | `getAccount`, `signAndSend`, `getAllowance`, `buildTransaction`, `getTransactionInfo`                                                         | TRON transactions and TRON approves.                                                                              |
+| `xrpl`                             | `getAccount`, `signAndSend`, `getTrustline`, `buildTransaction`, `getTransactionInfo`                                                         | XRPL payments and trustlines.                                                                                     |
+| `stellar`                          | `getAccount`, `signAndSend`, `getTrustline`, `buildTransaction`                                                                               | Stellar transactions and trustlines.                                                                              |
+| `bip122`                           | `getAccount`, `signAndSend`                                                                                                                   | Transfers on every UTXO blockchain.                                                                               |
+| `solana`, `starknet`, `ton`, `sui` | `getAccount`, `signAndSend`                                                                                                                   | Their own transactions.                                                                                           |
 
 `evm` and `bip122` take one wallet, or a map of wallets keyed by blockchain, as `selectedWallets` is, with an optional `default`. An entry is served by the wallet under its blockchain, then `default`, then the one wallet; with none, the **Execution** is `BLOCKED` `NOT_CONNECTED`. Hyperliquid is one of `evm`'s blockchains, keyed `HYPERLIQUID`. One `bip122` wallet answers one account, so with one wallet, a Route on two UTXO blockchains with different addresses is `BLOCKED` `ACCOUNT_MISMATCH` on one of them: give a wallet per blockchain.
 
@@ -202,12 +203,17 @@ No request carries the address: sign with the wallet's active account. A method 
 - `getAccount`: answer the account the wallet will sign with, or `null` when it isn't connected. Never prompt.
 - `getChainId`: answer the wallet's chain ID, hex or decimal.
 - `switchChain`: switch to `chainId`, or reject when the wallet can't. On `evm`, `chain` describes the chain as EIP-3085 does without `chainId`, so a wallet that doesn't know the chain can add `{ chainId, ...chain }` first.
-- `sign`: sign and send `tx` and resolve with `{ hash, response?, hashRequiringUpdate? }`; a Stellar `sign` resolves only once the network accepted it.
+- `signAndSend`: sign and send `tx` and resolve with `{ hash, response?, hashRequiringUpdate? }`; a Stellar `signAndSend` resolves only once the network accepted it.
 - `signTypedData`: optional, called only for Hyperliquid actions. Sign ethers' `{ domain, types, value }` on `chainId` and answer the `0x` signature. Without it, a Hyperliquid entry fails.
 - `wait`: resolve with the hash to follow, or the same `hash` when you have no signer for it, such as after a reload.
 - `getAllowance` and `getTrustline`: answer what the wallet already grants as a decimal string, or `null` for nothing.
 - `buildTransaction`: on `evm` and `tron`, build the approve; on `xrpl` and `stellar`, build the trustline with the `limit` given. Build it as plain data, without prompting.
 - `getTransactionInfo`: on `evm`, answer `'pending'`, `'success'` or `'failed'` from the receipt; on `tron` and `xrpl`, answer what the chain says, as it is.
+
+### Hub3 adapters
+
+If your wallets run on hub3 (`@hub3js/*`), build each [Wallet port](#wallet-port) entry from a hub3 provider with an adapter instead of writing it.
+The adapters ship separately, in [`@rango-dev/sdk-adapter-hub3`](https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk-adapter-hub3/README.md).
 
 ### `execute()`
 

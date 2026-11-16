@@ -83,7 +83,7 @@ async function expectFailed(
   failure: PrerequisiteFailure,
 ): Promise<void> {
   await expectPrerequisiteFailed(client, failure)
-  expect(port.requests.map(callOf)).not.toContain('sign:0xcontract')
+  expect(port.requests.map(callOf)).not.toContain('signAndSend:0xcontract')
 }
 
 describe('EVM approve Prerequisites', () => {
@@ -116,19 +116,19 @@ describe('EVM approve Prerequisites', () => {
       'getChainId',
       'read:0xtoken0',
       'build:0xtoken0',
-      'sign:0xtoken0',
+      'signAndSend:0xtoken0',
       'info:0xhash1',
       'read:0xtoken0',
       'read:0xtoken0',
       'getChainId',
       'read:0xtoken1',
       'build:0xtoken1',
-      'sign:0xtoken1',
+      'signAndSend:0xtoken1',
       'info:0xhash2',
       'read:0xtoken1',
       'read:0xtoken1',
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     const view = await historyOf(client)
     expect(view?._queue.status).toBe('SUCCESS')
@@ -170,7 +170,7 @@ describe('EVM approve Prerequisites', () => {
         'getChainId',
         'read:0xtoken',
         'getChainId',
-        'sign:0xcontract',
+        'signAndSend:0xcontract',
       ])
       expect(port.requests[1]).toEqual([
         'evm',
@@ -208,7 +208,7 @@ describe('EVM approve Prerequisites', () => {
         'getChainId',
         'read:0xtoken',
         'build:0xtoken',
-        'sign:0xtoken',
+        'signAndSend:0xtoken',
       ]
       expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
     },
@@ -225,7 +225,12 @@ describe('EVM approve Prerequisites', () => {
     const prerequisite = evmApprove({ token: '0xusdt' })
     const { client } = await start(port, [prerequisite])
 
-    const calls = ['getChainId', 'read:0xusdt', 'build:0xusdt', 'sign:0xusdt']
+    const calls = [
+      'getChainId',
+      'read:0xusdt',
+      'build:0xusdt',
+      'signAndSend:0xusdt',
+    ]
     expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
     expect(port.wallet.evm.buildTransaction.mock.calls).toEqual([
       [{ prerequisite }],
@@ -289,7 +294,7 @@ describe('EVM approve Prerequisites', () => {
       'getChainId',
       'read:0xtoken',
       'build:0xtoken',
-      'sign:0xtoken',
+      'signAndSend:0xtoken',
     ]
     expect(port.requests.map(callOf).slice(0, calls.length)).toEqual(calls)
     expect(port.requests[1]).toEqual([

@@ -65,7 +65,7 @@ const routeResult = {
 // An `evm` namespace with only its required methods.
 function minimalWallet() {
   return {
-    sign: vi.fn(async () => ({ hash: '0xhash' })),
+    signAndSend: vi.fn(async () => ({ hash: '0xhash' })),
     getAccount: vi.fn(async () => '0xfrom'),
     getChainId: vi.fn(async () => '0x1'),
     switchChain: vi.fn(async () => undefined),
@@ -266,7 +266,7 @@ describe('the execution keys', () => {
     )
 
     expect(client).toBeInstanceOf(RangoClient)
-    expect(wallet.sign).not.toHaveBeenCalled()
+    expect(wallet.signAndSend).not.toHaveBeenCalled()
     expect(wallet.getAccount).not.toHaveBeenCalled()
     expect(wallet.getChainId).not.toHaveBeenCalled()
     expect(indexedDB).not.toHaveBeenCalled()
@@ -295,7 +295,7 @@ describe('the execution keys', () => {
 
     expect(confirmed.data.requestId).toBe('request-1')
     expect(quoted.data.requestId).toBe('request-1')
-    expect(wallet.sign).not.toHaveBeenCalled()
+    expect(wallet.signAndSend).not.toHaveBeenCalled()
     expect(wallet.getAccount).not.toHaveBeenCalled()
     expect(wallet.getChainId).not.toHaveBeenCalled()
     expect(emitter.emit).not.toHaveBeenCalled()
@@ -448,7 +448,7 @@ describe('the execution keys', () => {
       ton?: Sdk.TonWallet
       sui?: Sdk.SuiWallet
     }>()
-    expectTypeOf<Sdk.SignResult>().toEqualTypeOf<{
+    expectTypeOf<Sdk.SignAndSendResult>().toEqualTypeOf<{
       hash: string
       response?: unknown
       hashRequiringUpdate?: boolean
@@ -466,7 +466,9 @@ describe('the execution keys', () => {
         chainId: string
         chain?: Sdk.EvmChainDescription
       }): Promise<void>
-      sign(req: { tx: TxOf<TransactionType.EVM> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.EVM>
+      }): Promise<Sdk.SignAndSendResult>
       wait?(req: {
         hash: string
         response?: unknown
@@ -489,7 +491,9 @@ describe('the execution keys', () => {
     expectTypeOf<Sdk.HyperliquidWallet>().not.toBeNever()
     expectTypeOf<Sdk.TronWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.TRON> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.TRON>
+      }): Promise<Sdk.SignAndSendResult>
       getAllowance(req: {
         prerequisite: PrerequisiteOf<'TRON_APPROVE'>
       }): Promise<string | null>
@@ -503,7 +507,9 @@ describe('the execution keys', () => {
     }>()
     expectTypeOf<Sdk.XrplWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.XRPL> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.XRPL>
+      }): Promise<Sdk.SignAndSendResult>
       getTrustline(req: {
         prerequisite: PrerequisiteOf<'XRPL_CHANGE_TRUSTLINE'>
       }): Promise<string | null>
@@ -518,7 +524,9 @@ describe('the execution keys', () => {
     }>()
     expectTypeOf<Sdk.StellarWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.STELLAR> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.STELLAR>
+      }): Promise<Sdk.SignAndSendResult>
       getTrustline(req: {
         prerequisite: PrerequisiteOf<'STELLAR_CHANGE_TRUSTLINE'>
       }): Promise<string | null>
@@ -529,29 +537,39 @@ describe('the execution keys', () => {
     }>()
     expectTypeOf<Sdk.Bip122Wallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.TRANSFER> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.TRANSFER>
+      }): Promise<Sdk.SignAndSendResult>
     }>()
     expectTypeOf<Sdk.SolanaWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.SOLANA> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.SOLANA>
+      }): Promise<Sdk.SignAndSendResult>
     }>()
     expectTypeOf<Sdk.StarknetWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.STARKNET> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.STARKNET>
+      }): Promise<Sdk.SignAndSendResult>
     }>()
     expectTypeOf<Sdk.TonWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.TON> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.TON>
+      }): Promise<Sdk.SignAndSendResult>
     }>()
     expectTypeOf<Sdk.SuiWallet>().toEqualTypeOf<{
       getAccount(): Promise<string | null>
-      sign(req: { tx: TxOf<TransactionType.SUI> }): Promise<Sdk.SignResult>
+      signAndSend(req: {
+        tx: TxOf<TransactionType.SUI>
+      }): Promise<Sdk.SignAndSendResult>
     }>()
     // wait and signTypedData are optional: switchChain is required on evm.
     expectTypeOf<undefined>().toExtend<Sdk.EvmWallet['wait']>()
     expectTypeOf<undefined>().toExtend<Sdk.EvmWallet['signTypedData']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['switchChain']>()
-    expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['sign']>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['signAndSend']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['getAllowance']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.EvmWallet['buildTransaction']>()
     expectTypeOf<undefined>().not.toExtend<Sdk.TronWallet['buildTransaction']>()

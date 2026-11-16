@@ -410,15 +410,15 @@ function assetOf(prerequisite: Sdk.TransactionPrerequisite): string {
 // A readable name for a signed transaction: an XRPL one by its `TransactionType`, a Stellar one by its first operation.
 function txOf(tx: LegacySdk.Transaction): string {
   if (tx.type === LegacySdk.TransactionType.XRPL) {
-    return `sign:${tx.data.TransactionType}`
+    return `signAndSend:${tx.data.TransactionType}`
   }
   if (tx.type === LegacySdk.TransactionType.STELLAR) {
-    return `sign:${tx.data.operationsXdrBase64[0] ?? ''}`
+    return `signAndSend:${tx.data.operationsXdrBase64[0] ?? ''}`
   }
   if ('to' in tx) {
-    return `sign:${tx.to}`
+    return `signAndSend:${tx.to}`
   }
-  return 'txID' in tx ? `sign:${tx.txID}` : 'sign'
+  return 'txID' in tx ? `signAndSend:${tx.txID}` : 'sign'
 }
 
 /*
@@ -427,7 +427,7 @@ function txOf(tx: LegacySdk.Transaction): string {
  */
 export function callOf(request: NamespaceRequest): string {
   switch (request[1]) {
-    case 'sign':
+    case 'signAndSend':
       return txOf(request[2].tx)
     case 'getAllowance':
     case 'getTrustline':
@@ -445,12 +445,12 @@ export function callOf(request: NamespaceRequest): string {
   }
 }
 
-// The `sign` requests, in call order.
+// The `signAndSend` requests, in call order.
 export function signsOf(
   requests: NamespaceRequest[],
-): Extract<NamespaceRequest, [RecordedLabel, 'sign', unknown]>[2][] {
+): Extract<NamespaceRequest, [RecordedLabel, 'signAndSend', unknown]>[2][] {
   return requests.flatMap((request) =>
-    request[1] === 'sign' ? [request[2]] : [],
+    request[1] === 'signAndSend' ? [request[2]] : [],
   )
 }
 
@@ -770,7 +770,7 @@ export function xrplTrustline(
   }
 }
 
-export type StellarTx = Extract<
+type StellarTx = Extract<
   LegacySdk.Transaction,
   { type: LegacySdk.TransactionType.STELLAR }
 >
@@ -1161,7 +1161,7 @@ export function stubHyperliquid({
  * `createExecutionClient` hands one to the SDK as it is, so a test asserts what the port receives.
  */
 
-type SignResult = {
+type SignAndSendResult = {
   hash: string
   response?: unknown
   hashRequiringUpdate?: boolean
@@ -1176,7 +1176,7 @@ type TronTx = TxOf<LegacySdk.TransactionType.TRON>
 
 // What `getTransactionInfo` answers on each namespace: the Host's judgement on `evm`, else the chain's raw answer.
 export type EvmInfo = 'pending' | 'success' | 'failed'
-export type TronInfo = { blockNumber?: number; receipt?: { result?: string } }
+type TronInfo = { blockNumber?: number; receipt?: { result?: string } }
 export type XrplInfo = {
   validated: boolean
   meta?: { TransactionResult: string }
@@ -1207,7 +1207,7 @@ export type EvmNamespace = {
   getAccount(): Promise<string | null>
   getChainId(): Promise<string | null>
   switchChain(req: { chainId: string }): Promise<void>
-  sign(req: { tx: EvmTx }): Promise<SignResult>
+  signAndSend(req: { tx: EvmTx }): Promise<SignAndSendResult>
   wait?(req: { hash: string; response?: unknown }): Promise<WaitResult>
   getAllowance(req: { prerequisite: EvmApprove }): Promise<string | null>
   buildTransaction(req: { prerequisite: EvmApprove }): Promise<EvmTx>
@@ -1216,14 +1216,14 @@ export type EvmNamespace = {
 }
 export type TronNamespace = {
   getAccount(): Promise<string | null>
-  sign(req: { tx: TronTx }): Promise<SignResult>
+  signAndSend(req: { tx: TronTx }): Promise<SignAndSendResult>
   getAllowance(req: { prerequisite: TronApprove }): Promise<string | null>
   buildTransaction(req: { prerequisite: TronApprove }): Promise<TronTx>
   getTransactionInfo(req: { hash: string }): Promise<TronInfo>
 }
 export type XrplNamespace = {
   getAccount(): Promise<string | null>
-  sign(req: { tx: XrplTx }): Promise<SignResult>
+  signAndSend(req: { tx: XrplTx }): Promise<SignAndSendResult>
   getTrustline(req: { prerequisite: XrplTrustline }): Promise<string | null>
   buildTransaction(req: {
     prerequisite: XrplTrustline
@@ -1233,7 +1233,7 @@ export type XrplNamespace = {
 }
 export type StellarNamespace = {
   getAccount(): Promise<string | null>
-  sign(req: { tx: StellarTx }): Promise<SignResult>
+  signAndSend(req: { tx: StellarTx }): Promise<SignAndSendResult>
   getTrustline(req: { prerequisite: StellarTrustline }): Promise<string | null>
   buildTransaction(req: {
     prerequisite: StellarTrustline
@@ -1242,13 +1242,13 @@ export type StellarNamespace = {
 }
 export type Bip122Namespace = {
   getAccount(): Promise<string | null>
-  sign(req: {
+  signAndSend(req: {
     tx: TxOf<LegacySdk.TransactionType.TRANSFER>
-  }): Promise<SignResult>
+  }): Promise<SignAndSendResult>
 }
 type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
   getAccount(): Promise<string | null>
-  sign(req: { tx: TxOf<T> }): Promise<SignResult>
+  signAndSend(req: { tx: TxOf<T> }): Promise<SignAndSendResult>
 }
 // Each wallet the fakes record, by the namespace they record it under.
 type RecordedWallets = {
@@ -1292,9 +1292,9 @@ export type NamespaceRequest = {
 export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
 
 /*
- * The recording namespace port: every namespace, with every method but `wait`. `sign` answers `0xhash1`, `0xhash2`, ...
- * across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, `BTC` on `bip122`, the
- * namespace's own otherwise, such as `TRON`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
+ * The recording namespace port: every namespace, with every method but `wait`. `signAndSend` answers `0xhash1`,
+ * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, `BTC` on
+ * `bip122`, the namespace's own otherwise, such as `TRON`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
  * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron` and `stellar`, as no build
@@ -1308,7 +1308,7 @@ export function recordingNamespaces(
 ) {
   const requests: NamespaceRequest[] = []
   let signed = 0
-  const nextHash = (): SignResult => {
+  const nextHash = (): SignAndSendResult => {
     signed += 1
     return { hash: `0xhash${signed}` }
   }
@@ -1324,8 +1324,8 @@ export function recordingNamespaces(
     switchChain: vi.fn(async (req: { chainId: string }): Promise<void> => {
       requests.push(['evm', 'switchChain', structuredClone(req)])
     }),
-    sign: vi.fn(async (req: { tx: EvmTx }) => {
-      requests.push(['evm', 'sign', structuredClone(req)])
+    signAndSend: vi.fn(async (req: { tx: EvmTx }) => {
+      requests.push(['evm', 'signAndSend', structuredClone(req)])
       return nextHash()
     }),
     getAllowance: vi.fn(
@@ -1355,9 +1355,9 @@ export function recordingNamespaces(
   })
   const bip122On = (blockchain: string) => ({
     getAccount: vi.fn(accountOn(blockchain)),
-    sign: vi.fn(
+    signAndSend: vi.fn(
       async (req: { tx: TxOf<LegacySdk.TransactionType.TRANSFER> }) => {
-        requests.push(['bip122', 'sign', structuredClone(req)])
+        requests.push(['bip122', 'signAndSend', structuredClone(req)])
         return nextHash()
       },
     ),
@@ -1367,10 +1367,12 @@ export function recordingNamespaces(
     evm: evmOn('ETH'),
     tron: {
       getAccount: vi.fn(accountOn('TRON')),
-      sign: vi.fn(async (req: Parameters<TronNamespace['sign']>[0]) => {
-        requests.push(['tron', 'sign', structuredClone(req)])
-        return nextHash()
-      }),
+      signAndSend: vi.fn(
+        async (req: Parameters<TronNamespace['signAndSend']>[0]) => {
+          requests.push(['tron', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
       getAllowance: vi.fn(
         async (
           req: Parameters<TronNamespace['getAllowance']>[0],
@@ -1394,10 +1396,12 @@ export function recordingNamespaces(
     },
     xrpl: {
       getAccount: vi.fn(accountOn('XRPL')),
-      sign: vi.fn(async (req: Parameters<XrplNamespace['sign']>[0]) => {
-        requests.push(['xrpl', 'sign', structuredClone(req)])
-        return nextHash()
-      }),
+      signAndSend: vi.fn(
+        async (req: Parameters<XrplNamespace['signAndSend']>[0]) => {
+          requests.push(['xrpl', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
       getTrustline: vi.fn(
         async (
           req: Parameters<XrplNamespace['getTrustline']>[0],
@@ -1424,10 +1428,12 @@ export function recordingNamespaces(
     },
     stellar: {
       getAccount: vi.fn(accountOn('STELLAR')),
-      sign: vi.fn(async (req: Parameters<StellarNamespace['sign']>[0]) => {
-        requests.push(['stellar', 'sign', structuredClone(req)])
-        return nextHash()
-      }),
+      signAndSend: vi.fn(
+        async (req: Parameters<StellarNamespace['signAndSend']>[0]) => {
+          requests.push(['stellar', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
       getTrustline: vi.fn(
         async (
           req: Parameters<StellarNamespace['getTrustline']>[0],
@@ -1449,35 +1455,39 @@ export function recordingNamespaces(
     bip122: bip122On('BTC'),
     solana: {
       getAccount: vi.fn(accountOn('SOLANA')),
-      sign: vi.fn(
+      signAndSend: vi.fn(
         async (req: { tx: TxOf<LegacySdk.TransactionType.SOLANA> }) => {
-          requests.push(['solana', 'sign', structuredClone(req)])
+          requests.push(['solana', 'signAndSend', structuredClone(req)])
           return nextHash()
         },
       ),
     },
     starknet: {
       getAccount: vi.fn(accountOn('STARKNET')),
-      sign: vi.fn(
+      signAndSend: vi.fn(
         async (req: { tx: TxOf<LegacySdk.TransactionType.STARKNET> }) => {
-          requests.push(['starknet', 'sign', structuredClone(req)])
+          requests.push(['starknet', 'signAndSend', structuredClone(req)])
           return nextHash()
         },
       ),
     },
     ton: {
       getAccount: vi.fn(accountOn('TON')),
-      sign: vi.fn(async (req: { tx: TxOf<LegacySdk.TransactionType.TON> }) => {
-        requests.push(['ton', 'sign', structuredClone(req)])
-        return nextHash()
-      }),
+      signAndSend: vi.fn(
+        async (req: { tx: TxOf<LegacySdk.TransactionType.TON> }) => {
+          requests.push(['ton', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
     },
     sui: {
       getAccount: vi.fn(accountOn('SUI')),
-      sign: vi.fn(async (req: { tx: TxOf<LegacySdk.TransactionType.SUI> }) => {
-        requests.push(['sui', 'sign', structuredClone(req)])
-        return nextHash()
-      }),
+      signAndSend: vi.fn(
+        async (req: { tx: TxOf<LegacySdk.TransactionType.SUI> }) => {
+          requests.push(['sui', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
     },
   } satisfies Namespaces
   return { wallet, hyperliquid, requests, evmOn, bip122On }

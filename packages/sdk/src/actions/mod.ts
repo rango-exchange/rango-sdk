@@ -27,7 +27,7 @@ export type {
   ExecutionTransaction,
   HistoryItem,
   RouteEvent,
-  SignResult,
+  SignAndSendResult,
   SolanaWallet,
   StarknetWallet,
   StellarWallet,

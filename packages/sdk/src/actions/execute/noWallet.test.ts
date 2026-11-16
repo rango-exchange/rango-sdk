@@ -136,7 +136,10 @@ describe('with no wallet', () => {
     await settle()
 
     expect(port.wallet.evm.getAccount).toHaveBeenCalledTimes(1)
-    expect(port.requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(port.requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
@@ -219,7 +222,7 @@ describe('with no wallet', () => {
       'read:0xtoken',
       'read:0xtoken',
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     const view = await historyOf(loaded)
     expect(view?._queue.status).toBe('SUCCESS')

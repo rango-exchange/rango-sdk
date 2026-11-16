@@ -184,8 +184,8 @@ describe('HistoryItem', () => {
     expect(view?._storage.finishedSwapSteps).toBe(TWO_STEPS.length)
     expect(view?._storage.failure).toBeNull()
     expect(view?._storage.finishedAt).toEqual(expect.any(Number))
-    expect(port.eth.sign).toHaveBeenCalledTimes(1)
-    expect(port.bsc.sign).toHaveBeenCalledTimes(1)
+    expect(port.eth.signAndSend).toHaveBeenCalledTimes(1)
+    expect(port.bsc.signAndSend).toHaveBeenCalledTimes(1)
     for (const [, request] of port.requests) {
       expect(request).not.toHaveProperty('walletId')
     }

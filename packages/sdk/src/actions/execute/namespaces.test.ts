@@ -192,7 +192,7 @@ describe('the WalletPort by namespace', () => {
     expect(port.wallet.evm.getAccount).toHaveBeenCalledWith()
     expect(port.requests).toEqual([
       ['evm', 'getChainId', undefined],
-      ['evm', 'sign', { tx }],
+      ['evm', 'signAndSend', { tx }],
     ])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
@@ -212,7 +212,7 @@ describe('the WalletPort by namespace', () => {
 
       await start(client, tx)
 
-      expect(port.requests).toEqual([[namespace, 'sign', { tx }]])
+      expect(port.requests).toEqual([[namespace, 'signAndSend', { tx }]])
       expect(port.wallet.evm.getAccount).not.toHaveBeenCalled()
       expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     },
@@ -244,7 +244,7 @@ describe('the WalletPort by namespace', () => {
     await settle()
 
     expect(port.wallet.solana.getAccount).toHaveBeenCalledTimes(1)
-    expect(port.requests).toEqual([['solana', 'sign', { tx: solanaTx }]])
+    expect(port.requests).toEqual([['solana', 'signAndSend', { tx: solanaTx }]])
     expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 
@@ -300,7 +300,7 @@ describe('the WalletPort by namespace', () => {
       'info:0xhash1',
       'read:0xtrc20',
       'read:0xtrc20',
-      'sign:main-tx',
+      'signAndSend:main-tx',
     ])
     const view = await historyOf(loaded)
     expect(view?._queue.status).toBe('SUCCESS')
@@ -406,14 +406,14 @@ describe('the WalletPort by namespace', () => {
 
       const step2 = evmTx({ blockChain: 'BSC', from: '0xto', data: '0xdata2' })
       expect(eth.getAccount).toHaveBeenCalledTimes(1)
-      expect(eth.sign.mock.calls).toEqual([[{ tx: evmTx() }]])
+      expect(eth.signAndSend.mock.calls).toEqual([[{ tx: evmTx() }]])
       expect(bsc.getAccount).toHaveBeenCalledTimes(1)
-      expect(bsc.sign.mock.calls).toEqual([[{ tx: step2 }]])
+      expect(bsc.signAndSend.mock.calls).toEqual([[{ tx: step2 }]])
       expect(port.requests).toEqual([
         ['evm', 'getChainId', undefined],
-        ['evm', 'sign', { tx: evmTx() }],
+        ['evm', 'signAndSend', { tx: evmTx() }],
         ['evm', 'getChainId', undefined],
-        ['evm', 'sign', { tx: step2 }],
+        ['evm', 'signAndSend', { tx: step2 }],
       ])
       expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     })
@@ -430,7 +430,7 @@ describe('the WalletPort by namespace', () => {
 
         await start(client, tx)
 
-        expect(wallet.sign.mock.calls).toEqual([[{ tx }]])
+        expect(wallet.signAndSend.mock.calls).toEqual([[{ tx }]])
         expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
       },
     )
@@ -479,9 +479,9 @@ describe('the WalletPort by namespace', () => {
       await settle()
 
       expect(btc.getAccount).toHaveBeenCalledTimes(1)
-      expect(btc.sign.mock.calls).toEqual([[{ tx: onBtc }]])
+      expect(btc.signAndSend.mock.calls).toEqual([[{ tx: onBtc }]])
       expect(ltc.getAccount).toHaveBeenCalledTimes(1)
-      expect(ltc.sign.mock.calls).toEqual([[{ tx: onLtc }]])
+      expect(ltc.signAndSend.mock.calls).toEqual([[{ tx: onLtc }]])
       expect(port.wallet.bip122.getAccount).not.toHaveBeenCalled()
       expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
     })
@@ -543,7 +543,7 @@ describe('the WalletPort by namespace', () => {
         expect(bsc.getTransactionInfo).toHaveBeenCalledWith({
           hash: '0xhash1',
         })
-        expect(bsc.sign).toHaveBeenCalledTimes(2)
+        expect(bsc.signAndSend).toHaveBeenCalledTimes(2)
         expect(callsOn(eth)).toEqual([])
         expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
       })
@@ -576,7 +576,7 @@ describe('the WalletPort by namespace', () => {
           [{ hash: '0xhash1' }],
         ])
         expect(bsc.getAllowance).toHaveBeenCalledWith({ prerequisite: approve })
-        expect(bsc.sign.mock.calls).toEqual([[{ tx }]])
+        expect(bsc.signAndSend.mock.calls).toEqual([[{ tx }]])
         expect(callsOn(eth)).toEqual([])
         expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
       })
@@ -611,7 +611,7 @@ describe('the WalletPort by namespace', () => {
 
       await start(client, evmTx())
 
-      expect(eth.sign).toHaveBeenCalledTimes(1)
+      expect(eth.signAndSend).toHaveBeenCalledTimes(1)
       expect(bsc.wait).not.toHaveBeenCalled()
       expect(httpClient.checkStatus.mock.calls.map(([req]) => req)).toEqual([
         { requestId: 'request-1', step: 1, txId: '0xhash1' },
@@ -681,7 +681,7 @@ describe('the WalletPort by namespace', () => {
       await start(client, solanaTx)
 
       expect(port.wallet.solana.getAccount).toHaveBeenCalledTimes(1)
-      expect(port.wallet.solana.sign).not.toHaveBeenCalled()
+      expect(port.wallet.solana.signAndSend).not.toHaveBeenCalled()
       expect(port.requests).toEqual([])
       const view = await historyOf(client)
       expect(view?._queue.status).toBe('FAILED')

@@ -41,7 +41,10 @@ export type SdkContext = {
   // From the client's Cache, or with an HTTP call on a miss.
   loadBlockchainsMeta: () => Promise<readonly BlockchainMeta[]>
   emit: Emit
-  // Each signed `EVM` main entry's `sign` response until its `wait` takes it, keyed `requestId/transactionId`; a reload loses it.
+  /*
+   * Each signed `EVM` main entry's `signAndSend` response until its `wait` takes it, keyed `requestId/transactionId`;
+   * a reload loses it.
+   */
   signResponsesAwaitingWait: Map<string, unknown>
   // `true` while this client is paused by `pauseOnStart: true` or `pause()`.
   isPaused: () => boolean

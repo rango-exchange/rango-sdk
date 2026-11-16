@@ -191,10 +191,13 @@ describe('after a reload', () => {
     } = await resumeExecutions(onEthAndBsc(recordingNamespaces()))
 
     expect(httpClient.createTransaction).not.toHaveBeenCalled()
-    expect(requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     // Step 2's route is on BSC: its calls go to the `evm` map's BSC wallet.
     expect(bsc.getChainId).toHaveBeenCalledTimes(1)
-    expect(bsc.sign).toHaveBeenCalledWith({
+    expect(bsc.signAndSend).toHaveBeenCalledWith({
       tx: expect.objectContaining({ blockChain: 'BSC', data: '0xdata2' }),
     })
     expect(httpClient.checkStatus.mock.calls.map(([req]) => req)).toEqual([
@@ -226,7 +229,10 @@ describe('after a reload', () => {
     } = await resumeExecutions(onEthAndBsc(recordingNamespaces()))
 
     expect(httpClient.createTransaction).not.toHaveBeenCalled()
-    expect(requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     const view = await historyOf(loaded)
     expect(view?._queue.status).toBe('SUCCESS')
     expect(view?._storage.finishedSwapSteps).toBe(2)
@@ -272,7 +278,7 @@ describe('after a reload', () => {
 
   test('a main entry left sign_requested fails TX_EXPIRED, reported, and the wallet is not prompted again', async () => {
     const first = recordingNamespaces()
-    first.wallet.evm.sign.mockImplementation(hang)
+    first.wallet.evm.signAndSend.mockImplementation(hang)
     const { client } = await createExecutionClient(first)
     await start(client)
     expect(
@@ -292,13 +298,13 @@ describe('after a reload', () => {
     expect(httpClient.reportFailure).toHaveBeenCalledWith(
       expect.objectContaining({ step: 1, eventType: 'TX_EXPIRED' }),
     )
-    expect(wallet.evm.sign).not.toHaveBeenCalled()
+    expect(wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(requests).toEqual([])
   })
 
   test('a signed main entry other than Hyperliquid with no stored hash fails TX_EXPIRED, with nothing signed or polled', async () => {
     const first = recordingNamespaces()
-    first.wallet.evm.sign.mockImplementation(hang)
+    first.wallet.evm.signAndSend.mockImplementation(hang)
     const { client } = await createExecutionClient(first)
     await start(client)
     // As if the stored `signed` write lost its hash: the entry is `signed` with `walletResult: null`.
@@ -346,7 +352,7 @@ describe('after a reload', () => {
       message: 'Transaction is expired. Please try again.',
     })
     expect(view?._storage.transactions.s1?.execution.status).toBe('signed')
-    expect(wallet.evm.sign).not.toHaveBeenCalled()
+    expect(wallet.evm.signAndSend).not.toHaveBeenCalled()
     expect(httpClient.checkStatus).not.toHaveBeenCalled()
     expect(requests).toEqual([])
   })
@@ -405,7 +411,7 @@ describe('after a reload', () => {
       'read:0xtoken',
       'read:0xtoken',
       'getChainId',
-      'sign:0xcontract',
+      'signAndSend:0xcontract',
     ])
     expect(port.wallet.evm.buildTransaction).not.toHaveBeenCalled()
     expect(httpClient.createTransaction).not.toHaveBeenCalled()
@@ -442,7 +448,10 @@ describe('after a reload', () => {
     const port = approvingNamespaces(recordingNamespaces())
     const { client: loaded, requests } = await resumeExecutions(port)
 
-    expect(requests.map(callOf)).toEqual(['getChainId', 'sign:0xcontract'])
+    expect(requests.map(callOf)).toEqual([
+      'getChainId',
+      'signAndSend:0xcontract',
+    ])
     expect((await historyOf(loaded))?._queue.status).toBe('SUCCESS')
   })
 

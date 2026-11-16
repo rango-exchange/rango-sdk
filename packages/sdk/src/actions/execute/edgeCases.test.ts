@@ -44,7 +44,7 @@ function freshStart(on: IDBFactory): void {
   httpClient.reportFailure.mockResolvedValue(undefined)
 }
 
-// Runs a one-Step Route to its end: `SUCCESS`, or `FAILED` through a `sign` that rejects.
+// Runs a one-Step Route to its end: `SUCCESS`, or `FAILED` through a `signAndSend` that rejects.
 async function runToEnd(
   client: Sdk.RangoClient,
   port: ReturnType<typeof recordingNamespaces>,
@@ -52,7 +52,9 @@ async function runToEnd(
   requestId = 'request-1',
 ): Promise<void> {
   if (status === 'FAILED') {
-    port.wallet.evm.sign.mockRejectedValueOnce(new Error('wallet exploded'))
+    port.wallet.evm.signAndSend.mockRejectedValueOnce(
+      new Error('wallet exploded'),
+    )
   }
   await confirmQuote(client, requestId)
   await client.execute(requestId, EXECUTION_OPTIONS)
@@ -242,7 +244,7 @@ describe('execute() edge cases', () => {
     expect(
       httpClient.createTransaction.mock.calls.map(([req]) => req.step),
     ).toEqual([1])
-    expect(wallet.evm.sign).toHaveBeenCalledTimes(1)
+    expect(wallet.evm.signAndSend).toHaveBeenCalledTimes(1)
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'SUCCESS',
     )
