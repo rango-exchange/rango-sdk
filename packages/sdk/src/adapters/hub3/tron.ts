@@ -49,7 +49,10 @@ export function hub3TronAdapter(provider: TronProvider): TronWallet {
     },
     // Passed on as hub3 answers it: the SDK decides whether the approve succeeded.
     async getTransactionInfo({ hash }) {
-      return getNamespace(provider, NAMESPACE_KEY).getTransactionInfo(hash)
+      return getNamespace(
+        provider,
+        NAMESPACE_KEY,
+      ).getUnconfirmedTransactionInfo(hash)
     },
   }
 }

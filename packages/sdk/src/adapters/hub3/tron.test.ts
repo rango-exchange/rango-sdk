@@ -12,6 +12,7 @@ import {
   NamespaceBuilder,
   ProviderBuilder,
 } from '@hub3js/core'
+import { fromAny } from '@total-typescript/shoehorn'
 import { IDBFactory } from 'fake-indexeddb'
 import {
   DefaultSignerFactory,
@@ -46,6 +47,7 @@ type TronTransaction = mainAPI.TronTransaction
 type AllowanceParams = Parameters<TronActions['getAllowance']>[0]
 type ApproveParams = Parameters<TronActions['buildApproveTransaction']>[0]
 type Built = Awaited<ReturnType<TronActions['buildApproveTransaction']>>
+type Info = Awaited<ReturnType<TronActions['getUnconfirmedTransactionInfo']>>
 
 const PROVIDER_ID = 'test-wallet'
 const CHAINS = [...evmBlockchains, tronChain()]
@@ -55,7 +57,7 @@ const ALLOWANCE_READ_INTERVAL_MS = 3_000
 const APPROVE_HASH = 'approve-hash'
 const SWAP_HASH = '0xhash1'
 // A TronWeb-built approve's raw data, with a field the Rango types leave out.
-const RAW_DATA = {
+const RAW_DATA: Built['raw_data'] = fromAny({
   contract: [
     {
       parameter: {
@@ -70,7 +72,7 @@ const RAW_DATA = {
   expiration: 1_700_000_060_000,
   timestamp: 1_700_000_000_000,
   fee_limit: 100_000_000,
-}
+})
 const PAYLOAD = {
   type: 'WEB',
   owner_address: '41from',
@@ -179,8 +181,8 @@ function withoutOptionalFields(built: Built): Built {
 /*
  * A real hub3 provider whose `tron` namespace is stubbed by `wallet`: its state holds `wallet`'s connection and
  * accounts, set once the provider is built, `connect` counts a connect, and `getAllowance`, `buildApproveTransaction`
- * and `getTransactionInfo` record their argument and answer `wallet`'s next answer. Its `signers` metadata property
- * answers `wallet.signers`.
+ * and `getUnconfirmedTransactionInfo` record their argument and answer `wallet`'s next answer. Its `signers` metadata
+ * property answers `wallet.signers`.
  */
 function buildProvider(wallet: Wallet) {
   const namespace = new NamespaceBuilder<TronActions>('tron', PROVIDER_ID)
@@ -196,9 +198,9 @@ function buildProvider(wallet: Wallet) {
       wallet.buildCalls.push(params)
       return next<Built>(wallet.builds)
     })
-    .action('getTransactionInfo', async (_context, txID) => {
+    .action('getUnconfirmedTransactionInfo', async (_context, txID) => {
       wallet.infoReads.push(txID)
-      return next<TronInfo>(wallet.infos)
+      return fromAny<Info, TronInfo>(await next<TronInfo>(wallet.infos))
     })
     .build()
   const provider = new ProviderBuilder(PROVIDER_ID, { store: createStore() })
@@ -507,7 +509,7 @@ describe('hub3TronAdapter', () => {
         'whose approve hub3 builds with a `raw_data` that is not a Tron transaction’s',
         {
           allowances: ['0'],
-          builds: [{ ...BUILT, raw_data: { contract: 1 } }],
+          builds: [{ ...BUILT, raw_data: fromAny({ contract: 1 }) }],
         },
         'Could not build the Tron approve transaction.',
       ],
@@ -533,7 +535,9 @@ describe('hub3TronAdapter', () => {
 
   test('`buildTransaction` takes the transaction’s blockchain from the Prerequisite, and passes a `null` `raw_data` as it is', async () => {
     const adapter = hub3TronAdapter(
-      buildProvider(buildWallet({ builds: [{ ...BUILT, raw_data: null }] })),
+      buildProvider(
+        buildWallet({ builds: [{ ...BUILT, raw_data: fromAny(null) }] }),
+      ),
     )
 
     const built = await adapter.buildTransaction({
@@ -557,7 +561,7 @@ describe('hub3TronAdapter', () => {
     async (_, rawData) => {
       const adapter = hub3TronAdapter(
         buildProvider(
-          buildWallet({ builds: [{ ...BUILT, raw_data: rawData }] }),
+          buildWallet({ builds: [{ ...BUILT, raw_data: fromAny(rawData) }] }),
         ),
       )
 
