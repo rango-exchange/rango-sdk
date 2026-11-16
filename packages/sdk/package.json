@@ -87,7 +87,7 @@
   "peerDependencies": {
     "@hub3js/bip122": "^0.4",
     "@hub3js/core": "^0.64.0",
-    "@hub3js/evm": "^0.8",
+    "@hub3js/evm": "^0.8.1 || 0.8.1-next.2",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
     "@hub3js/stellar": "^0.6",
@@ -143,7 +143,7 @@
   "devDependencies": {
     "@hub3js/bip122": "^0.4",
     "@hub3js/core": "^0.64.0",
-    "@hub3js/evm": "^0.8",
+    "@hub3js/evm": "0.8.1-next.2",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
     "@hub3js/stellar": "^0.6",
@@ -152,8 +152,10 @@
     "@hub3js/tvm": "^0.6",
     "@hub3js/xrpl": "^0.6",
     "@stellar/stellar-sdk": "^15.0.1",
+    "@total-typescript/shoehorn": "^0.1.2",
     "caip": "^1.1.1",
     "fake-indexeddb": "^6.2.6",
+    "viem": "^2.56.8",
     "vitest": "^4.1.5",
     "xrpl": "^4.2.0"
   },

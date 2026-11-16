@@ -2,12 +2,9 @@
 import 'fake-indexeddb/auto'
 
 import type * as Sdk from '../../mod.js'
-import type {
-  AllowanceParams,
-  EvmActions,
-  EvmTransactionReceipt,
-} from '@hub3js/evm'
+import type { AllowanceParams, EvmActions } from '@hub3js/evm'
 import type { GenericSigner, mainAPI, SignerFactory } from 'rango-types'
+import type { TransactionReceipt } from 'viem'
 
 import {
   createStore,
@@ -15,6 +12,7 @@ import {
   NamespaceBuilder,
   ProviderBuilder,
 } from '@hub3js/core'
+import { fromPartial } from '@total-typescript/shoehorn'
 import { IDBFactory } from 'fake-indexeddb'
 import {
   DefaultSignerFactory,
@@ -84,15 +82,18 @@ const SWAP_HASH = '0xhash1'
 // The ERC-20 approve calldata for spender 0xAbC0000000000000000000000000000000000123 and amount 1000000.
 const APPROVE_CALLDATA =
   '0x095ea7b3000000000000000000000000abc000000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000f4240'
-const RECEIPT_SUCCESS: EvmTransactionReceipt = {
-  status: '0x1',
+const RECEIPT_SUCCESS = fromPartial<TransactionReceipt>({
+  status: 'success',
   transactionHash: APPROVE_HASH,
-  blockNumber: '0x10',
-}
-const RECEIPT_REVERTED: EvmTransactionReceipt = {
+})
+const RECEIPT_REVERTED: TransactionReceipt = {
   ...RECEIPT_SUCCESS,
-  status: '0x0',
+  status: 'reverted',
 }
+// What viem's `getTransactionReceipt` throws while the transaction is not mined.
+const RECEIPT_NOT_FOUND = Object.assign(new Error('not found'), {
+  name: 'TransactionReceiptNotFoundError',
+})
 const NOT_CONNECTED: Sdk.BlockReason = {
   reason: 'NOT_CONNECTED',
   metadata: { blockchain: 'ETH', address: '0xfrom' },
@@ -133,7 +134,7 @@ type Wallet = {
   connects: (string | AddChain | undefined)[]
   signerLookups: number
   allowances: (string | Error)[]
-  receipts: (EvmTransactionReceipt | null | Error)[]
+  receipts: (TransactionReceipt | Error)[]
   allowanceReads: AllowanceParams[]
   receiptReads: string[]
 }
@@ -241,9 +242,9 @@ function buildProvider(wallet: Wallet) {
       wallet.allowanceReads.push(params)
       return next<string>(wallet.allowances)
     })
-    .action('getTransactionReceipt', async (_context, hash) => {
-      wallet.receiptReads.push(hash)
-      return next<EvmTransactionReceipt | null>(wallet.receipts)
+    .action('getTransactionReceipt', async (_context, params) => {
+      wallet.receiptReads.push(params.hash)
+      return next<TransactionReceipt>(wallet.receipts)
     })
     .build()
   const provider = new ProviderBuilder(PROVIDER_ID, { store: createStore() })
@@ -907,7 +908,7 @@ describe('hub3EvmAdapter', () => {
       const wallet = buildWallet({
         signers: buildSigners(signer),
         allowances: ['0', UNLIMITED],
-        receipts: [null, null, RECEIPT_SUCCESS],
+        receipts: [RECEIPT_NOT_FOUND, RECEIPT_NOT_FOUND, RECEIPT_SUCCESS],
       })
 
       const client = await startApproving(wallet)
@@ -932,7 +933,7 @@ describe('hub3EvmAdapter', () => {
       expect(getIsApprovalOfEachSignedTx(signAndSendTx)).toEqual([true, false])
     })
 
-    test('whose approve’s receipt has a status other than 1 fails the Execution with the Prerequisite’s on-chain failure, and the swap is never signed', async () => {
+    test('whose approve’s receipt is reverted fails the Execution with the Prerequisite’s on-chain failure, and the swap is never signed', async () => {
       const { signer, signAndSendTx } = buildApprovingSigner()
       const wallet = buildWallet({
         signers: buildSigners(signer),
@@ -1076,7 +1077,7 @@ describe('hub3EvmAdapter', () => {
   })
 
   test('`getTransactionInfo` passes a hash that starts with 0x to the receipt read unchanged', async () => {
-    const wallet = buildWallet({ receipts: [null] })
+    const wallet = buildWallet({ receipts: [RECEIPT_NOT_FOUND] })
     const adapter = hub3EvmAdapter(buildProvider(wallet))
 
     await expect(
@@ -1086,7 +1087,7 @@ describe('hub3EvmAdapter', () => {
   })
 
   test('`getTransactionInfo` prepends 0x to a bare hash before the receipt read', async () => {
-    const wallet = buildWallet({ receipts: [null] })
+    const wallet = buildWallet({ receipts: [RECEIPT_NOT_FOUND] })
     const adapter = hub3EvmAdapter(buildProvider(wallet))
 
     await expect(adapter.getTransactionInfo({ hash: 'approve' })).resolves.toBe(
@@ -1095,20 +1096,39 @@ describe('hub3EvmAdapter', () => {
     expect(wallet.receiptReads).toEqual(['0xapprove'])
   })
 
-  test('`getTransactionInfo` reads a receipt status of `0x01` as success', async () => {
-    // hub3 types the status as `0x1` or `0x0`, but wallets also hand over `0x01`.
-    const paddedStatus: string = '0x01'
-    const receipt: EvmTransactionReceipt = {
-      ...RECEIPT_SUCCESS,
-      status: paddedStatus as EvmTransactionReceipt['status'],
-    }
+  test('`getTransactionInfo` answers pending while the receipt is not found, also when the not-found error is a `cause`', async () => {
+    const wrapped = new Error('or_else failed', { cause: RECEIPT_NOT_FOUND })
     const adapter = hub3EvmAdapter(
-      buildProvider(buildWallet({ receipts: [receipt] })),
+      buildProvider(
+        buildWallet({
+          receipts: [RECEIPT_NOT_FOUND, new Error('outer', { cause: wrapped })],
+        }),
+      ),
     )
 
     await expect(
       adapter.getTransactionInfo({ hash: APPROVE_HASH }),
-    ).resolves.toBe('success')
+    ).resolves.toBe('pending')
+    await expect(
+      adapter.getTransactionInfo({ hash: APPROVE_HASH }),
+    ).resolves.toBe('pending')
+  })
+
+  test('`getTransactionInfo` rethrows any other error, also one whose `cause` chain never names a missing receipt', async () => {
+    const plain = new Error('node down')
+    const chained = new Error('outer', { cause: new Error('inner') })
+    const adapter = hub3EvmAdapter(
+      buildProvider(buildWallet({ receipts: [plain, chained] })),
+    )
+
+    const read = async () =>
+      adapter
+        .getTransactionInfo({ hash: APPROVE_HASH })
+        .catch((error: unknown) => error)
+    const rejections = [await read(), await read()]
+
+    expect(rejections[0]).toBe(plain)
+    expect(rejections[1]).toBe(chained)
   })
 
   describe('a Hyperliquid action', () => {

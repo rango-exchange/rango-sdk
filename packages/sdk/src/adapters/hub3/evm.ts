@@ -96,14 +96,18 @@ export function hub3EvmAdapter(provider: EvmProvider): EvmWallet {
       const prefixedHash: `0x${string}` = hash.startsWith('0x')
         ? `0x${hash.slice(2)}`
         : `0x${hash}`
-      const receipt = await getNamespace(
-        provider,
-        NAMESPACE_KEY,
-      ).getTransactionReceipt(prefixedHash)
-      if (receipt === null) {
-        return 'pending'
+      try {
+        const { status } = await getNamespace(
+          provider,
+          NAMESPACE_KEY,
+        ).getTransactionReceipt({ hash: prefixedHash })
+        return status === 'reverted' ? 'failed' : 'success'
+      } catch (error) {
+        if (isReceiptNotFound(error)) {
+          return 'pending'
+        }
+        throw error
       }
-      return Number(receipt.status) === 1 ? 'success' : 'failed'
     },
     async signTypedData({ typedData, chainId }) {
       return tryRunAndRejectWithSignerError(async () => {
@@ -129,6 +133,18 @@ export function hub3EvmAdapter(provider: EvmProvider): EvmWallet {
       })
     },
   }
+}
+
+// Matches viem's error by name, not `instanceof`, so it still holds when the app bundles another copy of viem.
+function isReceiptNotFound(error: unknown): boolean {
+  let cause = error
+  while (cause instanceof Error) {
+    if (cause.name === 'TransactionReceiptNotFoundError') {
+      return true
+    }
+    cause = cause.cause
+  }
+  return false
 }
 
 // A signer may answer a provisional hash (`hashRequiringUpdate: true` in `response`); `wait` then answers the real one.
