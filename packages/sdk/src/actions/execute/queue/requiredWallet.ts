@@ -36,7 +36,8 @@ export function readWallet<N extends Namespace>(
   namespace: N,
 ): WalletByNamespace[N] | undefined {
   const storage = actions.getStorage()
-  const entry = storage.transactions[actions.payload.transactionId].data.value
+  const { transactionId } = actions.getCurrentTask().payload
+  const entry = storage.transactions[transactionId].data.value
   const { blockchain } = getRequiredWallet(storage, entry)
   const selectedWallet = storage.data.selectedWallets[blockchain]
   return actions.context.getWallet?.({

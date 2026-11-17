@@ -80,7 +80,6 @@ export type StoredQueue = Omit<QueueInfo, 'status' | 'list' | 'actions'> & {
   }
 }
 
-// Payloads are `type` aliases: an `interface` has no index signature, so it isn't a JSON payload.
 export type ExecuteTransactionPayload = { transactionId: string }
 export type StepFinishedPayload = { step: number }
 

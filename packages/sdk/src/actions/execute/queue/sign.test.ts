@@ -47,7 +47,11 @@ function actionsOn(
     retry: vi.fn(),
     failed: vi.fn(),
     schedule: vi.fn(),
-    payload: { transactionId: 's1' },
+    getCurrentTask: () => ({
+      id: 'task-1',
+      action: 'SDK_EXECUTE_TRANSACTION',
+      payload: { transactionId: 's1' },
+    }),
     setStorage: vi.fn(),
     getStorage: () => storage,
     block: vi.fn(),

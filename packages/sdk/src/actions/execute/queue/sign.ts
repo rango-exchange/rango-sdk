@@ -80,7 +80,7 @@ export function buildMainTransactionSigner(
 ): () => Promise<
   (SignedEntryResult & { checkResult: CheckResult | null }) | null
 > {
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   return async () => {
     const storage = actions.getStorage()
     const { data } = storage.transactions[transactionId]

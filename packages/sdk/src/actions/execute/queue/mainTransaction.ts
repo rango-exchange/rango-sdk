@@ -118,7 +118,7 @@ export async function gateSignAndProveMainTransaction(
     mainTx.type === TransactionType.EVM &&
     readWallet(actions, 'evm')?.wait !== undefined
   if (isWaitedByItsWallet) {
-    const { transactionId } = actions.payload
+    const { transactionId } = actions.getCurrentTask().payload
     const { requestId } = actions.getStorage().data
     context.signResponsesAwaitingWait.set(
       `${requestId}/${transactionId}`,
@@ -133,7 +133,7 @@ async function gateAndBuildHyperliquidMainTransactionSigner(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   mainTx: HyperliquidTransaction,
 ): Promise<GatedMainTransaction> {
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   const storage = actions.getStorage()
   const requiredWallet = getRequiredWallet(storage, mainTx)
   const hyperliquid = readWallet(actions, 'evm')
@@ -168,7 +168,7 @@ async function gateAndBuildEvmMainTransactionSigner(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   mainTx: EvmTransaction,
 ): Promise<GatedMainTransaction> {
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   const storage = actions.getStorage()
   const requiredWallet = getRequiredWallet(storage, mainTx)
   const evm = readWallet(actions, 'evm')

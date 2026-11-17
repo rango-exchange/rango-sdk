@@ -198,7 +198,7 @@ export async function signPostAndLookUpHyperliquidHash(
   hyperliquid: EvmWallet,
   tx: HyperliquidTransaction,
 ): Promise<{ walletResult: { hash: string } } | null> {
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   const postResult = await signEntryAndStoreSignedHash(
     actions,
     transactionId,

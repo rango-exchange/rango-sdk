@@ -12,7 +12,7 @@ import { waitForHashThenPollStepStatus } from './transactionStatusPolling.js'
 export async function executeTransaction(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
 ): Promise<TaskResult> {
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   const storage = actions.getStorage()
 
   const entry = storage.transactions[transactionId]

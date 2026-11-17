@@ -13,7 +13,7 @@ export async function runTask<K extends ActionName>(
   actions: SdkActions<K>,
   task: (actions: SdkActions<K>) => Promise<TaskResult>,
 ): Promise<void> {
-  const taskPayload: SdkPayloads[ActionName] = actions.payload
+  const taskPayload: SdkPayloads[ActionName] = actions.getCurrentTask().payload
   const transactionId =
     taskPayload && 'transactionId' in taskPayload
       ? taskPayload.transactionId

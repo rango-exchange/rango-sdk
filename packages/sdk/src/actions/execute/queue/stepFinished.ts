@@ -4,7 +4,7 @@ import type { SdkActions, TaskResult } from './types.js'
 export async function stepFinished(
   actions: SdkActions<'SDK_STEP_FINISHED'>,
 ): Promise<TaskResult> {
-  const { step } = actions.payload
+  const { step } = actions.getCurrentTask().payload
   const storage = actions.getStorage()
 
   // Already counted: a second run.

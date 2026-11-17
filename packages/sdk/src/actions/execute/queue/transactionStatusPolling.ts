@@ -117,7 +117,7 @@ async function waitForFinalEvmHash(
   hash: string,
 ): Promise<string | null> {
   const { httpClient, signResponsesAwaitingWait } = actions.context
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   const storage = actions.getStorage()
   const { requestId } = storage.data
   const signResponseKey = `${requestId}/${transactionId}`
@@ -176,7 +176,7 @@ export async function waitForHashThenPollStepStatus(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   hash: string,
 ): Promise<TaskResult> {
-  const { transactionId } = actions.payload
+  const { transactionId } = actions.getCurrentTask().payload
   const { step } = actions.getStorage().transactions[transactionId]
   const finalHash = await waitForFinalEvmHash(actions, hash)
   return finalHash === null

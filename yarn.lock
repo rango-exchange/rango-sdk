@@ -823,10 +823,10 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.3.6.tgz#3569708bd4be4d8870ba32bf1c456dac81600d97"
   integrity sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA==
 
-"@rango-dev/queue-manager-core@0.0.0-experimental-c7c15d53-20261107":
-  version "0.0.0-experimental-c7c15d53-20261107"
-  resolved "https://registry.yarnpkg.com/@rango-dev/queue-manager-core/-/queue-manager-core-0.0.0-experimental-c7c15d53-20261107.tgz#409c50b2c885f191e9ae8a6031a9731cbc22cc8b"
-  integrity sha512-69zJ8oFzI1t1mkV0pJjSBsNMuCTq3Mv1jezi+Pj5oSrVuaDND/MaDTl7mPpAQnqfkJ0eQ6BQ/n4UrBfe8ODnXQ==
+"@rango-dev/queue-manager-core@0.0.0-experimental-719ad9ea-20261117":
+  version "0.0.0-experimental-719ad9ea-20261117"
+  resolved "https://registry.yarnpkg.com/@rango-dev/queue-manager-core/-/queue-manager-core-0.0.0-experimental-719ad9ea-20261117.tgz#3774eb44365b3889014beccd75a2c5e6fef81163"
+  integrity sha512-9BK/SPu1rcn5QwI/qp/+jsPxI6rMcOj1fjmXzclavgo+C76ge8/MWXeIlLvFkycJMXk/vNLyj3zryQlCXfb0dQ==
   dependencies:
     idb "^7.1.1"
     uuid "^9.0.0"
