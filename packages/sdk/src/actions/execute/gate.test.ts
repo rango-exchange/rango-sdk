@@ -9,7 +9,6 @@ import { SignerErrorCode } from 'rango-types'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
-  activeAccounts,
   advance,
   chain,
   confirmQuote,
@@ -499,50 +498,6 @@ describe('the network gate', () => {
     expect((await client.history.get('request-1'))?._queue.status).toBe(
       'SUCCESS',
     )
-  })
-
-  test('a transfer on a blockchain with no selected wallet is gated and signed by its own wallet in the bip122 map', async () => {
-    const switching = switchingNamespaces(undefined, {
-      ...activeAccounts(),
-      DOGE: 'Dfrom',
-    })
-    const doge = switching.bip122On('DOGE')
-    const port = {
-      ...switching,
-      wallet: { ...switching.wallet, bip122: { DOGE: doge } },
-    }
-    const { client } = await createExecutionClient(port, [
-      ...evmBlockchains,
-      chain('DOGE', ['^D']),
-    ])
-    const transfer: LegacySdk.Transfer = {
-      type: LegacySdk.TransactionType.TRANSFER,
-      blockChain: 'DOGE',
-      prerequisites: [],
-      method: 'transfer',
-      asset: {
-        blockchain: 'DOGE',
-        symbol: 'DOGE',
-        address: null,
-        ticker: 'DOGE',
-      },
-      amount: '100000',
-      decimals: 8,
-      fromWalletAddress: 'Dfrom',
-      recipientAddress: 'Dto',
-      memo: null,
-      psbt: null,
-    }
-    httpClient.createTransaction.mockReset()
-    httpClient.createTransaction.mockResolvedValue(createTxResponse(transfer))
-
-    await start(client)
-
-    expect(doge.getAccount.mock.calls).toEqual([[]])
-    expect(port.requests).toEqual([['bip122', 'sign', { tx: transfer }]])
-    const view = await client.history.get('request-1')
-    expect(view?._queue.status).toBe('SUCCESS')
-    expect(view?._storage.data.selectedWallets).not.toHaveProperty('DOGE')
   })
 
   test('an EVM entry whose blockchain has no chain ID in the list fails CLIENT_UNEXPECTED_BEHAVIOUR, stored and not reported, without signing', async () => {

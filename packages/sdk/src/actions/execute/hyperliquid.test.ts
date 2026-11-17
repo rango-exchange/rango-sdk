@@ -18,6 +18,7 @@ import {
   confirmQuote,
   createExecutionClient,
   createTxResponse,
+  distinctQueries,
   evmBlockchains,
   EXECUTION_OPTIONS,
   expectNotReported,
@@ -145,6 +146,14 @@ describe('Hyperliquid', () => {
     ['withdraw3', 'HyperliquidTransaction:Withdraw'],
     ['usdSend', 'HyperliquidTransaction:UsdSend'],
   ]
+
+  test('asks getWallet for an evm wallet on HYPERLIQUID, with the HYPERLIQUID selected Wallet ID', async () => {
+    stubHyperliquid({ explorer: [explorerAnswer(HASH, 'withdraw3')] })
+    const { client, queries } = await start(hyperliquidWallet())
+
+    expect(distinctQueries(queries)).toEqual(['evm:HYPERLIQUID:rabby'])
+    expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+  })
 
   test.each(actions)(
     'a %s is signed through signTypedData on its signatureChainId, posted, found by its nonce and ends SUCCESS',

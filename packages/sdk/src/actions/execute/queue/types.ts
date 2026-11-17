@@ -3,10 +3,10 @@ import type {
   BlockReason,
   ExecutionRecord,
   ExecutionTransaction,
+  GetWallet,
   HistoryItem,
   RouteEvent,
   StepEvent,
-  WalletPort,
 } from '../mod.js'
 import type {
   ExecuterActions,
@@ -36,8 +36,8 @@ export type CheckResult = NonNullable<
 
 export type SdkContext = {
   httpClient: LegacyClient
-  // `undefined` until the host sets one: each gated entry Blocks `NOT_CONNECTED` meanwhile.
-  wallet: WalletPort | undefined
+  // `undefined` with no `execution` config: each gated entry Blocks `NOT_CONNECTED`.
+  getWallet: GetWallet | undefined
   // From the client's Cache, or with an HTTP call on a miss.
   loadBlockchainsMeta: () => Promise<readonly BlockchainMeta[]>
   emit: Emit

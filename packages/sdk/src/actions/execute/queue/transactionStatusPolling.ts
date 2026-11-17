@@ -7,7 +7,7 @@ import { loadBlockchainMetaOf } from './blockchainMeta.js'
 import { POLL_INTERVAL_MS } from './constants.js'
 import { ErrorToReport, isCanceledOrPaused } from './executionFailure.js'
 import { replaceLastExplorerLinkWithReplacedHash } from './explorerLink.js'
-import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
+import { getRequiredWallet, readWallet } from './requiredWallet.js'
 import { sleep } from './utils.js'
 
 function mergeStatusAnswerIntoCheckResult(
@@ -116,7 +116,7 @@ async function waitForFinalEvmHash(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   hash: string,
 ): Promise<string | null> {
-  const { wallet, httpClient, signResponsesAwaitingWait } = actions.context
+  const { httpClient, signResponsesAwaitingWait } = actions.context
   const { transactionId } = actions.payload
   const storage = actions.getStorage()
   const { requestId } = storage.data
@@ -126,7 +126,7 @@ async function waitForFinalEvmHash(
     return hash
   }
   const requiredWallet = getRequiredWallet(storage, entryTx.value)
-  const evm = getWalletOnBlockchain(wallet?.evm, requiredWallet.blockchain)
+  const evm = readWallet(actions, 'evm')
   if (evm?.wait === undefined) {
     return hash
   }

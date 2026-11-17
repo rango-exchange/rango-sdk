@@ -17,7 +17,7 @@ import {
 } from './blockchainMeta.js'
 import { isCanceledOrPaused } from './executionFailure.js'
 import { signPostAndLookUpHyperliquidHash } from './hyperliquid.js'
-import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
+import { getRequiredWallet, readWallet } from './requiredWallet.js'
 import { buildMainTransactionSigner } from './sign.js'
 import { waitForHashThenPollStepStatus } from './transactionStatusPolling.js'
 import {
@@ -52,49 +52,49 @@ export async function gateSignAndProveMainTransaction(
     case TransactionType.TRON:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.tron,
+        readWallet(actions, 'tron'),
         mainTx,
       )
       break
     case TransactionType.XRPL:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.xrpl,
+        readWallet(actions, 'xrpl'),
         mainTx,
       )
       break
     case TransactionType.STELLAR:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.stellar,
+        readWallet(actions, 'stellar'),
         mainTx,
       )
       break
     case TransactionType.SOLANA:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.solana,
+        readWallet(actions, 'solana'),
         mainTx,
       )
       break
     case TransactionType.STARKNET:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.starknet,
+        readWallet(actions, 'starknet'),
         mainTx,
       )
       break
     case TransactionType.TON:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.ton,
+        readWallet(actions, 'ton'),
         mainTx,
       )
       break
     case TransactionType.SUI:
       gated = await gateAccountAndBuildMainTransactionSigner(
         actions,
-        context.wallet?.sui,
+        readWallet(actions, 'sui'),
         mainTx,
       )
       break
@@ -116,10 +116,7 @@ export async function gateSignAndProveMainTransaction(
   }
   const isWaitedByItsWallet =
     mainTx.type === TransactionType.EVM &&
-    getWalletOnBlockchain(
-      context.wallet?.evm,
-      getRequiredWallet(actions.getStorage(), mainTx).blockchain,
-    )?.wait !== undefined
+    readWallet(actions, 'evm')?.wait !== undefined
   if (isWaitedByItsWallet) {
     const { transactionId } = actions.payload
     const { requestId } = actions.getStorage().data
@@ -137,11 +134,9 @@ async function gateAndBuildHyperliquidMainTransactionSigner(
   mainTx: HyperliquidTransaction,
 ): Promise<GatedMainTransaction> {
   const { transactionId } = actions.payload
-  const requiredWallet = getRequiredWallet(actions.getStorage(), mainTx)
-  const hyperliquid = getWalletOnBlockchain(
-    actions.context.wallet?.evm,
-    requiredWallet.blockchain,
-  )
+  const storage = actions.getStorage()
+  const requiredWallet = getRequiredWallet(storage, mainTx)
+  const hyperliquid = readWallet(actions, 'evm')
   if (hyperliquid === undefined) {
     return {
       blockReason: { reason: 'NOT_CONNECTED', metadata: requiredWallet },
@@ -174,11 +169,9 @@ async function gateAndBuildEvmMainTransactionSigner(
   mainTx: EvmTransaction,
 ): Promise<GatedMainTransaction> {
   const { transactionId } = actions.payload
-  const requiredWallet = getRequiredWallet(actions.getStorage(), mainTx)
-  const evm = getWalletOnBlockchain(
-    actions.context.wallet?.evm,
-    requiredWallet.blockchain,
-  )
+  const storage = actions.getStorage()
+  const requiredWallet = getRequiredWallet(storage, mainTx)
+  const evm = readWallet(actions, 'evm')
   if (evm === undefined) {
     return {
       blockReason: { reason: 'NOT_CONNECTED', metadata: requiredWallet },
@@ -221,11 +214,9 @@ async function gateAndBuildBip122MainTransactionSigner(
   actions: SdkActions<'SDK_EXECUTE_TRANSACTION'>,
   mainTx: TransferTransaction,
 ): Promise<GatedMainTransaction> {
-  const requiredWallet = getRequiredWallet(actions.getStorage(), mainTx)
-  const bip122 = getWalletOnBlockchain(
-    actions.context.wallet?.bip122,
-    requiredWallet.blockchain,
-  )
+  const storage = actions.getStorage()
+  const requiredWallet = getRequiredWallet(storage, mainTx)
+  const bip122 = readWallet(actions, 'bip122')
   if (bip122 === undefined) {
     return {
       blockReason: { reason: 'NOT_CONNECTED', metadata: requiredWallet },

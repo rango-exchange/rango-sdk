@@ -870,17 +870,68 @@ export type ExecutionClientOptions = {
   // The emitter in place of the recording one, or `null` to build with no emitter.
   emitter?: Sdk.Emitter<Sdk.ExecutionEvents> | null
   pauseOnStart?: boolean
-  beforeResume?: Sdk.BeforeResume
 }
 
 type ExecutionClient<P extends NamespacePort> = {
   client: Sdk.RangoClient
   events: RecordedEvent[]
   all: (RecordedEvent | ['loaded', undefined])[]
+  // Every query `getWallet` got, copied, in call order.
+  queries: Sdk.WalletQuery<Sdk.Namespace>[]
 } & P
 
+// A namespace's wallet for a blockchain: a map answers its entry, else its `default`.
+function onBlockchain<W extends { getAccount: unknown }>(
+  wallet: W | WalletsByBlockchain<W> | undefined,
+  blockchain: string,
+): W | undefined {
+  if (wallet === undefined || isSingleWallet(wallet)) {
+    return wallet
+  }
+  return wallet[blockchain] ?? wallet.default
+}
+
+function isSingleWallet<W extends { getAccount: unknown }>(
+  wallet: W | WalletsByBlockchain<W>,
+): wallet is W {
+  return typeof wallet.getAccount === 'function'
+}
+
+// The distinct queries `getWallet` got, as `namespace:blockchain:walletId`.
+export function distinctQueries(
+  queries: readonly Sdk.WalletQuery<Sdk.Namespace>[],
+): string[] {
+  return [
+    ...new Set(
+      queries.map(
+        ({ namespace, blockchain, walletId }) =>
+          `${namespace}:${blockchain}:${walletId}`,
+      ),
+    ),
+  ]
+}
+
 /*
- * A client with `execution.wallet` set to this namespace port, by default a recording one, and a
+ * The host's `getWallet` over `port`: it reads `port.wallet` on each call, so a test swaps the wallet by setting it, and
+ * answers `evm` and `bip122` by the queried blockchain when they are maps. Records each query in `queries`.
+ */
+function getWalletOf(
+  port: NamespacePort,
+  queries: Sdk.WalletQuery<Sdk.Namespace>[],
+): Sdk.GetWallet {
+  return (query) => {
+    queries.push({ ...query })
+    const wallets: Partial<Sdk.WalletByNamespace> = {
+      ...port.wallet,
+      evm: onBlockchain(port.wallet.evm, query.blockchain),
+      bip122: onBlockchain(port.wallet.bip122, query.blockchain),
+    }
+    return wallets[query.namespace]
+  }
+}
+
+/*
+ * A client with `execution.getWallet` answering from this namespace port, by default a recording one, and a
  * recording emitter unless `options` replaces it, with these `options` (such as `pauseOnStart`), whose blockchain list
  * holds these blockchains. The port is returned as given, so its mocks keep their types; `events` and `all` stay empty
  * when the emitter is replaced. The only way the tests build a client with a wallet.
@@ -903,15 +954,22 @@ export async function createExecutionClient(
   const { RangoClient } = await loadSdk()
   httpClient.getBlockchains.mockResolvedValue([...chains])
   const recording = recordingEmitter()
+  const queries: Sdk.WalletQuery<Sdk.Namespace>[] = []
   const client = new RangoClient({
     apiKey: 'test-key',
     execution: {
-      wallet: port.wallet,
+      getWallet: getWalletOf(port, queries),
       ...(emitter === null ? {} : { emitter: emitter ?? recording.emitter }),
       ...options,
     },
   })
-  return { client, events: recording.events, all: recording.all, ...port }
+  return {
+    client,
+    events: recording.events,
+    all: recording.all,
+    queries,
+    ...port,
+  }
 }
 
 // The stored Execution, as `history` answers it.
@@ -954,10 +1012,12 @@ export const SELECTED_WALLETS = {
   XRPL: { address: 'rXRPLfrom', walletId: 'xaman' },
   STELLAR: { address: 'GSTELLARFROM', walletId: 'freighter' },
   HYPERLIQUID: { address: '0xhyperliquid', walletId: 'rabby' },
+  BTC: { address: 'bc1from', walletId: 'xverse' },
+  LTC: { address: 'ltc1from', walletId: 'xverse' },
 }
 /*
- * What `getAccount` answers by default: each selected wallet's address, and a TRANSFER's `bc1from` on BTC. A fresh
- * map per call, so a test can change it.
+ * What `getAccount` answers by default: each selected wallet's address. A fresh map per call, so a test can change
+ * it.
  */
 export function activeAccounts(): Record<string, string | null> {
   return {
@@ -967,7 +1027,6 @@ export function activeAccounts(): Record<string, string | null> {
         address,
       ]),
     ),
-    BTC: 'bc1from',
   }
 }
 
@@ -1156,7 +1215,7 @@ export function stubHyperliquid({
 }
 
 /*
- * Per-namespace fakes: the WalletPort by namespace. Each namespace takes the port's requests and has its method names;
+ * Per-namespace fakes: the wallets by namespace. Each namespace takes the port's requests and has its method names;
  * every call but `getAccount` is recorded, copied, in call order, as `[namespace, method, request]`.
  * `createExecutionClient` hands one to the SDK as it is, so a test asserts what the port receives.
  */
@@ -1262,7 +1321,7 @@ type RecordedWallets = {
   ton: SingleChainNamespace<LegacySdk.TransactionType.TON>
   sui: SingleChainNamespace<LegacySdk.TransactionType.SUI>
 }
-// A wallet by blockchain, as `evm` and `bip122` take it.
+// A wallet by blockchain, as the fake `getWallet` answers `evm` and `bip122` from it.
 type WalletsByBlockchain<W> = {
   [blockchain: string]: W | undefined
   default?: W

@@ -49,23 +49,23 @@ function scriptLegacy(): void {
 }
 
 /*
- * A client whose `execution` has a recording emitter and a `beforeResume` that sets the wallet to `wallet()`
- * on every run, and no `wallet` of its own. `wallet()` answers `undefined` until the test connects one.
+ * A client whose `execution` has a recording emitter and a `getWallet` that answers from `wallets()` on every
+ * call. `wallets()` answers `undefined` until the test connects some.
  */
 async function walletlessClient(
-  wallet: () => Sdk.WalletPort | undefined = () => undefined,
+  wallets: () => Partial<Sdk.WalletByNamespace> | undefined = () => undefined,
 ) {
   const { RangoClient } = await loadSdk()
   httpClient.getBlockchains.mockResolvedValue([...evmBlockchains])
   const { emitter, events } = recordingEmitter()
-  const beforeResume = vi.fn<Sdk.BeforeResume>((_, setContext) => {
-    setContext({ wallet: wallet() })
-  })
   const client = new RangoClient({
     apiKey: 'test-key',
-    execution: { emitter, beforeResume },
+    execution: {
+      emitter,
+      getWallet: ({ namespace }) => wallets()?.[namespace],
+    },
   })
-  return { client, events, beforeResume }
+  return { client, events }
 }
 
 // Confirms a one-Step Route and executes it, with every pending step run.
@@ -121,14 +121,11 @@ describe('with no wallet', () => {
     ])
   })
 
-  test('a wallet set in beforeResume continues the Blocked Execution on the next execute(), and every port call goes to it', async () => {
-    const connection: { wallet?: Sdk.WalletPort } = {}
-    const { client, beforeResume } = await walletlessClient(
-      () => connection.wallet,
-    )
+  test('a wallet getWallet answers later continues the Blocked Execution on the next execute(), and every port call goes to it', async () => {
+    const connection: { wallet?: Partial<Sdk.WalletByNamespace> } = {}
+    const { client } = await walletlessClient(() => connection.wallet)
     await start(client)
     expect((await historyOf(client))?._queue.status).toBe('BLOCKED')
-    expect(beforeResume.mock.calls[0]?.[0].wallet).toBeUndefined()
 
     const port = recordingNamespaces()
     connection.wallet = port.wallet
@@ -188,7 +185,7 @@ describe('with no wallet', () => {
     httpClient.createTransaction.mockResolvedValue(
       createTxResponse(evmTx({ prerequisites: [evmApprove()] })),
     )
-    const connection: { wallet?: Sdk.WalletPort } = {}
+    const connection: { wallet?: Partial<Sdk.WalletByNamespace> } = {}
     const { client: loaded, events } = await walletlessClient(
       () => connection.wallet,
     )

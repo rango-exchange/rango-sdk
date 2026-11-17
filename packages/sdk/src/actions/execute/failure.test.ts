@@ -9,7 +9,6 @@ import { type SignerError, SignerErrorCode } from 'rango-types'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
-  activeAccounts,
   BSC_ASSET,
   cacheQuote,
   chain,
@@ -396,48 +395,6 @@ describe("the failure report's wallet tag", () => {
       reason: 'bad response from create tx endpoint',
     })
     expect(events.map(nameOf).slice(-FAILED_TAIL)).toEqual([
-      'step1:failed',
-      'route:failed',
-    ])
-  })
-
-  test('an entry on a blockchain with no selected wallet reports no tag, and the failure is still stored and emitted', async () => {
-    const recording = recordingNamespaces(undefined, {
-      ...activeAccounts(),
-      DOGE: 'Dfrom',
-    })
-    const doge = recording.bip122On('DOGE')
-    const port = {
-      ...recording,
-      wallet: { ...recording.wallet, bip122: { DOGE: doge } },
-    }
-    const { client, events } = await createExecutionClient(port)
-    httpClient.getBlockchains.mockResolvedValue([
-      ...evmBlockchains,
-      chain('DOGE', ['^D']),
-    ])
-    doge.sign.mockRejectedValueOnce(signFailed())
-
-    await startWith(client, {
-      ...BTC_TRANSFER,
-      blockChain: 'DOGE',
-      fromWalletAddress: 'Dfrom',
-    })
-
-    const view = await client.history.get('request-1')
-    expect(view?._queue.status).toBe('FAILED')
-    expect(view?._storage.failure).toEqual({
-      reasonCode: 'CALL_WALLET_FAILED',
-      message: 'Error signing the transaction',
-      detail: SIGN_FAILED,
-    })
-    expect(httpClient.reportFailure).toHaveBeenCalledTimes(1)
-    expect(httpClient.reportFailure).toHaveBeenCalledWith({
-      ...reported('CALL_WALLET_FAILED', undefined),
-      reason: SIGN_FAILED,
-    })
-    expect(events.map(nameOf).slice(-FAILURE_TAIL)).toEqual([
-      'changed',
       'step1:failed',
       'route:failed',
     ])

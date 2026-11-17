@@ -24,7 +24,7 @@ import {
   TRUSTLINE_LIMIT_BY_BLOCKCHAIN,
 } from './constants.js'
 import { ErrorToReport, isCanceledOrPaused } from './executionFailure.js'
-import { getRequiredWallet, getWalletOnBlockchain } from './requiredWallet.js'
+import { getRequiredWallet, readWallet } from './requiredWallet.js'
 import {
   awaitSignResultAndBuildExplorerLink,
   signEntryAndStoreSignedHash,
@@ -65,10 +65,7 @@ async function gateSignAndProveEvmApprove(
 ): Promise<TaskResult> {
   const storage = actions.getStorage()
   const requiredWallet = getRequiredWallet(storage, prerequisite)
-  const evm = getWalletOnBlockchain(
-    actions.context.wallet?.evm,
-    requiredWallet.blockchain,
-  )
+  const evm = readWallet(actions, 'evm')
   if (evm === undefined) {
     return { block: { reason: 'NOT_CONNECTED', metadata: requiredWallet } }
   }
@@ -152,7 +149,7 @@ async function gateSignAndProveTronApprove(
 ): Promise<TaskResult> {
   const storage = actions.getStorage()
   const requiredWallet = getRequiredWallet(storage, prerequisite)
-  const tron = actions.context.wallet?.tron
+  const tron = readWallet(actions, 'tron')
   if (tron === undefined) {
     return { block: { reason: 'NOT_CONNECTED', metadata: requiredWallet } }
   }
@@ -218,7 +215,7 @@ async function gateSignAndProveXrplTrustline(
 ): Promise<TaskResult> {
   const storage = actions.getStorage()
   const requiredWallet = getRequiredWallet(storage, prerequisite)
-  const xrpl = actions.context.wallet?.xrpl
+  const xrpl = readWallet(actions, 'xrpl')
   if (xrpl === undefined) {
     return { block: { reason: 'NOT_CONNECTED', metadata: requiredWallet } }
   }
@@ -287,7 +284,7 @@ async function gateAndSignStellarTrustline(
 ): Promise<TaskResult> {
   const storage = actions.getStorage()
   const requiredWallet = getRequiredWallet(storage, prerequisite)
-  const stellar = actions.context.wallet?.stellar
+  const stellar = readWallet(actions, 'stellar')
   if (stellar === undefined) {
     return { block: { reason: 'NOT_CONNECTED', metadata: requiredWallet } }
   }

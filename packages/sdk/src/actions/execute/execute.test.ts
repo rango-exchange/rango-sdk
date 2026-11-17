@@ -112,20 +112,20 @@ const calls: [
   ['resume()', async (client) => client.resume(), undefined],
 ]
 
-// A client with no `execution`, and one whose `execution` has every key but `wallet`.
+// A client with no `execution`, and one whose `execution` has every key and a `getWallet` answering no wallet.
 const builds: [string, () => Promise<Sdk.RangoClient>][] = [
   ['without execution', async () => createClient(evmBlockchains)],
   [
-    'with an execution without wallet',
+    'with a getWallet answering no wallet',
     async () => {
       const { RangoClient } = await loadSdk()
       httpClient.getBlockchains.mockResolvedValue([...evmBlockchains])
       return new RangoClient({
         apiKey: 'test-key',
         execution: {
+          getWallet: () => undefined,
           emitter: { emit: vi.fn() },
           pauseOnStart: false,
-          beforeResume: vi.fn(),
         },
       })
     },
@@ -272,7 +272,7 @@ describe('the execution keys', () => {
     expect(indexedDB).not.toHaveBeenCalled()
   })
 
-  test('with an execution of wallet, emitter and pauseOnStart, quote(), quotes() and confirm() still work, calling no port method and emitting nothing', async () => {
+  test('with an execution of getWallet, emitter and pauseOnStart, quote(), quotes() and confirm() still work, calling no port method and emitting nothing', async () => {
     const wallet = minimalWallet()
     const emitter = { emit: vi.fn() }
     const { client } = await createExecutionClient(
@@ -331,11 +331,11 @@ describe('the execution keys', () => {
       Sdk.ExecutionConfig | undefined
     >()
     expectTypeOf<Sdk.ExecutionConfig>().toEqualTypeOf<{
-      wallet?: Sdk.WalletPort
+      getWallet: Sdk.GetWallet
       emitter?: Sdk.Emitter<Sdk.ExecutionEvents>
       pauseOnStart?: boolean
-      beforeResume?: Sdk.BeforeResume
     }>()
+    expectTypeOf<undefined>().not.toExtend<Sdk.ExecutionConfig['getWallet']>()
     expectTypeOf<Sdk.ExecutionOptions>().toEqualTypeOf<{
       transactionOptions: {
         slippage: string
@@ -421,32 +421,44 @@ describe('the execution keys', () => {
     expectTypeOf<Sdk.ExecutionEvents['loaded']>().toEqualTypeOf<undefined>()
   })
 
-  test('types the WalletPort as nine optional namespaces, evm and bip122 each one wallet or a map by blockchain, the Hyperliquid wallet an evm one, each with only the methods the SDK calls for it, no request carrying the blockchain, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
+  test('types GetWallet as a query by namespace answering that namespace’s wallet or undefined, and a lookup object fitting it without a cast', () => {
+    expectTypeOf<Sdk.Namespace>().toEqualTypeOf<keyof Sdk.WalletByNamespace>()
+    expectTypeOf<Sdk.WalletQuery<'evm'>>().toEqualTypeOf<{
+      namespace: 'evm'
+      blockchain: string
+      walletId: string
+    }>()
+    expectTypeOf<Sdk.GetWallet>().toEqualTypeOf<
+      <N extends Sdk.Namespace>(
+        query: Sdk.WalletQuery<N>,
+      ) => Sdk.WalletByNamespace[N] | undefined
+    >()
+    const fromAll =
+      (wallets: Sdk.WalletByNamespace): Sdk.GetWallet =>
+      ({ namespace }) =>
+        wallets[namespace]
+    const wallets: Partial<Sdk.WalletByNamespace> = {}
+    const getWallet: Sdk.GetWallet = ({ namespace }) => wallets[namespace]
+    expectTypeOf(fromAll).returns.toEqualTypeOf<Sdk.GetWallet>()
+    expectTypeOf(getWallet).toEqualTypeOf<Sdk.GetWallet>()
+  })
+
+  test('types WalletByNamespace as nine namespaces, evm and bip122 each one wallet, the Hyperliquid wallet an evm one, each with only the methods the SDK calls for it, no request carrying the blockchain, getTransactionInfo answering the Host judgement on evm and what the chain says elsewhere, and exports no WalletTarget', () => {
     type TxOf<T extends TransactionType> = Extract<Transaction, { type: T }>
     type PrerequisiteOf<T extends TransactionPrerequisite['type']> = Extract<
       TransactionPrerequisite,
       { type: T }
     >
-    expectTypeOf<Sdk.WalletPort>().toEqualTypeOf<{
-      evm?:
-        | Sdk.EvmWallet
-        | {
-            [blockchain: string]: Sdk.EvmWallet | undefined
-            default?: Sdk.EvmWallet
-          }
-      tron?: Sdk.TronWallet
-      xrpl?: Sdk.XrplWallet
-      stellar?: Sdk.StellarWallet
-      bip122?:
-        | Sdk.Bip122Wallet
-        | {
-            [blockchain: string]: Sdk.Bip122Wallet | undefined
-            default?: Sdk.Bip122Wallet
-          }
-      solana?: Sdk.SolanaWallet
-      starknet?: Sdk.StarknetWallet
-      ton?: Sdk.TonWallet
-      sui?: Sdk.SuiWallet
+    expectTypeOf<Sdk.WalletByNamespace>().toEqualTypeOf<{
+      evm: Sdk.EvmWallet
+      tron: Sdk.TronWallet
+      xrpl: Sdk.XrplWallet
+      stellar: Sdk.StellarWallet
+      bip122: Sdk.Bip122Wallet
+      solana: Sdk.SolanaWallet
+      starknet: Sdk.StarknetWallet
+      ton: Sdk.TonWallet
+      sui: Sdk.SuiWallet
     }>()
     expectTypeOf<Sdk.SignResult>().toEqualTypeOf<{
       hash: string
@@ -559,7 +571,7 @@ describe('the execution keys', () => {
     // @ts-expect-error WalletTarget is not exported: no request carries an address
     expectTypeOf<Sdk.WalletTarget>().not.toBeNever()
     // @ts-expect-error there is no cosmos namespace
-    expectTypeOf<Sdk.WalletPort['cosmos']>().not.toBeNever()
+    expectTypeOf<Sdk.WalletByNamespace['cosmos']>().not.toBeNever()
   })
 
   test('narrows an INVALID_INPUT error on options to MISSING, on a client with no wallet', async () => {

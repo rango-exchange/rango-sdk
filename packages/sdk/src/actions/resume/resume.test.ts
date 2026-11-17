@@ -325,7 +325,7 @@ describe('pause() and resume()', () => {
     expect(view?._storage.finishedSwapSteps).toBe(2)
   })
 
-  test('pause() then resume() on one client, while a step is mid-sign, asks the WalletPort to sign once and ends SUCCESS once', async () => {
+  test('pause() then resume() on one client, while a step is mid-sign, asks the wallet to sign once and ends SUCCESS once', async () => {
     const port = recordingNamespaces()
     const held = Promise.withResolvers<string | null>()
     port.wallet.evm.getChainId.mockImplementationOnce(async () => held.promise)

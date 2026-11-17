@@ -6,7 +6,6 @@ import {
   clientArgsOf,
   httpClient,
   loadSdk,
-  recordingNamespaces,
   resetHttpClient,
 } from '../tests/support.js'
 
@@ -84,11 +83,13 @@ describe('client', () => {
       execution?: Sdk.ExecutionConfig
     }>()
     expect(
-      new RangoClient({ apiKey: 'test-key', execution: {} }),
+      new RangoClient({
+        apiKey: 'test-key',
+        execution: { getWallet: () => undefined },
+      }),
     ).toBeInstanceOf(RangoClient)
-    const { wallet } = recordingNamespaces()
-    // @ts-expect-error the execution settings are under execution: the config has no top-level wallet
-    void new RangoClient({ apiKey: 'test-key', wallet })
+    // @ts-expect-error the execution settings are under execution: the config has no top-level getWallet
+    void new RangoClient({ apiKey: 'test-key', getWallet: () => undefined })
     // @ts-expect-error the execution settings are under execution: the config has no top-level pauseOnStart
     void new RangoClient({ apiKey: 'test-key', pauseOnStart: true })
     // @ts-expect-error the config takes no meta: the client fetches the blockchains itself

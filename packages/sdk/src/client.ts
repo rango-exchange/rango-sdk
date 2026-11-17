@@ -73,8 +73,8 @@ export class RangoClient {
 
   /**
    * @param config - Your `apiKey`, a `baseUrl` that defaults to `https://api.rango.exchange`, and the `execution`
-   * config: the `wallet` that `execute()` and the other execution methods need, with an optional `emitter`,
-   * `pauseOnStart` and `beforeResume`.
+   * config: the `getWallet` that `execute()` and the other execution methods need, with an optional `emitter` and
+   * `pauseOnStart`.
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#usage
    */
   constructor(config: RangoClientConfig) {
@@ -273,7 +273,7 @@ export class RangoClient {
   /*
    * Built by the first execution call, with core loaded only then, and shared by the calls made while it is in
    * flight. A failed build is not kept: the calls waiting on it get its error, and the next execution call builds
-   * again. With no wallet it is built all the same: each gated entry Blocks `NOT_CONNECTED` until one is set.
+   * again. With no `execution` config it is built all the same: each gated entry Blocks `NOT_CONNECTED`.
    */
   async #executionEngine(): Promise<ExecutionEngine> {
     if (this.#executionEnginePromise) {

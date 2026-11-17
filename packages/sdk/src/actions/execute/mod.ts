@@ -7,7 +7,6 @@ export {
 } from './queue/mod.js'
 export type { StoredQueue } from './queue/mod.js'
 export type {
-  BeforeResume,
   Bip122Wallet,
   BlockReason,
   Emitter,
@@ -21,7 +20,9 @@ export type {
   ExecutionOptions,
   ExecutionRecord,
   ExecutionTransaction,
+  GetWallet,
   HistoryItem,
+  Namespace,
   RouteEvent,
   SignResult,
   SolanaWallet,
@@ -31,6 +32,7 @@ export type {
   SuiWallet,
   TonWallet,
   TronWallet,
-  WalletPort,
+  WalletByNamespace,
+  WalletQuery,
   XrplWallet,
 } from './types.js'

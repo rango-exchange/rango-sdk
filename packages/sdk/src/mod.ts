@@ -1,6 +1,5 @@
 export { RangoClient } from './client.js'
 export type {
-  BeforeResume,
   Bip122Wallet,
   BlockReason,
   ConfirmOptions,
@@ -16,7 +15,9 @@ export type {
   ExecutionOptions,
   ExecutionRecord,
   ExecutionTransaction,
+  GetWallet,
   HistoryItem,
+  Namespace,
   Quote,
   QuoteEntry,
   QuoteRequest,
@@ -38,7 +39,8 @@ export type {
   SuiWallet,
   TonWallet,
   TronWallet,
-  WalletPort,
+  WalletByNamespace,
+  WalletQuery,
   XrplWallet,
 } from './actions/mod.js'
 export type { RangoClientConfig } from './configs.js'

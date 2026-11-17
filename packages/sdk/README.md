@@ -19,7 +19,7 @@ import { RangoClient } from '@rango-dev/sdk'
 const client = new RangoClient({ apiKey: 'YOUR_API_KEY' })
 ```
 
-`baseUrl` defaults to `https://api.rango.exchange`. To run swaps, add an `execution` config with a `wallet`, now or later; see [Execution](#execution).
+`baseUrl` defaults to `https://api.rango.exchange`. To run swaps, add an `execution` config with a `getWallet`; see [Execution](#execution).
 
 The package keeps no client of its own. To share one, export it from a module of yours and import it where you need it:
 
@@ -138,27 +138,26 @@ The execution methods run a confirmed **Route** to a finished swap, in the brows
 ```ts
 export const client = new RangoClient({
   apiKey: 'YOUR_API_KEY',
-  execution: { wallet, emitter: mitt<ExecutionEvents>() },
+  execution: { getWallet, emitter: mitt<ExecutionEvents>() },
 })
 ```
 
-Every key of `execution` (`ExecutionConfig`) is optional:
+`execution` (`ExecutionConfig`) takes:
 
-- `wallet` (`WalletPort`): signs and reads for the user's wallets; see [Wallet port](#wallet-port). Without one, each **Execution** is `BLOCKED` `NOT_CONNECTED` until a wallet is set.
-- `emitter` (`Emitter<ExecutionEvents>`): receives the [events](#events) of every **Execution**; a mitt emitter fits as it is.
-- `pauseOnStart`: `true` builds the execution engine paused, for an app in several tabs; see [`pause()` and `resume()`](#pause-and-resume).
-- `beforeResume`: sets the wallet before each run of an **Execution**; see [`beforeResume`](#beforeresume).
+- `getWallet` (`GetWallet`), required: answers the user's wallet for a namespace; see [Wallet port](#wallet-port).
+- `emitter` (`Emitter<ExecutionEvents>`), optional: receives the [events](#events) of every **Execution**; a mitt emitter fits as it is.
+- `pauseOnStart`, optional: `true` builds the execution engine paused, for an app in several tabs; see [`pause()` and `resume()`](#pause-and-resume).
 
 Build one execution client per page, and don't run other `@rango-dev/queue-manager-core` apps on the same origin: they share one database. Execution is browser only: in Node, `quotes()`, `confirm()` and `quote()` work, and `execute()` throws `REQUEST_FAILED`.
 
 ### Wallet port
 
-The SDK has no wallet code: you pass a `WalletPort`, one optional key per **Namespace**, holding the methods the SDK calls for it. Implement only the namespaces your app supports; within one, every method is required except `evm`'s `wait`.
+The SDK has no wallet code: `getWallet` answers the wallet for a **Namespace**, holding the methods the SDK calls for it. Implement only the namespaces your app supports; within one, every method is required except `evm`'s `wait` and `signTypedData`.
 
 ```ts
-import type { EvmWallet, WalletPort } from '@rango-dev/sdk'
+import type { EvmWallet, GetWallet, WalletByNamespace } from '@rango-dev/sdk'
 
-// `MyEvmWallet`, `metamask`, `bscWallet` and `solana` are your code: your app's wallets.
+// `MyEvmWallet`, `metamask` and `solana` are your code: your app's wallets.
 function evmWallet(wallet: MyEvmWallet): EvmWallet {
   return {
     getAccount: async () => wallet.account(), // null when not connected
@@ -176,15 +175,18 @@ function evmWallet(wallet: MyEvmWallet): EvmWallet {
   }
 }
 
-const wallet: WalletPort = {
-  // One wallet for every EVM blockchain would be `evm: evmWallet(metamask)`.
-  evm: { default: evmWallet(metamask), BSC: evmWallet(bscWallet) },
+const wallets: Partial<WalletByNamespace> = {
+  evm: evmWallet(metamask),
   solana: {
     getAccount: async () => solana.account(),
     sign: async (req) => solana.signAndSend(req.tx),
   },
 }
+
+const getWallet: GetWallet = ({ namespace }) => wallets[namespace]
 ```
+
+`getWallet` gets a `WalletQuery`: the `namespace`, the entry's `blockchain` (`HYPERLIQUID` for a Hyperliquid action, asked as `evm`) and that blockchain's `walletId` from `selectedWallets`. It is called on every use, so answer the current wallet. Answering `undefined`, or a Route with no selected wallet for the blockchain, makes the **Execution** `BLOCKED` `NOT_CONNECTED`.
 
 | Namespace                          | Methods                                                                                                                                | Signs                                                                                                             |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -194,8 +196,6 @@ const wallet: WalletPort = {
 | `stellar`                          | `getAccount`, `sign`, `getTrustline`, `buildTransaction`                                                                               | Stellar transactions and trustlines.                                                                              |
 | `bip122`                           | `getAccount`, `sign`                                                                                                                   | Transfers on every UTXO blockchain.                                                                               |
 | `solana`, `starknet`, `ton`, `sui` | `getAccount`, `sign`                                                                                                                   | Their own transactions.                                                                                           |
-
-`evm` and `bip122` take one wallet, or a map of wallets keyed by blockchain, as `selectedWallets` is, with an optional `default`. An entry is served by the wallet under its blockchain, then `default`, then the one wallet; with none, the **Execution** is `BLOCKED` `NOT_CONNECTED`. Hyperliquid is one of `evm`'s blockchains, keyed `HYPERLIQUID`. One `bip122` wallet answers one account, so with one wallet, a Route on two UTXO blockchains with different addresses is `BLOCKED` `ACCOUNT_MISMATCH` on one of them: give a wallet per blockchain.
 
 No request carries the address: sign with the wallet's active account. A method that fails rejects with a `SignerError` (exported with `SignerErrorCode`), whose `code` and `getErrorDetail()` make the stored failure.
 
@@ -253,16 +253,6 @@ onElectionChange((isActive) => (isActive ? client.resume() : client.pause()))
 
 Call `resume()` at mount in every app: it builds the execution engine and resumes the stored `RUNNING` **Executions** after a reload. With several tabs, your election picks the **Active tab**: build with `pauseOnStart: true`, `resume()` the active tab and `pause()` the others at mount and on every election change, and call `execute()` only in the active tab.
 
-#### `beforeResume`
-
-```ts
-beforeResume(context, setContext, item) {
-  setContext({ wallet: walletFor(item._storage.data.selectedWallets) })
-}
-```
-
-Called before each run of an **Execution** with the wallet, a `setContext` that sets it and the [`HistoryItem`](#history). `setContext` is client-wide, so set the wallet in every call. It must be synchronous and must not throw.
-
 ### `history`
 
 ```ts
@@ -273,7 +263,7 @@ const items = await client.history.getAll()
 Each stored **Execution** as a `HistoryItem`, read fresh on each call; read `getAll()` again on each [`loaded`](#events) event. Its shape may still change, as the underscores mark:
 
 - `_queue`: `id` (the request ID), `createdAt`, `status` (`PENDING`, `RUNNING`, `BLOCKED`, `SUCCESS`, `FAILED` or `CANCELED`) and `blocked`, which is `{ reason, metadata: { blockchain, address, requiredChainId? } }` while `BLOCKED`, else `null`.
-  - `NOT_CONNECTED`: no wallet, no namespace for the entry, or `getAccount` gives `null`, `''` or rejects. Ask the user to connect.
+  - `NOT_CONNECTED`: no selected wallet for the blockchain, `getWallet` answers `undefined`, or `getAccount` gives `null`, `''` or rejects. Ask the user to connect.
   - `ACCOUNT_MISMATCH`: `address` isn't the wallet's active account. Ask the user to switch to it.
   - `NETWORK_MISMATCH` (EVM/Hyperliquid only): the wallet is still on the wrong chain after one `switchChain`. Ask the user to switch to `requiredChainId`.
 - `_storage` (`ExecutionRecord`), a copy of what is stored: the **Route** (`data`), `options`, `transactions` (`s<step>` for a step's main transaction, `s<step>.p<i>` for its **Prerequisites**), `finishedSwapSteps`, `failure` and `finishedAt`. A failed swap failed at step `finishedSwapSteps + 1`.

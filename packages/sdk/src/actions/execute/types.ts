@@ -9,17 +9,17 @@ import type {
 } from 'rango-types'
 
 /**
- * The client config's `execution`: the wallet and settings the execution methods run with.
+ * The client config's `execution`: the wallets and settings the execution methods run with.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#setup
  */
 export type ExecutionConfig = {
   /**
-   * Signs and reads for the user's wallets, one optional key per namespace.
+   * Answers the user's current wallet for a namespace, blockchain and Wallet ID, or `undefined` for none.
    *
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
    */
-  wallet?: WalletPort
+  getWallet: GetWallet
   /**
    * Receives the events of every Execution.
    *
@@ -32,12 +32,6 @@ export type ExecutionConfig = {
    * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#pause-and-resume
    */
   pauseOnStart?: boolean
-  /**
-   * Called before each run of an Execution, to set the wallet that run uses.
-   *
-   * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#beforeresume
-   */
-  beforeResume?: BeforeResume
 }
 
 /**
@@ -387,37 +381,57 @@ export interface SuiWallet {
 }
 
 /**
- * The user's wallets, one optional key per namespace, holding the methods the SDK calls for it.
+ * Each namespace's wallet, holding the methods the SDK calls for it.
  *
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
  */
-export type WalletPort = {
-  /** EVM transactions, approves and Hyperliquid actions: one wallet, or a wallet per blockchain with an optional `default`. */
-  evm?:
-    | EvmWallet
-    | {
-        [blockchain: string]: EvmWallet | undefined
-        default?: EvmWallet
-      }
+export type WalletByNamespace = {
+  /** EVM transactions, approves and Hyperliquid actions. */
+  evm: EvmWallet
   /** TRON transactions and approves. */
-  tron?: TronWallet
+  tron: TronWallet
   /** XRPL payments and trustlines. */
-  xrpl?: XrplWallet
+  xrpl: XrplWallet
   /** Stellar transactions and trustlines. */
-  stellar?: StellarWallet
-  /** UTXO transfers: one wallet, or a wallet per blockchain with an optional `default`. */
-  bip122?:
-    | Bip122Wallet
-    | { [blockchain: string]: Bip122Wallet | undefined; default?: Bip122Wallet }
+  stellar: StellarWallet
+  /** UTXO transfers. */
+  bip122: Bip122Wallet
   /** Solana transactions. */
-  solana?: SolanaWallet
+  solana: SolanaWallet
   /** Starknet transactions. */
-  starknet?: StarknetWallet
+  starknet: StarknetWallet
   /** TON transactions. */
-  ton?: TonWallet
+  ton: TonWallet
   /** Sui transactions. */
-  sui?: SuiWallet
+  sui: SuiWallet
 }
+
+/**
+ * A kind of wallet, serving one or more blockchains.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type Namespace = keyof WalletByNamespace
+
+/**
+ * What `getWallet` is asked: the namespace, the blockchain (`HYPERLIQUID` for Hyperliquid) and its selected Wallet ID.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type WalletQuery<N extends Namespace> = {
+  namespace: N
+  blockchain: string
+  walletId: string
+}
+
+/**
+ * Answers the current wallet for a query, or `undefined`, which Blocks `NOT_CONNECTED`; called on every use.
+ *
+ * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#wallet-port
+ */
+export type GetWallet = <N extends Namespace>(
+  query: WalletQuery<N>,
+) => WalletByNamespace[N] | undefined
 
 /**
  * Receives the execution events; a mitt emitter fits as it is.
@@ -428,18 +442,6 @@ export interface Emitter<Events extends Record<string, unknown>> {
   /** Called with each event's name and payload. */
   emit<K extends keyof Events>(type: K, event: Events[K]): void
 }
-
-/**
- * Called before each run of an Execution with the wallet, a client-wide `setContext` that sets it and the Execution's
- * `HistoryItem`.
- *
- * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#beforeresume
- */
-export type BeforeResume = (
-  context: { wallet?: WalletPort },
-  setContext: (next: { wallet?: WalletPort }) => void,
-  item: HistoryItem,
-) => void
 
 /**
  * The events the `emitter` receives.

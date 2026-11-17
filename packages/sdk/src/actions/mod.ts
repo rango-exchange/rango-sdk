@@ -11,7 +11,6 @@ export {
   startOrUnblockExecution,
 } from './execute/mod.js'
 export type {
-  BeforeResume,
   Bip122Wallet,
   BlockReason,
   Emitter,
@@ -25,7 +24,9 @@ export type {
   ExecutionOptions,
   ExecutionRecord,
   ExecutionTransaction,
+  GetWallet,
   HistoryItem,
+  Namespace,
   RouteEvent,
   SignResult,
   SolanaWallet,
@@ -35,7 +36,8 @@ export type {
   SuiWallet,
   TonWallet,
   TronWallet,
-  WalletPort,
+  WalletByNamespace,
+  WalletQuery,
   XrplWallet,
 } from './execute/mod.js'
 export { getAllExecutions, getExecution } from './history/mod.js'

@@ -54,7 +54,7 @@ function actionsOn(
     unblock: vi.fn(),
     context: {
       httpClient,
-      wallet: undefined,
+      getWallet: undefined,
       loadBlockchainsMeta: vi.fn(async () => []),
       emit: {
         routeEvent: vi.fn(),

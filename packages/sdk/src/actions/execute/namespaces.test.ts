@@ -1,4 +1,4 @@
-// The WalletPort by namespace: each entry goes to its own namespace, and a missing namespace Blocks NOT_CONNECTED as no wallet does, over fake-indexeddb.
+// The wallets by namespace: each entry goes to its own namespace, and a missing namespace Blocks NOT_CONNECTED as no wallet does, over fake-indexeddb.
 import 'fake-indexeddb/auto'
 
 import type { NamespacePort, Namespaces } from '../../../tests/support.js'
@@ -21,6 +21,7 @@ import {
   confirmResponse,
   createExecutionClient,
   createTxResponse,
+  distinctQueries,
   evmApprove,
   evmBlockchains,
   evmChain,
@@ -146,27 +147,24 @@ async function start(client: Sdk.RangoClient, tx: LegacySdk.Transaction) {
 }
 
 /*
- * A client whose `execution` has a recording emitter and a `beforeResume` that sets the wallet to `wallet()`
- * on every run, and no `wallet` of its own, on a Blockchain list of `blockchains`.
+ * A client whose `execution` has a recording emitter and a `getWallet` that answers from `wallets()` on every
+ * call, on a Blockchain list of `blockchains`.
  */
 async function connectingClient(
-  wallet: () => Sdk.WalletPort | undefined,
+  wallets: () => Partial<Sdk.WalletByNamespace>,
   blockchains: readonly Sdk.BlockchainMeta[] = chains,
 ) {
   const { RangoClient } = await loadSdk()
   httpClient.getBlockchains.mockResolvedValue([...blockchains])
   const { emitter, events } = recordingEmitter()
-  const beforeResume = vi.fn<Sdk.BeforeResume>((_, setContext) => {
-    setContext({ wallet: wallet() })
-  })
   const client = new RangoClient({
     apiKey: 'test-key',
-    execution: { emitter, beforeResume },
+    execution: { emitter, getWallet: ({ namespace }) => wallets()[namespace] },
   })
   return { client, events }
 }
 
-describe('the WalletPort by namespace', () => {
+describe('the wallets by namespace', () => {
   beforeEach(() => {
     factory = new IDBFactory()
     reloadOn(factory)
@@ -218,9 +216,9 @@ describe('the WalletPort by namespace', () => {
     },
   )
 
-  test('a route whose namespace the port lacks Blocks NOT_CONNECTED with no port call, and signs through the namespace once beforeResume adds it', async () => {
+  test('a route whose namespace the port lacks Blocks NOT_CONNECTED with no port call, and signs through the namespace once getWallet answers it', async () => {
     const port = namespacesPort()
-    const connection: { wallet: Sdk.WalletPort } = {
+    const connection: { wallet: Partial<Sdk.WalletByNamespace> } = {
       wallet: { evm: port.wallet.evm, tron: port.wallet.tron },
     }
     const { client, events } = await connectingClient(() => connection.wallet)
@@ -267,7 +265,7 @@ describe('the WalletPort by namespace', () => {
     httpClient.reportFailure.mockResolvedValue(undefined)
     httpClient.createTransaction.mockResolvedValue(createTxResponse(tx))
     const port = approvingNamespaces(namespacesPort(), { granted: [UNLIMITED] })
-    const connection: { wallet: Sdk.WalletPort } = {
+    const connection: { wallet: Partial<Sdk.WalletByNamespace> } = {
       wallet: { evm: port.wallet.evm },
     }
     const { client: loaded, events } = await connectingClient(
@@ -366,7 +364,7 @@ describe('the WalletPort by namespace', () => {
     })
   })
 
-  describe('a wallet per blockchain on evm and bip122', () => {
+  describe('a wallet per blockchain on evm and bip122, as getWallet answers by the queried blockchain', () => {
     // `port` with `evm` and `bip122` as given, keeping its other namespaces and its requests.
     function withWallets(
       port: ReturnType<typeof namespacesPort>,
@@ -567,7 +565,7 @@ describe('the WalletPort by namespace', () => {
         const { eth, bsc, mapped } = approvingMap(port)
         bsc.getAllowance.mockReset()
         bsc.getAllowance.mockResolvedValue(UNLIMITED)
-        const { client: loaded } = await connectingClient(() => mapped.wallet)
+        const { client: loaded } = await createExecutionClient(mapped, chains)
         await loaded.history.getAll()
         await settle()
         await advance(ALLOWANCE_READ_INTERVAL_MS)
@@ -633,23 +631,26 @@ describe('the WalletPort by namespace', () => {
       )
     }
 
-    const blocks: [string, () => Sdk.WalletPort, Sdk.BlockReason['reason']][] =
+    const blocks: [
+      string,
+      () => Partial<Sdk.WalletByNamespace>,
+      Sdk.BlockReason['reason'],
+    ][] = [
       [
-        [
-          'with no solana namespace',
-          () => ({ evm: namespacesPort().wallet.evm }),
-          'NOT_CONNECTED',
-        ],
-        [
-          'whose active account is another address',
-          () =>
-            recordingNamespaces(undefined, {
-              ...activeAccounts(),
-              SOLANA: 'SoLother',
-            }).wallet,
-          'ACCOUNT_MISMATCH',
-        ],
-      ]
+        'with no solana namespace',
+        () => ({ evm: namespacesPort().wallet.evm }),
+        'NOT_CONNECTED',
+      ],
+      [
+        'whose active account is another address',
+        () =>
+          recordingNamespaces(undefined, {
+            ...activeAccounts(),
+            SOLANA: 'SoLother',
+          }).wallet,
+        'ACCOUNT_MISMATCH',
+      ],
+    ]
 
     test.each(blocks)(
       'a SOLANA entry %s Blocks while the list fails to load, with no failure stored',
@@ -739,7 +740,7 @@ describe('the WalletPort by namespace', () => {
 
     const tronApproveBlocks: [
       string,
-      () => Sdk.WalletPort,
+      () => Partial<Sdk.WalletByNamespace>,
       Sdk.BlockReason['reason'],
     ][] = [
       [
@@ -779,5 +780,77 @@ describe('the WalletPort by namespace', () => {
         )
       },
     )
+  })
+})
+
+describe('getWallet', () => {
+  beforeEach(() => {
+    factory = new IDBFactory()
+    reloadOn(factory)
+    httpClient.checkStatus.mockResolvedValue(succeeded)
+    httpClient.reportFailure.mockResolvedValue(undefined)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test("is asked for the entry's namespace and blockchain and that blockchain's selected Wallet ID", async () => {
+    const { client, queries } = await createExecutionClient(
+      namespacesPort(),
+      chains,
+    )
+
+    await start(client, evmTx())
+
+    expect(distinctQueries(queries)).toEqual(['evm:ETH:metamask'])
+    expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+  })
+
+  test("is asked for a TRANSFER on its own blockchain, with that blockchain's selected Wallet ID", async () => {
+    const { client, queries } = await createExecutionClient(namespacesPort(), [
+      ...chains,
+      chain('BTC', ['^bc1']),
+    ])
+
+    await start(client, transferTx())
+
+    expect(distinctQueries(queries)).toEqual(['bip122:BTC:xverse'])
+    expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
+  })
+
+  test('answering undefined Blocks NOT_CONNECTED on the selected blockchain and address', async () => {
+    const { client, events } = await connectingClient(() => ({}))
+
+    await start(client, evmTx())
+
+    const view = await historyOf(client)
+    expect(view?._queue.status).toBe('BLOCKED')
+    expect(view?._queue.blocked).toEqual({
+      reason: 'NOT_CONNECTED',
+      metadata: { blockchain: 'ETH', address: '0xfrom' },
+    })
+    expect(view?._storage.failure).toBeNull()
+    expect(events.map(nameOf).at(-1)).toBe(NOT_CONNECTED_EVENT)
+  })
+
+  test('is called on every use, so a wallet swapped between calls is the one the next execute() signs with', async () => {
+    const port = namespacesPort()
+    const first = port.evmOn('ETH')
+    first.getAccount.mockResolvedValue(null)
+    const host = { ...port, wallet: { ...port.wallet, evm: first } }
+    const { client } = await createExecutionClient(host, chains)
+    await start(client, evmTx())
+    expect((await historyOf(client))?._queue.status).toBe('BLOCKED')
+
+    const second = port.evmOn('ETH')
+    host.wallet = { ...host.wallet, evm: second }
+    await client.execute('request-1')
+    await settle()
+
+    expect(second.sign.mock.calls).toEqual([[{ tx: evmTx() }]])
+    expect(first.sign).not.toHaveBeenCalled()
+    expect((await historyOf(client))?._queue.status).toBe('SUCCESS')
   })
 })
