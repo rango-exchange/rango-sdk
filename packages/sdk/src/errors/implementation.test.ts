@@ -91,9 +91,14 @@ describe('SdkError', () => {
       case 'TOO_MANY_REQUESTS':
       case 'SERVER_ERROR':
       case 'UNKNOWN_SLIPPAGE':
+      case 'CLIENT_PAUSED':
         expectTypeOf(caught.metadata).toEqualTypeOf<undefined>()
         break
       case 'INVALID_INPUT':
+        // No `wallet`: a missing wallet Blocks NOT_CONNECTED, it is never an error.
+        expectTypeOf(caught.metadata.field).toEqualTypeOf<
+          'requestId' | 'to' | 'amount' | 'destination' | 'options'
+        >()
         switch (caught.metadata.field) {
           case 'requestId':
             expectTypeOf(caught.metadata.reason).toEqualTypeOf<'NOT_FOUND'>()
@@ -110,6 +115,9 @@ describe('SdkError', () => {
             expectTypeOf(caught.metadata.reason).toEqualTypeOf<
               'NO_ADDRESS_PATTERNS' | 'PATTERN_MISMATCH'
             >()
+            break
+          case 'options':
+            expectTypeOf(caught.metadata.reason).toEqualTypeOf<'MISSING'>()
         }
     }
     expect(caught.type).toBe('NO_RESULT')
