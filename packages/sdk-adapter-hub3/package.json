@@ -37,6 +37,10 @@
     "./xrpl": {
       "types": "./dist/xrpl.d.ts",
       "default": "./dist/xrpl.js"
+    },
+    "./stellar": {
+      "types": "./dist/stellar.d.ts",
+      "default": "./dist/stellar.js"
     }
   },
   "files": [
@@ -60,7 +64,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build --inputs src/evm.ts,src/solana.ts,src/starknet.ts,src/ton.ts,src/sui.ts,src/bip122.ts,src/tron.ts,src/xrpl.ts --splitting",
+    "build": "yarn run rangutopia library build --inputs src/evm.ts,src/solana.ts,src/starknet.ts,src/ton.ts,src/sui.ts,src/bip122.ts,src/tron.ts,src/xrpl.ts,src/stellar.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "test:build": "yarn build && vitest run --config vitest.build.config.ts",
@@ -76,11 +80,13 @@
     "@hub3js/evm": "^0.8.1 || 0.8.1-next.2",
     "@hub3js/solana": "^0.7",
     "@hub3js/starknet": "^0.6",
+    "@hub3js/stellar": "^0.6",
     "@hub3js/sui": "^0.6",
     "@hub3js/tron": "^0.3.1 || 0.3.1-next.0",
     "@hub3js/tvm": "^0.6",
     "@hub3js/xrpl": "^0.6",
     "@rango-dev/sdk": "^0.0.1-next.1",
+    "@stellar/stellar-sdk": "^15.0.1",
     "caip": "^1.1.1",
     "xrpl": "^4.2.0"
   },
@@ -97,6 +103,9 @@
     "@hub3js/starknet": {
       "optional": true
     },
+    "@hub3js/stellar": {
+      "optional": true
+    },
     "@hub3js/sui": {
       "optional": true
     },
@@ -109,6 +118,9 @@
     "@hub3js/xrpl": {
       "optional": true
     },
+    "@stellar/stellar-sdk": {
+      "optional": true
+    },
     "xrpl": {
       "optional": true
     }
@@ -119,11 +131,13 @@
     "@hub3js/evm": "0.8.1-next.2",
     "@hub3js/solana": "0.7.1-next.1",
     "@hub3js/starknet": "^0.6",
+    "@hub3js/stellar": "^0.6",
     "@hub3js/sui": "^0.6",
     "@hub3js/tron": "0.3.1-next.0",
     "@hub3js/tvm": "^0.6",
     "@hub3js/xrpl": "^0.6",
     "@rango-dev/sdk": "0.0.1-next.1",
+    "@stellar/stellar-sdk": "^15.0.1",
     "@total-typescript/shoehorn": "^0.1.2",
     "caip": "^1.1.1",
     "fake-indexeddb": "^6.2.6",

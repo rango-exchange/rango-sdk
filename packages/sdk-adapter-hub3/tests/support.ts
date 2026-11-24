@@ -566,6 +566,72 @@ export function xrplTrustline(
   }
 }
 
+export type StellarTx = Extract<
+  LegacySdk.Transaction,
+  { type: LegacySdk.TransactionType.STELLAR }
+>
+
+export function stellarChain(): Sdk.BlockchainMeta {
+  return {
+    ...chain('STELLAR', ['^G[A-Z2-7]{55}$']),
+    type: LegacySdk.TransactionType.STELLAR,
+    chainId: null,
+    info: {
+      infoType: 'StellarMetaInfo',
+      blockExplorerUrls: [],
+      addressUrl: '',
+      transactionUrl: '',
+      tokenUrl: null,
+    },
+  }
+}
+
+// A Stellar transaction from the selected Stellar wallet, with one operation, `payment-op` unless overridden.
+export function stellarTx(
+  operation = 'payment-op',
+  overrides: Partial<StellarTx> = {},
+): StellarTx {
+  return {
+    type: LegacySdk.TransactionType.STELLAR,
+    blockChain: 'STELLAR',
+    prerequisites: [],
+    data: {
+      baseFee: '100',
+      preconditions: {
+        timeBounds: { minTime: 0, maxTime: 0 },
+        ledgerBounds: { minLedger: 0, maxLedger: 0 },
+        minSeqNumber: null,
+        minSeqAge: null,
+        minSeqLedgerGap: null,
+        extraSigners: null,
+      },
+      operationsXdrBase64: [operation],
+      memoXdrBase64: null,
+    },
+    ...overrides,
+  }
+}
+
+export type StellarTrustline = Extract<
+  Sdk.TransactionPrerequisite,
+  { type: 'STELLAR_CHANGE_TRUSTLINE' }
+>
+
+// A Stellar trustline to USDC from `GISSUER`, for the selected Stellar wallet.
+export function stellarTrustline(
+  overrides: Partial<StellarTrustline> = {},
+): StellarTrustline {
+  return {
+    type: 'STELLAR_CHANGE_TRUSTLINE',
+    blockChain: 'STELLAR',
+    code: 'USDC',
+    issuer: 'GISSUER',
+    value: '11.50',
+    wallet: 'GSTELLARFROM',
+    ...overrides,
+  }
+}
+
 // A `confirmRoute` answer for this request, with these swaps and this validation status.
 export function confirmResponse(
   requestId: string,
@@ -994,6 +1060,15 @@ export type XrplNamespace = {
   }): Promise<XrplTx>
   getTransactionInfo(req: { hash: string }): Promise<XrplInfo>
 }
+export type StellarNamespace = {
+  getAccount(): Promise<string | null>
+  signAndSend(req: { tx: StellarTx }): Promise<SignAndSendResult>
+  getTrustline(req: { prerequisite: StellarTrustline }): Promise<string | null>
+  buildTransaction(req: {
+    prerequisite: StellarTrustline
+    limit: string
+  }): Promise<StellarTx>
+}
 export type Bip122Namespace = {
   getAccount(): Promise<string | null>
   signAndSend(req: {
@@ -1009,6 +1084,7 @@ type RecordedWallets = {
   evm: EvmNamespace
   tron: TronNamespace
   xrpl: XrplNamespace
+  stellar: StellarNamespace
   bip122: Bip122Namespace
   solana: SingleChainNamespace<LegacySdk.TransactionType.SOLANA>
   starknet: SingleChainNamespace<LegacySdk.TransactionType.STARKNET>
@@ -1050,7 +1126,7 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
  * `bip122`, the namespace's own otherwise, such as `TRON`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
- * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron`, as no build
+ * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron` and `stellar`, as no build
  * is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
  * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet` until `withHyperliquid` puts it in `evm`'s map.
  * `evmOn` and `bip122On` build another such wallet on a blockchain, sharing the requests and the hashes, for a map.
@@ -1176,6 +1252,32 @@ export function recordingNamespaces(
         async (req: { hash: string }): Promise<XrplInfo> => {
           requests.push(['xrpl', 'getTransactionInfo', structuredClone(req)])
           return XRPL_INFO.success
+        },
+      ),
+    },
+    stellar: {
+      getAccount: vi.fn(accountOn('STELLAR')),
+      signAndSend: vi.fn(
+        async (req: Parameters<StellarNamespace['signAndSend']>[0]) => {
+          requests.push(['stellar', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+      getTrustline: vi.fn(
+        async (
+          req: Parameters<StellarNamespace['getTrustline']>[0],
+        ): Promise<string | null> => {
+          requests.push(['stellar', 'getTrustline', structuredClone(req)])
+          return null
+        },
+      ),
+      buildTransaction: vi.fn(
+        async (req: {
+          prerequisite: StellarTrustline
+          limit: string
+        }): Promise<StellarTx> => {
+          requests.push(['stellar', 'buildTransaction', structuredClone(req)])
+          throw unscripted
         },
       ),
     },

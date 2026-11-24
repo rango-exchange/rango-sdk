@@ -11,18 +11,19 @@ If your wallets run on hub3 (`@hub3js/*`), build the wallet your [`@rango-dev/sd
 yarn add @rango-dev/sdk-adapter-hub3 # or: npm install @rango-dev/sdk-adapter-hub3
 ```
 
-`@rango-dev/sdk`, `@hub3js/core` and `caip` are peer dependencies. The other `@hub3js/*` packages and `xrpl` are optional peer dependencies: install the Install column of each adapter you import. Each import path loads only its own.
+`@rango-dev/sdk`, `@hub3js/core` and `caip` are peer dependencies. The other `@hub3js/*` packages, `xrpl` and `@stellar/stellar-sdk` are optional peer dependencies: install the Install column of each adapter you import. Each import path loads only its own.
 
-| Namespace  | Import from                            | Adapter               | Reads the hub3 namespace | Install                |
-| ---------- | -------------------------------------- | --------------------- | ------------------------ | ---------------------- |
-| `evm`      | `@rango-dev/sdk-adapter-hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`          |
-| `solana`   | `@rango-dev/sdk-adapter-hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`       |
-| `starknet` | `@rango-dev/sdk-adapter-hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet`     |
-| `ton`      | `@rango-dev/sdk-adapter-hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`          |
-| `sui`      | `@rango-dev/sdk-adapter-hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`          |
-| `bip122`   | `@rango-dev/sdk-adapter-hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`       |
-| `tron`     | `@rango-dev/sdk-adapter-hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`         |
-| `xrpl`     | `@rango-dev/sdk-adapter-hub3/xrpl`     | `hub3XrplAdapter`     | `xrpl`                   | `@hub3js/xrpl`, `xrpl` |
+| Namespace  | Import from                            | Adapter               | Reads the hub3 namespace | Install                                   |
+| ---------- | -------------------------------------- | --------------------- | ------------------------ | ----------------------------------------- |
+| `evm`      | `@rango-dev/sdk-adapter-hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`                             |
+| `solana`   | `@rango-dev/sdk-adapter-hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`                          |
+| `starknet` | `@rango-dev/sdk-adapter-hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet`                        |
+| `ton`      | `@rango-dev/sdk-adapter-hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`                             |
+| `sui`      | `@rango-dev/sdk-adapter-hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`                             |
+| `bip122`   | `@rango-dev/sdk-adapter-hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`                          |
+| `tron`     | `@rango-dev/sdk-adapter-hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`                            |
+| `xrpl`     | `@rango-dev/sdk-adapter-hub3/xrpl`     | `hub3XrplAdapter`     | `xrpl`                   | `@hub3js/xrpl`, `xrpl`                    |
+| `stellar`  | `@rango-dev/sdk-adapter-hub3/stellar`  | `hub3StellarAdapter`  | `stellar`                | `@hub3js/stellar`, `@stellar/stellar-sdk` |
 
 ## Usage
 
@@ -75,6 +76,11 @@ const tron = hub3TronAdapter(provider)
 ```ts
 import { hub3XrplAdapter } from '@rango-dev/sdk-adapter-hub3/xrpl'
 const xrpl = hub3XrplAdapter(provider)
+```
+
+```ts
+import { hub3StellarAdapter } from '@rango-dev/sdk-adapter-hub3/stellar'
+const stellar = hub3StellarAdapter(provider)
 ```
 
 `bip122` also takes the UTXO blockchain it serves, so answer one for the blockchain `getWallet` is asked for:
