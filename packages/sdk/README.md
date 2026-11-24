@@ -210,6 +210,11 @@ No request carries the address: sign with the wallet's active account. A method 
 - `buildTransaction`: on `evm` and `tron`, build the approve; on `xrpl` and `stellar`, build the trustline with the `limit` given. Build it as plain data, without prompting.
 - `getTransactionInfo`: on `evm`, answer `'pending'`, `'success'` or `'failed'` from the receipt; on `tron` and `xrpl`, answer what the chain says, as it is.
 
+### Hub3 adapters
+
+If your wallets run on hub3 (`@hub3js/*`), build the wallet `getWallet` answers for each namespace from a hub3 provider with an adapter instead of writing it; see [Wallet port](#wallet-port).
+The adapters ship separately, in [`@rango-dev/sdk-adapter-hub3`](https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk-adapter-hub3/README.md).
+
 ### `execute()`
 
 Runs a confirmed **Route** to its end, or unblocks its stored **Execution**.
