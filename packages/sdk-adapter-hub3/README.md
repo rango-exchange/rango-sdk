@@ -20,6 +20,7 @@ yarn add @rango-dev/sdk-adapter-hub3 # or: npm install @rango-dev/sdk-adapter-hu
 | `starknet` | `@rango-dev/sdk-adapter-hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
 | `ton`      | `@rango-dev/sdk-adapter-hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
 | `sui`      | `@rango-dev/sdk-adapter-hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
+| `bip122`   | `@rango-dev/sdk-adapter-hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`   |
 
 ## Usage
 
@@ -64,8 +65,17 @@ import { hub3SuiAdapter } from '@rango-dev/sdk-adapter-hub3/sui'
 const sui = hub3SuiAdapter(provider)
 ```
 
+`bip122` also takes the UTXO blockchain it serves, so answer one for the blockchain `getWallet` is asked for:
+
+```ts
+import { hub3Bip122Adapter } from '@rango-dev/sdk-adapter-hub3/bip122'
+// In `getWallet`, for `namespace` `bip122` and a `blockchain` such as `BTC` or `LTC`:
+const bip122 = hub3Bip122Adapter(provider, blockchain)
+```
+
 - An adapter never connects: connect the wallet through hub3, or the **Execution** is `BLOCKED` `NOT_CONNECTED`.
 - An adapter stays bound to its provider. `getWallet` is called on every use, so to change wallets, answer new adapters from it.
 - A user rejection in the wallet fails with `REJECTED_BY_USER`.
+- `bip122` answers the provider's account on the blockchain it was built for, which is `BTC`, `LTC`, `DOGE`, `BCH` or `ZCASH`. Answer each adapter for its own blockchain only: for another, its address doesn't match the **Route**'s, so the **Execution** is `BLOCKED` `ACCOUNT_MISMATCH` and nothing is signed.
 - `evm` adds a chain the wallet doesn't know, so the user may be asked to add the network.
 - Hyperliquid has no adapter of its own: answer `hub3EvmAdapter` for `evm` when `getWallet` is asked with the blockchain `HYPERLIQUID`. It signs Hyperliquid actions with the provider's EVM signer, which needs `signTypedData`, or the action fails with `UNEXPECTED_BEHAVIOUR`.

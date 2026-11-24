@@ -510,7 +510,7 @@ export function distinctQueries(
 
 /*
  * The host's `getWallet` over `port`: it reads `port.wallet` on each call, so a test swaps the wallet by setting it, and
- * answers `evm` by the queried blockchain when it is a map. Records each query in `queries`.
+ * answers `evm` and `bip122` by the queried blockchain when they are maps. Records each query in `queries`.
  */
 function getWalletOf(
   port: NamespacePort,
@@ -521,6 +521,7 @@ function getWalletOf(
     const wallets: Partial<Sdk.WalletByNamespace> = {
       ...port.wallet,
       evm: onBlockchain(port.wallet.evm, query.blockchain),
+      bip122: onBlockchain(port.wallet.bip122, query.blockchain),
     }
     return wallets[query.namespace]
   }
@@ -827,6 +828,12 @@ export type EvmNamespace = {
   getTransactionInfo(req: { hash: string }): Promise<EvmInfo>
   signTypedData?(req: { typedData: unknown; chainId: string }): Promise<string>
 }
+export type Bip122Namespace = {
+  getAccount(): Promise<string | null>
+  signAndSend(req: {
+    tx: TxOf<LegacySdk.TransactionType.TRANSFER>
+  }): Promise<SignAndSendResult>
+}
 type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
   getAccount(): Promise<string | null>
   signAndSend(req: { tx: TxOf<T> }): Promise<SignAndSendResult>
@@ -834,20 +841,22 @@ type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
 // Each wallet the fakes record, by the namespace they record it under.
 type RecordedWallets = {
   evm: EvmNamespace
+  bip122: Bip122Namespace
   solana: SingleChainNamespace<LegacySdk.TransactionType.SOLANA>
   starknet: SingleChainNamespace<LegacySdk.TransactionType.STARKNET>
   ton: SingleChainNamespace<LegacySdk.TransactionType.TON>
   sui: SingleChainNamespace<LegacySdk.TransactionType.SUI>
 }
-// A wallet by blockchain, as the fake `getWallet` answers `evm` from it.
+// A wallet by blockchain, as the fake `getWallet` answers `evm` and `bip122` from it.
 type WalletsByBlockchain<W> = {
   [blockchain: string]: W | undefined
   default?: W
 }
 export type Namespaces = {
-  [F in Exclude<RecordedLabel, 'evm'>]?: RecordedWallets[F]
+  [F in Exclude<RecordedLabel, 'evm' | 'bip122'>]?: RecordedWallets[F]
 } & {
   evm?: EvmNamespace | WalletsByBlockchain<EvmNamespace>
+  bip122?: Bip122Namespace | WalletsByBlockchain<Bip122Namespace>
 }
 type RecordedLabel = keyof RecordedWallets
 
@@ -869,12 +878,12 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
 
 /*
  * The recording namespace port: every namespace, with every method but `wait`. `signAndSend` answers `0xhash1`,
- * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, the namespace's own otherwise), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
+ * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, `BTC` on `bip122`, the namespace's own otherwise), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
  * approve on the requested token on `evm`. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
  * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet` until `withHyperliquid` puts it in `evm`'s map.
- * `evmOn` builds another such wallet on a blockchain, sharing the requests and the hashes, for a map.
+ * `evmOn` and `bip122On` build another such wallet on a blockchain, sharing the requests and the hashes, for a map.
  */
 export function recordingNamespaces(
   chainIds: Record<string, string | null> = { ETH: '0x1', BSC: '0x38' },
@@ -926,9 +935,19 @@ export function recordingNamespaces(
       },
     ),
   })
+  const bip122On = (blockchain: string) => ({
+    getAccount: vi.fn(accountOn(blockchain)),
+    signAndSend: vi.fn(
+      async (req: { tx: TxOf<LegacySdk.TransactionType.TRANSFER> }) => {
+        requests.push(['bip122', 'signAndSend', structuredClone(req)])
+        return nextHash()
+      },
+    ),
+  })
   const hyperliquid = evmOn('HYPERLIQUID')
   const wallet = {
     evm: evmOn('ETH'),
+    bip122: bip122On('BTC'),
     solana: {
       getAccount: vi.fn(accountOn('SOLANA')),
       signAndSend: vi.fn(
@@ -966,5 +985,5 @@ export function recordingNamespaces(
       ),
     },
   } satisfies Namespaces
-  return { wallet, hyperliquid, requests, evmOn }
+  return { wallet, hyperliquid, requests, evmOn, bip122On }
 }
