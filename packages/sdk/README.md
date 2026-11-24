@@ -34,7 +34,7 @@ export const client = new RangoClient({ apiKey: 'YOUR_API_KEY' })
 // anywhere else
 import { client } from './rango.js'
 ```
-
+sss
 ## Methods
 
 `quote()` and `confirm()` resolve to `{ data, warnings, _response }`; `quotes()` to `{ data, _response }`, with warnings on each entry. Build on `data`; `warnings` are the [warnings](#warnings) that apply; `_response` is the legacy API's raw response, an escape hatch (to log `traceId`, say). Results are plain JSON.
