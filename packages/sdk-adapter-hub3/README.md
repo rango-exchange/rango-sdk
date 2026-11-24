@@ -13,9 +13,13 @@ yarn add @rango-dev/sdk-adapter-hub3 # or: npm install @rango-dev/sdk-adapter-hu
 
 `@rango-dev/sdk`, `@hub3js/core` and `caip` are peer dependencies. The other `@hub3js/*` packages are optional peer dependencies: install the Install column of each adapter you import. Each import path loads only its own.
 
-| Namespace | Import from                       | Adapter          | Reads the hub3 namespace | Install       |
-| --------- | --------------------------------- | ---------------- | ------------------------ | ------------- |
-| `evm`     | `@rango-dev/sdk-adapter-hub3/evm` | `hub3EvmAdapter` | `evm`                    | `@hub3js/evm` |
+| Namespace  | Import from                            | Adapter               | Reads the hub3 namespace | Install            |
+| ---------- | -------------------------------------- | --------------------- | ------------------------ | ------------------ |
+| `evm`      | `@rango-dev/sdk-adapter-hub3/evm`      | `hub3EvmAdapter`      | `evm`                    | `@hub3js/evm`      |
+| `solana`   | `@rango-dev/sdk-adapter-hub3/solana`   | `hub3SolanaAdapter`   | `solana`                 | `@hub3js/solana`   |
+| `starknet` | `@rango-dev/sdk-adapter-hub3/starknet` | `hub3StarknetAdapter` | `starknet`               | `@hub3js/starknet` |
+| `ton`      | `@rango-dev/sdk-adapter-hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
+| `sui`      | `@rango-dev/sdk-adapter-hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
 
 ## Usage
 
@@ -36,6 +40,28 @@ function getWalletOf(hub: Hub): GetWallet {
     return undefined
   }
 }
+```
+
+The other adapters answer their own **Namespace** the same way:
+
+```ts
+import { hub3SolanaAdapter } from '@rango-dev/sdk-adapter-hub3/solana'
+const solana = hub3SolanaAdapter(provider)
+```
+
+```ts
+import { hub3StarknetAdapter } from '@rango-dev/sdk-adapter-hub3/starknet'
+const starknet = hub3StarknetAdapter(provider)
+```
+
+```ts
+import { hub3TonAdapter } from '@rango-dev/sdk-adapter-hub3/ton'
+const ton = hub3TonAdapter(provider)
+```
+
+```ts
+import { hub3SuiAdapter } from '@rango-dev/sdk-adapter-hub3/sui'
+const sui = hub3SuiAdapter(provider)
 ```
 
 - An adapter never connects: connect the wallet through hub3, or the **Execution** is `BLOCKED` `NOT_CONNECTED`.

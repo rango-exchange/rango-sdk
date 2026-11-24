@@ -9,6 +9,22 @@
     "./evm": {
       "types": "./dist/evm.d.ts",
       "default": "./dist/evm.js"
+    },
+    "./solana": {
+      "types": "./dist/solana.d.ts",
+      "default": "./dist/solana.js"
+    },
+    "./starknet": {
+      "types": "./dist/starknet.d.ts",
+      "default": "./dist/starknet.js"
+    },
+    "./ton": {
+      "types": "./dist/ton.d.ts",
+      "default": "./dist/ton.js"
+    },
+    "./sui": {
+      "types": "./dist/sui.d.ts",
+      "default": "./dist/sui.js"
     }
   },
   "files": [
@@ -32,7 +48,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build --inputs src/evm.ts --splitting",
+    "build": "yarn run rangutopia library build --inputs src/evm.ts,src/solana.ts,src/starknet.ts,src/ton.ts,src/sui.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "test:build": "yarn build && vitest run --config vitest.build.config.ts",
@@ -45,17 +61,37 @@
   "peerDependencies": {
     "@hub3js/core": "^0.64.0",
     "@hub3js/evm": "^0.8.1 || 0.8.1-next.2",
+    "@hub3js/solana": "^0.7",
+    "@hub3js/starknet": "^0.6",
+    "@hub3js/sui": "^0.6",
+    "@hub3js/tvm": "^0.6",
     "@rango-dev/sdk": "^0.0.1-next.1",
     "caip": "^1.1.1"
   },
   "peerDependenciesMeta": {
     "@hub3js/evm": {
       "optional": true
+    },
+    "@hub3js/solana": {
+      "optional": true
+    },
+    "@hub3js/starknet": {
+      "optional": true
+    },
+    "@hub3js/sui": {
+      "optional": true
+    },
+    "@hub3js/tvm": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@hub3js/core": "^0.64.0",
     "@hub3js/evm": "0.8.1-next.2",
+    "@hub3js/solana": "0.7.1-next.1",
+    "@hub3js/starknet": "^0.6",
+    "@hub3js/sui": "^0.6",
+    "@hub3js/tvm": "^0.6",
     "@rango-dev/sdk": "0.0.1-next.1",
     "@total-typescript/shoehorn": "^0.1.2",
     "caip": "^1.1.1",

@@ -827,9 +827,17 @@ export type EvmNamespace = {
   getTransactionInfo(req: { hash: string }): Promise<EvmInfo>
   signTypedData?(req: { typedData: unknown; chainId: string }): Promise<string>
 }
+type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
+  getAccount(): Promise<string | null>
+  signAndSend(req: { tx: TxOf<T> }): Promise<SignAndSendResult>
+}
 // Each wallet the fakes record, by the namespace they record it under.
 type RecordedWallets = {
   evm: EvmNamespace
+  solana: SingleChainNamespace<LegacySdk.TransactionType.SOLANA>
+  starknet: SingleChainNamespace<LegacySdk.TransactionType.STARKNET>
+  ton: SingleChainNamespace<LegacySdk.TransactionType.TON>
+  sui: SingleChainNamespace<LegacySdk.TransactionType.SUI>
 }
 // A wallet by blockchain, as the fake `getWallet` answers `evm` from it.
 type WalletsByBlockchain<W> = {
@@ -861,7 +869,7 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
 
 /*
  * The recording namespace port: every namespace, with every method but `wait`. `signAndSend` answers `0xhash1`,
- * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
+ * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, the namespace's own otherwise), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
  * approve on the requested token on `evm`. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
@@ -921,6 +929,42 @@ export function recordingNamespaces(
   const hyperliquid = evmOn('HYPERLIQUID')
   const wallet = {
     evm: evmOn('ETH'),
+    solana: {
+      getAccount: vi.fn(accountOn('SOLANA')),
+      signAndSend: vi.fn(
+        async (req: { tx: TxOf<LegacySdk.TransactionType.SOLANA> }) => {
+          requests.push(['solana', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+    },
+    starknet: {
+      getAccount: vi.fn(accountOn('STARKNET')),
+      signAndSend: vi.fn(
+        async (req: { tx: TxOf<LegacySdk.TransactionType.STARKNET> }) => {
+          requests.push(['starknet', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+    },
+    ton: {
+      getAccount: vi.fn(accountOn('TON')),
+      signAndSend: vi.fn(
+        async (req: { tx: TxOf<LegacySdk.TransactionType.TON> }) => {
+          requests.push(['ton', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+    },
+    sui: {
+      getAccount: vi.fn(accountOn('SUI')),
+      signAndSend: vi.fn(
+        async (req: { tx: TxOf<LegacySdk.TransactionType.SUI> }) => {
+          requests.push(['sui', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+    },
   } satisfies Namespaces
   return { wallet, hyperliquid, requests, evmOn }
 }
