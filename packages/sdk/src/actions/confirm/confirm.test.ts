@@ -244,6 +244,22 @@ describe('confirm', () => {
     })
   })
 
+  test('confirms a cached Quote whose entry has an error', async () => {
+    const client = await createClient()
+    const { requestId } = await cacheQuote(client, {
+      swaps: [swap({ fromAmountMinValue: '2' })],
+    })
+    expect(
+      client.cache.get('quotes')?.get('route-1')?.get(requestId)?.error,
+    ).toBeDefined()
+
+    await client.confirm(requestId, SELECTED_WALLETS)
+
+    expect(httpClient.confirmRoute.mock.lastCall?.[0]).toMatchObject({
+      requestId,
+    })
+  })
+
   test('confirms the same request ID twice, keeping the Quote cached', async () => {
     const client = await createClient()
     const quote = await cacheQuote(client)
@@ -266,7 +282,7 @@ describe('confirm', () => {
       ETH: { address: '0xb', walletId: 'rabby' },
     })
     expect(
-      client.cache.get('quotes')?.get('route-1')?.get(quote.requestId),
+      client.cache.get('quotes')?.get('route-1')?.get(quote.requestId)?.data,
     ).toEqual(quote)
   })
 

@@ -1052,7 +1052,7 @@ describe('quotes cache', () => {
     expect(client.cache.get('quotes')).toBeUndefined()
   })
 
-  test("caches every Quote under the response's route ID, then its request ID, including one whose entry has an error, without its warnings or error", async () => {
+  test("caches every entry under the response's route ID, then its request ID, including one with an error", async () => {
     const { RangoClient } = await loadSdk()
     const client = new RangoClient({
       apiKey: 'test-key',
@@ -1079,12 +1079,41 @@ describe('quotes cache', () => {
     const quotes = routes?.get('route-a')
     expect([...(quotes?.keys() ?? [])]).toEqual(['ok', 'too-small'])
     for (const entry of data.quotes) {
-      const cached = quotes?.get(entry.data.requestId)
-      expect(cached).toEqual(entry.data)
-      expect(cached).not.toBe(entry.data)
-      expect(cached).not.toHaveProperty('warnings')
-      expect(cached).not.toHaveProperty('error')
+      expect(quotes?.get(entry.data.requestId)).toEqual(entry)
     }
+  })
+
+  test("caches each entry's warnings and error as the instances quotes() returned, and a clone of its Quote", async () => {
+    const { RangoClient } = await loadSdk()
+    const client = new RangoClient({
+      apiKey: 'test-key',
+    })
+    httpClient.getAllRoutes.mockResolvedValue(
+      response({
+        results: [
+          {
+            ...result,
+            swaps: [
+              swap({
+                fromAmountMinValue: '2',
+                recommendedSlippage: { error: false, slippage: '4' },
+              }),
+            ],
+          },
+        ],
+      }),
+    )
+
+    const { data } = await client.quotes(ETH, USDC, '1', { req })
+
+    const entry = data.quotes[0]
+    expect(entry?.warnings).toHaveLength(1)
+    expect(entry?.error).toBeDefined()
+    const cached = client.cache.get('quotes')?.get('route-1')?.get('request-1')
+    expect(cached?.warnings).toBe(entry?.warnings)
+    expect(cached?.error).toBe(entry?.error)
+    expect(cached?.data).toEqual(entry?.data)
+    expect(cached?.data).not.toBe(entry?.data)
   })
 
   test('keeps the cached Quote unchanged when the app mutates the Quote quotes() returned, nested values included', async () => {
@@ -1116,7 +1145,7 @@ describe('quotes cache', () => {
     returned.scores.length = 0
 
     expect(
-      client.cache.get('quotes')?.get('route-1')?.get('request-1'),
+      client.cache.get('quotes')?.get('route-1')?.get('request-1')?.data,
     ).toEqual(before)
   })
 
@@ -1167,9 +1196,7 @@ describe('quotes cache', () => {
       const routes = client.cache.get('quotes')
       expect(routes).toBe(before)
       expect([...(routes?.keys() ?? [])]).toEqual(['route-kept'])
-      expect(routes?.get('route-kept')?.get('kept')).toEqual(
-        data.quotes[0]?.data,
-      )
+      expect(routes?.get('route-kept')?.get('kept')).toEqual(data.quotes[0])
     },
   )
 
@@ -1196,12 +1223,8 @@ describe('quotes cache', () => {
 
     const routes = client.cache.get('quotes')
     expect([...(routes?.keys() ?? [])]).toEqual(['route-a', 'route-b'])
-    expect(routes?.get('route-a')?.get('first')).toEqual(
-      first.data.quotes[0]?.data,
-    )
-    expect(routes?.get('route-b')?.get('second')).toEqual(
-      second.data.quotes[0]?.data,
-    )
+    expect(routes?.get('route-a')?.get('first')).toEqual(first.data.quotes[0])
+    expect(routes?.get('route-b')?.get('second')).toEqual(second.data.quotes[0])
   })
 
   test('keeps the last 10 route IDs, dropping the oldest on the 11th', async () => {
@@ -1250,9 +1273,7 @@ describe('quotes cache', () => {
     const routes = client.cache.get('quotes')
     expect([...(routes?.keys() ?? [])]).toEqual(['route-b', 'route-a'])
     expect([...(routes?.get('route-a')?.keys() ?? [])]).toEqual(['new'])
-    expect(routes?.get('route-a')?.get('new')).toEqual(
-      repeated.data.quotes[0]?.data,
-    )
+    expect(routes?.get('route-a')?.get('new')).toEqual(repeated.data.quotes[0])
   })
 
   test('stores a new outer map on each successful call, leaving the one it read and each inner map unchanged', async () => {
@@ -1342,7 +1363,10 @@ describe('quotes cache', () => {
     })
 
     expectTypeOf(client.cache.get('quotes')).toEqualTypeOf<
-      ReadonlyMap<string, ReadonlyMap<string, Sdk.Quote>> | undefined
+      ReadonlyMap<string, ReadonlyMap<string, Sdk.QuoteEntry>> | undefined
+    >()
+    expectTypeOf<Sdk.CacheSchema['quotes']>().toEqualTypeOf<
+      ReadonlyMap<string, ReadonlyMap<string, Sdk.QuoteEntry>>
     >()
     expectTypeOf(client.cache).toEqualTypeOf<Sdk.ReadonlyCache>()
     // @ts-expect-error a request ID is not a cache slot

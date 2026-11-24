@@ -1,6 +1,6 @@
 import type {
   CheckedResponse,
-  Quote,
+  QuoteEntry,
   QuotesResult,
   WarnedResponse,
 } from './types.js'
@@ -92,9 +92,13 @@ export function generateResult(slippage: string | undefined) {
 
 export function cacheAndReturnResult(cache: Cache<CacheSchema>) {
   return (result: QuotesResult): QuotesResult => {
-    const quotes = new Map<string, Quote>()
-    for (const { data } of result.data.quotes) {
-      quotes.set(data.requestId, structuredClone(data))
+    const quotes = new Map<string, QuoteEntry>()
+    // Only `data` is cloned: a clone would drop the class of an `SdkError`.
+    for (const entry of result.data.quotes) {
+      quotes.set(entry.data.requestId, {
+        ...entry,
+        data: structuredClone(entry.data),
+      })
     }
     cache.set(
       'quotes',

@@ -1,4 +1,8 @@
-import type { ConfirmResult, ExecutionEngine, Quote } from './actions/mod.js'
+import type {
+  ConfirmResult,
+  ExecutionEngine,
+  QuoteEntry,
+} from './actions/mod.js'
 import type { Cache } from './cache/mod.js'
 import type {
   BlockchainMeta,
@@ -32,8 +36,8 @@ export type RequestOptions = {
  * @see https://github.com/rango-exchange/rango-sdk/blob/main/packages/sdk/README.md#clientcache
  */
 export type CacheSchema = {
-  /** Quotes by route ID, then by request ID, for the last 10 route IDs. */
-  quotes: ReadonlyMap<string, ReadonlyMap<string, Quote>>
+  /** Quote entries by route ID, then by request ID, for the last 10 route IDs. */
+  quotes: ReadonlyMap<string, ReadonlyMap<string, QuoteEntry>>
   /** `confirm()`'s results by request ID, for the last 10 confirms, each dropped once `execute()` stores it. */
   confirmed: ReadonlyMap<string, ConfirmResult>
   /** The blockchain list a destination is checked against, fetched on first need and never refetched. */

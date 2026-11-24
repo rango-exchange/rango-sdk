@@ -22,9 +22,9 @@ export function getCachedQuote(
   requestId: string,
 ): Quote {
   for (const quotes of cache.get('quotes')?.values() ?? []) {
-    const quote = quotes.get(requestId)
-    if (quote !== undefined) {
-      return quote
+    const entry = quotes.get(requestId)
+    if (entry !== undefined) {
+      return entry.data
     }
   }
   throw new SdkError(
