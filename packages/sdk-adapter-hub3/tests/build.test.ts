@@ -1,6 +1,6 @@
 /*
- * The built package: each subpath resolves and loads only its own hub3 packages, plus the shared peers, and none of
- * them bundles `@rango-dev/sdk`.
+ * The built package: each subpath resolves and loads only its own hub3 packages and chain library, plus the shared
+ * peers, and none of them bundles `@rango-dev/sdk`.
  * It reads `dist`, so it needs a build first: run it with `yarn test:build`, which builds and then runs it.
  */
 import type { Metafile } from 'esbuild'
@@ -18,6 +18,8 @@ const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HUB3_SCOPE = '@hub3js/'
 // The peers every hub3 subpath may load, whatever its namespace.
 const SHARED_PEERS = ['@hub3js/core', 'caip']
+// The chain libraries the adapters use where hub3 has no action, counted with the `@hub3js` packages.
+const CHAIN_LIBRARIES = ['xrpl']
 
 // Subpaths are named after the SDK namespace, not hub3's: `bip122` is hub3's `utxo`, and `ton`'s package is `tvm`.
 const NAMESPACES = [
@@ -43,6 +45,12 @@ const NAMESPACES = [
     namespace: 'tron',
     adapter: 'hub3TronAdapter',
     hub3Package: '@hub3js/tron',
+  },
+  {
+    namespace: 'xrpl',
+    adapter: 'hub3XrplAdapter',
+    hub3Package: '@hub3js/xrpl',
+    chainLibrary: 'xrpl',
   },
 ]
 
@@ -71,13 +79,22 @@ async function metafileOf(entry: string): Promise<Metafile> {
   return metafile
 }
 
-// Static and dynamic imports of the hub3 packages and shared peers, from the entry and its chunks.
+// Static and dynamic imports of the hub3 packages, shared peers and chain libraries, from the entry and its chunks.
 async function hub3ImportsOf(entry: string): Promise<string[]> {
   return externalImportsOf(await metafileOf(entry))
     .filter(
-      (path) => path.startsWith(HUB3_SCOPE) || SHARED_PEERS.includes(path),
+      (path) =>
+        path.startsWith(HUB3_SCOPE) ||
+        SHARED_PEERS.includes(path) ||
+        isChainLibrary(path),
     )
     .sort()
+}
+
+function isChainLibrary(path: string): boolean {
+  return CHAIN_LIBRARIES.some(
+    (library) => path === library || path.startsWith(`${library}/`),
+  )
 }
 
 function externalImportsOf(metafile: Metafile): string[] {
@@ -116,7 +133,7 @@ async function bundledSourcesOf(entry: string): Promise<string[]> {
 describe('the built package', () => {
   describe.each(NAMESPACES)(
     'the $namespace subpath',
-    ({ namespace, adapter, hub3Package }) => {
+    ({ namespace, adapter, hub3Package, chainLibrary }) => {
       const subpath = `${PACKAGE_NAME}/${namespace}`
 
       test('resolves through the exports map to its own built entry', () => {
@@ -136,12 +153,15 @@ describe('the built package', () => {
         expect(entry[adapter]).toBeTypeOf('function')
       })
 
-      test("imports no hub3 package or shared peer but the shared peers (core and caip) and its own namespace's", async () => {
+      test("imports no hub3 package, shared peer or chain library but the shared peers (core and caip), its own namespace's and its own chain's", async () => {
         const hub3Imports = await hub3ImportsOf(resolveFromPackage(subpath))
 
         expect(
           hub3Imports.filter(
-            (path) => !SHARED_PEERS.includes(path) && path !== hub3Package,
+            (path) =>
+              !SHARED_PEERS.includes(path) &&
+              path !== hub3Package &&
+              path !== chainLibrary,
           ),
         ).toEqual([])
       })

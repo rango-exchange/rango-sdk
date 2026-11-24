@@ -491,6 +491,81 @@ export function tronApprove(overrides: Partial<TronApprove> = {}): TronApprove {
   }
 }
 
+export type XrplTx = Extract<
+  LegacySdk.Transaction,
+  { type: LegacySdk.TransactionType.XRPL }
+>
+
+export function xrplChain(chainId = ''): Sdk.BlockchainMeta {
+  return {
+    ...chain('XRPL', ['^r[1-9A-HJ-NP-Za-km-z]{24,34}$']),
+    type: LegacySdk.TransactionType.XRPL,
+    chainId,
+    info: {
+      infoType: 'XRPLMetaInfo',
+      blockExplorerUrls: [],
+      addressUrl: '',
+      transactionUrl: '',
+      tokenUrl: null,
+    },
+  }
+}
+
+// An XRPL `Payment` from the selected XRPL wallet.
+export function xrplTx(overrides: Partial<XrplTx> = {}): XrplTx {
+  return {
+    type: LegacySdk.TransactionType.XRPL,
+    blockChain: 'XRPL',
+    prerequisites: [],
+    data: {
+      TransactionType: 'Payment',
+      Account: 'rXRPLfrom',
+      Destination: 'rDestination',
+      Amount: '1000000',
+    },
+    ...overrides,
+  }
+}
+
+// The `TrustSet` the fake port builds, from the selected XRPL wallet.
+export function xrplTrustSetTx(overrides: Partial<XrplTx> = {}): XrplTx {
+  return {
+    type: LegacySdk.TransactionType.XRPL,
+    blockChain: 'XRPL',
+    prerequisites: [],
+    data: {
+      TransactionType: 'TrustSet',
+      Account: 'rXRPLfrom',
+      LimitAmount: {
+        currency: 'USD',
+        issuer: 'rIssuer',
+        value: '10000000000000',
+      },
+    },
+    ...overrides,
+  }
+}
+
+export type XrplTrustline = Extract<
+  Sdk.TransactionPrerequisite,
+  { type: 'XRPL_CHANGE_TRUSTLINE' }
+>
+
+// An XRPL trustline to USD from `rIssuer`, for the selected XRPL wallet.
+export function xrplTrustline(
+  overrides: Partial<XrplTrustline> = {},
+): XrplTrustline {
+  return {
+    type: 'XRPL_CHANGE_TRUSTLINE',
+    blockChain: 'XRPL',
+    currency: 'USD',
+    issuer: 'rIssuer',
+    value: '1000',
+    wallet: 'rXRPLfrom',
+    ...overrides,
+  }
+}
+
 // A `confirmRoute` answer for this request, with these swaps and this validation status.
 export function confirmResponse(
   requestId: string,
@@ -865,6 +940,10 @@ type TronTx = TxOf<LegacySdk.TransactionType.TRON>
 // What `getTransactionInfo` answers on each namespace: the Host's judgement on `evm`, else the chain's raw answer.
 export type EvmInfo = 'pending' | 'success' | 'failed'
 export type TronInfo = { blockNumber?: number; receipt?: { result?: string } }
+export type XrplInfo = {
+  validated: boolean
+  meta?: { TransactionResult: string }
+}
 
 // How the SDK judges each raw info, and the Host on `evm`.
 type Status = 'pending' | 'success' | 'failed'
@@ -880,6 +959,11 @@ export const TRON_INFO = {
   success: { blockNumber: 1, receipt: { result: 'SUCCESS' } },
   failed: { blockNumber: 1, receipt: { result: 'REVERT' } },
 } satisfies Record<Status, TronInfo>
+export const XRPL_INFO = {
+  pending: { validated: false },
+  success: { validated: true, meta: { TransactionResult: 'tesSUCCESS' } },
+  failed: { validated: true, meta: { TransactionResult: 'tecPATH_DRY' } },
+} satisfies Record<Status, XrplInfo>
 
 // v20's namespace ports, as the tests fake them, matching the source's. Only `wait` and `signTypedData` are optional, as there.
 export type EvmNamespace = {
@@ -900,6 +984,16 @@ export type TronNamespace = {
   buildTransaction(req: { prerequisite: TronApprove }): Promise<TronTx>
   getTransactionInfo(req: { hash: string }): Promise<TronInfo>
 }
+export type XrplNamespace = {
+  getAccount(): Promise<string | null>
+  signAndSend(req: { tx: XrplTx }): Promise<SignAndSendResult>
+  getTrustline(req: { prerequisite: XrplTrustline }): Promise<string | null>
+  buildTransaction(req: {
+    prerequisite: XrplTrustline
+    limit: string
+  }): Promise<XrplTx>
+  getTransactionInfo(req: { hash: string }): Promise<XrplInfo>
+}
 export type Bip122Namespace = {
   getAccount(): Promise<string | null>
   signAndSend(req: {
@@ -914,6 +1008,7 @@ type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
 type RecordedWallets = {
   evm: EvmNamespace
   tron: TronNamespace
+  xrpl: XrplNamespace
   bip122: Bip122Namespace
   solana: SingleChainNamespace<LegacySdk.TransactionType.SOLANA>
   starknet: SingleChainNamespace<LegacySdk.TransactionType.STARKNET>
@@ -955,7 +1050,7 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
  * `bip122`, the namespace's own otherwise, such as `TRON`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
- * approve on the requested token on `evm`, but rejects on `tron`, as no build
+ * approve on the requested token on `evm` and a `TrustSet` on `xrpl`, but rejects on `tron`, as no build
  * is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
  * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet` until `withHyperliquid` puts it in `evm`'s map.
  * `evmOn` and `bip122On` build another such wallet on a blockchain, sharing the requests and the hashes, for a map.
@@ -1049,6 +1144,38 @@ export function recordingNamespaces(
         async (req: { hash: string }): Promise<TronInfo> => {
           requests.push(['tron', 'getTransactionInfo', structuredClone(req)])
           return TRON_INFO.success
+        },
+      ),
+    },
+    xrpl: {
+      getAccount: vi.fn(accountOn('XRPL')),
+      signAndSend: vi.fn(
+        async (req: Parameters<XrplNamespace['signAndSend']>[0]) => {
+          requests.push(['xrpl', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+      getTrustline: vi.fn(
+        async (
+          req: Parameters<XrplNamespace['getTrustline']>[0],
+        ): Promise<string | null> => {
+          requests.push(['xrpl', 'getTrustline', structuredClone(req)])
+          return null
+        },
+      ),
+      buildTransaction: vi.fn(
+        async (req: {
+          prerequisite: XrplTrustline
+          limit: string
+        }): Promise<XrplTx> => {
+          requests.push(['xrpl', 'buildTransaction', structuredClone(req)])
+          return xrplTrustSetTx()
+        },
+      ),
+      getTransactionInfo: vi.fn(
+        async (req: { hash: string }): Promise<XrplInfo> => {
+          requests.push(['xrpl', 'getTransactionInfo', structuredClone(req)])
+          return XRPL_INFO.success
         },
       ),
     },

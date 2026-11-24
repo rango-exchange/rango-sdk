@@ -33,6 +33,10 @@
     "./tron": {
       "types": "./dist/tron.d.ts",
       "default": "./dist/tron.js"
+    },
+    "./xrpl": {
+      "types": "./dist/xrpl.d.ts",
+      "default": "./dist/xrpl.js"
     }
   },
   "files": [
@@ -56,7 +60,7 @@
     "url": "https://github.com/rango-exchange/rango-sdk/issues"
   },
   "scripts": {
-    "build": "yarn run rangutopia library build --inputs src/evm.ts,src/solana.ts,src/starknet.ts,src/ton.ts,src/sui.ts,src/bip122.ts,src/tron.ts --splitting",
+    "build": "yarn run rangutopia library build --inputs src/evm.ts,src/solana.ts,src/starknet.ts,src/ton.ts,src/sui.ts,src/bip122.ts,src/tron.ts,src/xrpl.ts --splitting",
     "clean": "rm -rf ./dist",
     "test": "vitest run",
     "test:build": "yarn build && vitest run --config vitest.build.config.ts",
@@ -75,8 +79,10 @@
     "@hub3js/sui": "^0.6",
     "@hub3js/tron": "^0.3.1 || 0.3.1-next.0",
     "@hub3js/tvm": "^0.6",
+    "@hub3js/xrpl": "^0.6",
     "@rango-dev/sdk": "^0.0.1-next.1",
-    "caip": "^1.1.1"
+    "caip": "^1.1.1",
+    "xrpl": "^4.2.0"
   },
   "peerDependenciesMeta": {
     "@hub3js/bip122": {
@@ -99,6 +105,12 @@
     },
     "@hub3js/tvm": {
       "optional": true
+    },
+    "@hub3js/xrpl": {
+      "optional": true
+    },
+    "xrpl": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -110,13 +122,15 @@
     "@hub3js/sui": "^0.6",
     "@hub3js/tron": "0.3.1-next.0",
     "@hub3js/tvm": "^0.6",
+    "@hub3js/xrpl": "^0.6",
     "@rango-dev/sdk": "0.0.1-next.1",
     "@total-typescript/shoehorn": "^0.1.2",
     "caip": "^1.1.1",
     "fake-indexeddb": "^6.2.6",
     "rango-sdk": "^0.6.0",
     "viem": "^2.56.8",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "xrpl": "^4.2.0"
   },
   "publishConfig": {
     "access": "public"
