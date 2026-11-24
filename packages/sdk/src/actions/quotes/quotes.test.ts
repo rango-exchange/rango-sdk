@@ -365,7 +365,7 @@ describe('quotes', () => {
     expect(quotes[2]?.error).toMatchObject({
       type: 'UNKNOWN_SLIPPAGE',
     })
-    expect(quotes[2]?.error).not.toHaveProperty('metadata')
+    expect(quotes[2]?.error).toHaveProperty('metadata', { swapIndex: 0 })
     // The flagged entry keeps its warnings next to the error.
     expect(quotes[2]?.warnings).toEqual([
       {
@@ -989,6 +989,10 @@ describe('quotes', () => {
         expectTypeOf(error.metadata).toEqualTypeOf<Sdk.InvalidInputMetadata>()
       } else if (error.type === 'BRIDGE_LIMIT') {
         expectTypeOf(error.metadata).toEqualTypeOf<Sdk.BridgeLimitMetadata>()
+      } else if (error.type === 'UNKNOWN_SLIPPAGE') {
+        expectTypeOf(
+          error.metadata,
+        ).toEqualTypeOf<Sdk.UnknownSlippageMetadata>()
       } else {
         expectTypeOf(error.type).toEqualTypeOf<
           | 'REQUEST_CANCELED'
@@ -998,7 +1002,6 @@ describe('quotes', () => {
           | 'NOT_FOUND'
           | 'TOO_MANY_REQUESTS'
           | 'SERVER_ERROR'
-          | 'UNKNOWN_SLIPPAGE'
           | 'CLIENT_PAUSED'
         >()
         expectTypeOf(error.metadata).toEqualTypeOf<undefined>()

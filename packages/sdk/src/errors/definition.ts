@@ -38,6 +38,11 @@ export type BridgeLimitMetadata = {
   exclusive: boolean
 }
 
+export type UnknownSlippageMetadata = {
+  /** The index in the route's `swaps` of the first swap whose `recommendedSlippage.error` is set. */
+  swapIndex: number
+}
+
 /**
  * The input field that fails a check, and why. `quote()` and `quotes()` check `to` (`SAME_ASSET` as `from`) and
  * `amount` (`NOT_A_NUMBER` or `NOT_POSITIVE`). `quote()` and `confirm()` check a set `destination`
@@ -66,6 +71,6 @@ export type SdkErrorMetadata = {
   SERVER_ERROR: undefined
   INVALID_INPUT: InvalidInputMetadata
   BRIDGE_LIMIT: BridgeLimitMetadata
-  UNKNOWN_SLIPPAGE: undefined
+  UNKNOWN_SLIPPAGE: UnknownSlippageMetadata
   CLIENT_PAUSED: undefined
 }

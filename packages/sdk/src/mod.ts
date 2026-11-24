@@ -52,6 +52,7 @@ export type {
   SdkErrorMetadata,
   SdkErrorOptions,
   SdkErrorType,
+  UnknownSlippageMetadata,
 } from './errors/mod.js'
 export type { CacheSchema, ReadonlyCache, RequestOptions } from './types.js'
 export type {

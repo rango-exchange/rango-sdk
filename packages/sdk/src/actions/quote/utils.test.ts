@@ -372,7 +372,7 @@ describe('validateSwaps: amount limits', () => {
 })
 
 describe('validateSwaps: slippage', () => {
-  test('throws UNKNOWN_SLIPPAGE for a flagged swap, with no metadata', () => {
+  test('throws UNKNOWN_SLIPPAGE for a flagged swap, with its index', () => {
     const swaps = [
       swap({ recommendedSlippage: { error: false, slippage: '5' } }),
       swap({ recommendedSlippage: { error: true, slippage: '3' } }),
@@ -386,7 +386,19 @@ describe('validateSwaps: slippage', () => {
       message: "Rango failed to compute a swap's slippage.",
     })
     expect(error).not.toHaveProperty('cause')
-    expect(error).not.toHaveProperty('metadata')
+    expect(error).toHaveProperty('metadata', { swapIndex: 1 })
+  })
+
+  test('reports the index of the first flagged swap', () => {
+    const swaps = [
+      swap(),
+      swap({ recommendedSlippage: { error: true, slippage: '3' } }),
+      swap({ recommendedSlippage: { error: true, slippage: '4' } }),
+    ]
+
+    expect(thrownBy(() => validateSwaps(swaps))).toHaveProperty('metadata', {
+      swapIndex: 1,
+    })
   })
 
   test('does not throw for recommendations without the error flag', () => {

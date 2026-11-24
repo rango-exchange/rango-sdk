@@ -822,7 +822,7 @@ describe('quote', () => {
     })
   })
 
-  test('throws UNKNOWN_SLIPPAGE for a flagged swap, with or without a slippage', async () => {
+  test('throws UNKNOWN_SLIPPAGE for a flagged swap, with its index, with or without a slippage', async () => {
     const client = await createClient()
     const flaggedResponse = response({
       result: {
@@ -843,7 +843,7 @@ describe('quote', () => {
       expect(error).toMatchObject({
         type: 'UNKNOWN_SLIPPAGE',
       })
-      expect(error).not.toHaveProperty('metadata')
+      expect(error).toHaveProperty('metadata', { swapIndex: 1 })
     }
   })
 
@@ -941,9 +941,13 @@ describe('quote', () => {
         case 'NOT_FOUND':
         case 'TOO_MANY_REQUESTS':
         case 'SERVER_ERROR':
-        case 'UNKNOWN_SLIPPAGE':
         case 'CLIENT_PAUSED':
           expectTypeOf(error.metadata).toEqualTypeOf<undefined>()
+          break
+        case 'UNKNOWN_SLIPPAGE':
+          expectTypeOf(
+            error.metadata,
+          ).toEqualTypeOf<Sdk.UnknownSlippageMetadata>()
       }
     }
     expect(diagnosisMessage).toBe('No route')

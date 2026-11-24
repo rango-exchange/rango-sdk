@@ -1,4 +1,8 @@
-import type { BridgeLimitMetadata, NoResultMetadata } from './definition.js'
+import type {
+  BridgeLimitMetadata,
+  NoResultMetadata,
+  UnknownSlippageMetadata,
+} from './definition.js'
 import type { SwapResult } from 'rango-sdk'
 
 import { describe, expect, expectTypeOf, test } from 'vitest'
@@ -90,9 +94,11 @@ describe('SdkError', () => {
       case 'NOT_FOUND':
       case 'TOO_MANY_REQUESTS':
       case 'SERVER_ERROR':
-      case 'UNKNOWN_SLIPPAGE':
       case 'CLIENT_PAUSED':
         expectTypeOf(caught.metadata).toEqualTypeOf<undefined>()
+        break
+      case 'UNKNOWN_SLIPPAGE':
+        expectTypeOf(caught.metadata).toEqualTypeOf<UnknownSlippageMetadata>()
         break
       case 'INVALID_INPUT':
         expectTypeOf(caught.metadata.field).toEqualTypeOf<

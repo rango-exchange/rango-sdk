@@ -1085,7 +1085,7 @@ describe('confirm', () => {
     })
   })
 
-  test('throws UNKNOWN_SLIPPAGE for a flagged swap', async () => {
+  test('throws UNKNOWN_SLIPPAGE for a flagged swap, with its index', async () => {
     const client = await createClient()
     const flagged = response({
       result: result({
@@ -1105,7 +1105,7 @@ describe('confirm', () => {
     expect(error).toMatchObject({
       type: 'UNKNOWN_SLIPPAGE',
     })
-    expect(error).not.toHaveProperty('metadata')
+    expect(error).toHaveProperty('metadata', { swapIndex: 0 })
   })
 
   test('throws REQUEST_FAILED with the original as cause for a TypeError inside the pipeline', async () => {
@@ -1216,9 +1216,13 @@ describe('confirm', () => {
         case 'NOT_FOUND':
         case 'TOO_MANY_REQUESTS':
         case 'SERVER_ERROR':
-        case 'UNKNOWN_SLIPPAGE':
         case 'CLIENT_PAUSED':
           expectTypeOf(error.metadata).toEqualTypeOf<undefined>()
+          break
+        case 'UNKNOWN_SLIPPAGE':
+          expectTypeOf(
+            error.metadata,
+          ).toEqualTypeOf<Sdk.UnknownSlippageMetadata>()
       }
     }
     expect(type).toBe('NO_RESULT')

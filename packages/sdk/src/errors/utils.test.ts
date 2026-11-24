@@ -14,7 +14,9 @@ function getThrown(run: () => unknown): unknown {
 
 describe('throwRequestError', () => {
   test('rethrows an SdkError as it is, even when the signal is aborted', () => {
-    const error = new SdkError('UNKNOWN_SLIPPAGE', 'slippage')
+    const error = new SdkError('UNKNOWN_SLIPPAGE', 'slippage', {
+      metadata: { swapIndex: 0 },
+    })
     const controller = new AbortController()
     controller.abort()
 
@@ -106,7 +108,9 @@ describe('throwRequestError', () => {
 
 describe('throwSdkError', () => {
   test('rethrows an SdkError as the same object', () => {
-    const error = new SdkError('UNKNOWN_SLIPPAGE', 'slippage')
+    const error = new SdkError('UNKNOWN_SLIPPAGE', 'slippage', {
+      metadata: { swapIndex: 0 },
+    })
 
     expect(getThrown(() => throwSdkError(error))).toBe(error)
   })

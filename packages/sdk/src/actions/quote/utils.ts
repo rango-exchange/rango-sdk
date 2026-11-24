@@ -180,17 +180,19 @@ export function validateSwaps(swaps: SwapResult[]): void {
       )
     }
   }
-  if (checkSlippageErrors(swaps)) {
+  const swapIndex = findSlippageError(swaps)
+  if (swapIndex !== -1) {
     throw new SdkError(
       'UNKNOWN_SLIPPAGE',
       "Rango failed to compute a swap's slippage.",
+      { metadata: { swapIndex } },
     )
   }
 }
 
-// Whether the server flags a swap as having no computed slippage.
-function checkSlippageErrors(swaps: SwapResult[]): boolean {
-  return swaps.some((swap) => swap.recommendedSlippage?.error)
+// The index of the first swap the server flags as having no computed slippage, or -1.
+function findSlippageError(swaps: SwapResult[]): number {
+  return swaps.findIndex((swap) => swap.recommendedSlippage?.error)
 }
 
 type BrokenLimit = Omit<BridgeLimitMetadata, 'swap'>

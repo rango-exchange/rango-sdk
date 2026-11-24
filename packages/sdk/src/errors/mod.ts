@@ -3,6 +3,7 @@ export type {
   InvalidInputMetadata,
   NoResultMetadata,
   SdkErrorMetadata,
+  UnknownSlippageMetadata,
 } from './definition.js'
 export { SdkError } from './implementation.js'
 export type { SdkErrorOptions, SdkErrorType } from './implementation.js'
