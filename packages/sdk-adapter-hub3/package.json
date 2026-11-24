@@ -1,0 +1,70 @@
+{
+  "name": "@rango-dev/sdk-adapter-hub3",
+  "version": "0.0.1",
+  "description": "Hub3 wallet adapters for the Rango Exchange SDK",
+  "license": "GPL-3.0",
+  "author": "rango.exchange",
+  "type": "module",
+  "exports": {
+    "./evm": {
+      "types": "./dist/evm.d.ts",
+      "default": "./dist/evm.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rango-exchange/rango-sdk.git",
+    "directory": "packages/sdk-adapter-hub3"
+  },
+  "homepage": "https://github.com/rango-exchange/rango-sdk",
+  "bugs": {
+    "url": "https://github.com/rango-exchange/rango-sdk/issues"
+  },
+  "scripts": {
+    "build": "yarn run rangutopia library build --inputs src/evm.ts --splitting",
+    "clean": "rm -rf ./dist",
+    "test": "vitest run",
+    "test:build": "yarn build && vitest run --config vitest.build.config.ts",
+    "lint": "eslint src --fix",
+    "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ../../.prettierrc.json --ignore-path ../../.prettierignore"
+  },
+  "dependencies": {
+    "rango-types": "^0.6.0"
+  },
+  "peerDependencies": {
+    "@hub3js/core": "^0.64.0",
+    "@hub3js/evm": "^0.8.1 || 0.8.1-next.2",
+    "@rango-dev/sdk": "^0.0.1-next.1",
+    "caip": "^1.1.1"
+  },
+  "peerDependenciesMeta": {
+    "@hub3js/evm": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@hub3js/core": "^0.64.0",
+    "@hub3js/evm": "0.8.1-next.2",
+    "@rango-dev/sdk": "0.0.1-next.1",
+    "@total-typescript/shoehorn": "^0.1.2",
+    "caip": "^1.1.1",
+    "fake-indexeddb": "^6.2.6",
+    "rango-sdk": "^0.6.0",
+    "viem": "^2.56.8",
+    "vitest": "^4.1.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
