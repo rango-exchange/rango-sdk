@@ -21,6 +21,7 @@ yarn add @rango-dev/sdk-adapter-hub3 # or: npm install @rango-dev/sdk-adapter-hu
 | `ton`      | `@rango-dev/sdk-adapter-hub3/ton`      | `hub3TonAdapter`      | `ton`                    | `@hub3js/tvm`      |
 | `sui`      | `@rango-dev/sdk-adapter-hub3/sui`      | `hub3SuiAdapter`      | `sui`                    | `@hub3js/sui`      |
 | `bip122`   | `@rango-dev/sdk-adapter-hub3/bip122`   | `hub3Bip122Adapter`   | `utxo`                   | `@hub3js/bip122`   |
+| `tron`     | `@rango-dev/sdk-adapter-hub3/tron`     | `hub3TronAdapter`     | `tron`                   | `@hub3js/tron`     |
 
 ## Usage
 
@@ -63,6 +64,11 @@ const ton = hub3TonAdapter(provider)
 ```ts
 import { hub3SuiAdapter } from '@rango-dev/sdk-adapter-hub3/sui'
 const sui = hub3SuiAdapter(provider)
+```
+
+```ts
+import { hub3TronAdapter } from '@rango-dev/sdk-adapter-hub3/tron'
+const tron = hub3TronAdapter(provider)
 ```
 
 `bip122` also takes the UTXO blockchain it serves, so answer one for the blockchain `getWallet` is asked for:

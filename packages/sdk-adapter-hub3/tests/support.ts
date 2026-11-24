@@ -433,6 +433,64 @@ export function describedChain(
   return described
 }
 
+// The TRON mainnet chain ID, as the Blockchain list writes it.
+export const TRON_CHAIN_ID = '0x2b6653dc'
+
+export function tronChain(chainId = TRON_CHAIN_ID): Sdk.BlockchainMeta {
+  return {
+    ...chain('TRON', ['^T[1-9A-HJ-NP-Za-km-z]{33}$']),
+    type: LegacySdk.TransactionType.TRON,
+    chainId,
+    info: {
+      infoType: 'EvmMetaInfo',
+      chainName: 'TRON',
+      nativeCurrency: { name: 'TRX', symbol: 'TRX', decimals: 6 },
+      rpcUrls: [],
+      enableGasV2: false,
+      blockExplorerUrls: [],
+      addressUrl: '',
+      transactionUrl: '',
+      tokenUrl: null,
+    },
+  }
+}
+
+// A TRON transaction from the selected TRON wallet, its ID `main-tx` unless overridden.
+export function tronTx(
+  overrides: Partial<LegacySdk.TronTransaction> = {},
+): LegacySdk.TronTransaction {
+  return {
+    type: LegacySdk.TransactionType.TRON,
+    blockChain: 'TRON',
+    prerequisites: [],
+    isApprovalTx: false,
+    raw_data: null,
+    raw_data_hex: '0a02',
+    txID: 'main-tx',
+    visible: false,
+    __payload__: {},
+    ...overrides,
+  }
+}
+
+export type TronApprove = Extract<
+  Sdk.TransactionPrerequisite,
+  { type: 'TRON_APPROVE' }
+>
+
+// A TRON approve of USDT from the selected TRON wallet, for 1000000.
+export function tronApprove(overrides: Partial<TronApprove> = {}): TronApprove {
+  return {
+    type: 'TRON_APPROVE',
+    blockChain: 'TRON',
+    wallet: 'TXfrom',
+    token: '0xtrc20',
+    spender: '0xspender',
+    amount: '1000000',
+    ...overrides,
+  }
+}
+
 // A `confirmRoute` answer for this request, with these swaps and this validation status.
 export function confirmResponse(
   requestId: string,
@@ -802,9 +860,11 @@ type TxOf<T extends LegacySdk.TransactionType> = Extract<
   { type: T }
 >
 type EvmTx = TxOf<LegacySdk.TransactionType.EVM>
+type TronTx = TxOf<LegacySdk.TransactionType.TRON>
 
 // What `getTransactionInfo` answers on each namespace: the Host's judgement on `evm`, else the chain's raw answer.
 export type EvmInfo = 'pending' | 'success' | 'failed'
+export type TronInfo = { blockNumber?: number; receipt?: { result?: string } }
 
 // How the SDK judges each raw info, and the Host on `evm`.
 type Status = 'pending' | 'success' | 'failed'
@@ -815,6 +875,11 @@ export const EVM_INFO = {
   success: 'success',
   failed: 'failed',
 } satisfies Record<Status, EvmInfo>
+export const TRON_INFO = {
+  pending: {},
+  success: { blockNumber: 1, receipt: { result: 'SUCCESS' } },
+  failed: { blockNumber: 1, receipt: { result: 'REVERT' } },
+} satisfies Record<Status, TronInfo>
 
 // v20's namespace ports, as the tests fake them, matching the source's. Only `wait` and `signTypedData` are optional, as there.
 export type EvmNamespace = {
@@ -827,6 +892,13 @@ export type EvmNamespace = {
   buildTransaction(req: { prerequisite: EvmApprove }): Promise<EvmTx>
   getTransactionInfo(req: { hash: string }): Promise<EvmInfo>
   signTypedData?(req: { typedData: unknown; chainId: string }): Promise<string>
+}
+export type TronNamespace = {
+  getAccount(): Promise<string | null>
+  signAndSend(req: { tx: TronTx }): Promise<SignAndSendResult>
+  getAllowance(req: { prerequisite: TronApprove }): Promise<string | null>
+  buildTransaction(req: { prerequisite: TronApprove }): Promise<TronTx>
+  getTransactionInfo(req: { hash: string }): Promise<TronInfo>
 }
 export type Bip122Namespace = {
   getAccount(): Promise<string | null>
@@ -841,6 +913,7 @@ type SingleChainNamespace<T extends LegacySdk.TransactionType> = {
 // Each wallet the fakes record, by the namespace they record it under.
 type RecordedWallets = {
   evm: EvmNamespace
+  tron: TronNamespace
   bip122: Bip122Namespace
   solana: SingleChainNamespace<LegacySdk.TransactionType.SOLANA>
   starknet: SingleChainNamespace<LegacySdk.TransactionType.STARKNET>
@@ -878,10 +951,12 @@ export type NamespacePort = { wallet: Namespaces; requests: NamespaceRequest[] }
 
 /*
  * The recording namespace port: every namespace, with every method but `wait`. `signAndSend` answers `0xhash1`,
- * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, `BTC` on `bip122`, the namespace's own otherwise), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
+ * `0xhash2`, ... across namespaces, `getAccount` its blockchain's entry in `accounts` (`ETH` on `evm`, `BTC` on
+ * `bip122`, the namespace's own otherwise, such as `TRON`), `getChainId` its blockchain's entry in `chainIds` (`ETH`'s on `evm`,
  * `HYPERLIQUID`'s on `hyperliquid`), `switchChain` records the request and leaves the chain where it was, so the next read decides, the
  * reads `null`, `getTransactionInfo` its namespace's success, `signTypedData` a signature, and `buildTransaction` an
- * approve on the requested token on `evm`. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
+ * approve on the requested token on `evm`, but rejects on `tron`, as no build
+ * is scripted. Both maps are read on each call, so a test can change them; each mock is replaceable per test.
  * `hyperliquid` is an `evm` wallet on `HYPERLIQUID`, left out of `wallet` until `withHyperliquid` puts it in `evm`'s map.
  * `evmOn` and `bip122On` build another such wallet on a blockchain, sharing the requests and the hashes, for a map.
  */
@@ -897,6 +972,7 @@ export function recordingNamespaces(
   }
   const accountOn = (blockchain: string) => async (): Promise<string | null> =>
     accounts[blockchain] ?? null
+  const unscripted = new Error('No build scripted for this namespace')
   const evmOn = (blockchain: string) => ({
     getAccount: vi.fn(accountOn(blockchain)),
     getChainId: vi.fn(async (): Promise<string | null> => {
@@ -947,6 +1023,35 @@ export function recordingNamespaces(
   const hyperliquid = evmOn('HYPERLIQUID')
   const wallet = {
     evm: evmOn('ETH'),
+    tron: {
+      getAccount: vi.fn(accountOn('TRON')),
+      signAndSend: vi.fn(
+        async (req: Parameters<TronNamespace['signAndSend']>[0]) => {
+          requests.push(['tron', 'signAndSend', structuredClone(req)])
+          return nextHash()
+        },
+      ),
+      getAllowance: vi.fn(
+        async (
+          req: Parameters<TronNamespace['getAllowance']>[0],
+        ): Promise<string | null> => {
+          requests.push(['tron', 'getAllowance', structuredClone(req)])
+          return null
+        },
+      ),
+      buildTransaction: vi.fn(
+        async (req: { prerequisite: TronApprove }): Promise<TronTx> => {
+          requests.push(['tron', 'buildTransaction', structuredClone(req)])
+          throw unscripted
+        },
+      ),
+      getTransactionInfo: vi.fn(
+        async (req: { hash: string }): Promise<TronInfo> => {
+          requests.push(['tron', 'getTransactionInfo', structuredClone(req)])
+          return TRON_INFO.success
+        },
+      ),
+    },
     bip122: bip122On('BTC'),
     solana: {
       getAccount: vi.fn(accountOn('SOLANA')),
