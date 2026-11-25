@@ -1,22 +1,21 @@
 import type { QuoteRequest, QuoteResult } from './types.js'
-import type { Cache } from '../../cache/mod.js'
-import type { CacheSchema, RequestOptions } from '../../types.js'
-import type { RangoClient as LegacyRangoClient } from 'rango-sdk'
+import type { ClientState, RequestOptions } from '../../types.js'
 
 import { throwRequestError } from '../../errors/mod.js'
 
 import { checkErrors, checkWarnings, generateResult } from './helpers.js'
 import {
+  buildSelectedWalletAddresses,
   getBlockchainsAndValidateDestination,
   validateSwapRequest,
 } from './utils.js'
 
 export async function fetchQuote(
-  httpClient: LegacyRangoClient,
-  cache: Cache<CacheSchema>,
+  state: ClientState,
   request: QuoteRequest,
   opts: RequestOptions = {},
 ): Promise<QuoteResult> {
+  const { httpClient, cache } = state
   validateSwapRequest(request)
   await getBlockchainsAndValidateDestination(
     httpClient,
@@ -28,7 +27,11 @@ export async function fetchQuote(
 
   return httpClient
     .getBestRoute(
-      { ...request, checkPrerequisites: request.checkPrerequisites ?? true },
+      {
+        ...request,
+        selectedWallets: buildSelectedWalletAddresses(request.selectedWallets),
+        checkPrerequisites: request.checkPrerequisites ?? true,
+      },
       { signal: opts.signal },
     )
     .then(checkErrors)

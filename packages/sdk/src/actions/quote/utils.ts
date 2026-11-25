@@ -1,12 +1,17 @@
-import type { ErrorFields, Route, RouteResponse } from './types.js'
+import type {
+  ErrorFields,
+  Route,
+  RouteResponse,
+  SelectedWallets,
+} from './types.js'
 import type { Cache } from '../../cache/mod.js'
 import type { BridgeLimitMetadata } from '../../errors/mod.js'
-import type { CacheSchema } from '../../types.js'
+import type { CacheSchema, LegacyClient } from '../../types.js'
 import type {
   Asset,
+  BestRouteRequest,
   BestRouteResponse,
   BlockchainMeta,
-  RangoClient as LegacyRangoClient,
   SimulationResult,
   SwapResult,
 } from 'rango-sdk'
@@ -64,8 +69,29 @@ export function validateSwapRequest(request: {
   }
 }
 
+/**
+ * Loads the blockchain list through the client's cache: a hit makes no request, a miss fetches it with `getBlockchains` and stores it.
+ * A failed load throws through `throwRequestError` and stores nothing, so the next call tries again.
+ * The destination check calls it, and the execution tasks reach it through the Manager's context.
+ */
+export async function loadBlockchains(
+  httpClient: LegacyClient,
+  cache: Cache<CacheSchema>,
+  signal?: AbortSignal,
+): Promise<readonly BlockchainMeta[]> {
+  const cached = cache.get('blockchains')
+  if (cached !== undefined) {
+    return cached
+  }
+  const blockchains = await httpClient
+    .getBlockchains({ signal })
+    .catch((cause: unknown) => throwRequestError(cause, signal))
+  cache.set('blockchains', blockchains)
+  return blockchains
+}
+
 export async function getBlockchainsAndValidateDestination(
-  httpClient: LegacyRangoClient,
+  httpClient: LegacyClient,
   cache: Cache<CacheSchema>,
   destination: string | undefined,
   blockchain: string,
@@ -74,13 +100,7 @@ export async function getBlockchainsAndValidateDestination(
   if (destination === undefined || destination === '') {
     return
   }
-  let blockchains = cache.get('blockchains')
-  if (blockchains === undefined) {
-    blockchains = await httpClient
-      .getBlockchains({ signal })
-      .catch((cause: unknown) => throwRequestError(cause, signal))
-    cache.set('blockchains', blockchains)
-  }
+  const blockchains = await loadBlockchains(httpClient, cache, signal)
   validateDestination(destination, blockchain, blockchains)
 }
 
@@ -222,12 +242,29 @@ export function omitRouteErrorFields(route: CheckedRoute): RouteResponse {
 
 export function toRoute(
   route: CheckedRoute,
-  selectedWallets: Route['selectedWallets'],
+  selectedWallets: SelectedWallets,
   slippage: string | undefined,
 ): Route {
   return {
     ...omitRouteErrorFields(route),
-    selectedWallets: { ...selectedWallets },
+    selectedWallets: Object.fromEntries(
+      Object.entries(selectedWallets).map(([blockchain, wallet]) => [
+        blockchain,
+        { ...wallet },
+      ]),
+    ),
     ...(slippage === undefined ? {} : { slippage }),
   }
+}
+
+// What Rango takes as `selectedWallets`: each blockchain's address, with no Wallet ID.
+export function buildSelectedWalletAddresses(
+  selectedWallets: SelectedWallets,
+): BestRouteRequest['selectedWallets'] {
+  return Object.fromEntries(
+    Object.entries(selectedWallets).map(([blockchain, { address }]) => [
+      blockchain,
+      address,
+    ]),
+  )
 }
