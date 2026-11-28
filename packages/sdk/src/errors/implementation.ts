@@ -8,7 +8,7 @@ export type SdkErrorOptions<T extends SdkErrorType = SdkErrorType> =
     : { metadata: SdkErrorMetadata[T] }) &
     ErrorOptions
 
-type AnySdkError = { [K in SdkErrorType]: SdkError<K> }[SdkErrorType]
+export type AnySdkError = { [K in SdkErrorType]: SdkError<K> }[SdkErrorType]
 
 // The third argument is optional only for the types without metadata.
 type SdkErrorArgs<T extends SdkErrorType> =

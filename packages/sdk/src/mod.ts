@@ -46,6 +46,7 @@ export type {
 export type { RangoClientConfig } from './configs.js'
 export { SdkError } from './errors/mod.js'
 export type {
+  AnySdkError,
   BridgeLimitMetadata,
   InvalidInputMetadata,
   NoResultMetadata,

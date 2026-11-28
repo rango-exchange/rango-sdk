@@ -1,4 +1,4 @@
-import type { SdkError } from '../../errors/mod.js'
+import type { AnySdkError } from '../../errors/mod.js'
 import type { SdkWarning } from '../../warnings/mod.js'
 import type { ErrorFields } from '../quote/mod.js'
 import type {
@@ -25,7 +25,7 @@ export type Quote = MultiRouteSimulationResult & {
 export type QuoteEntry = {
   data: Quote
   warnings: SdkWarning[]
-  error?: SdkError
+  error?: AnySdkError
 }
 
 export type QuotesData = Omit<MultiRouteResponse, ErrorFields | 'results'> & {
@@ -40,7 +40,7 @@ export type QuotesResult = {
 // One slot per server result, in the server's order.
 export type CheckedResponse = {
   response: MultiRouteResponse
-  errors: (SdkError | undefined)[]
+  errors: (AnySdkError | undefined)[]
 }
 
 export type WarnedResponse = CheckedResponse & { warnings: SdkWarning[][] }

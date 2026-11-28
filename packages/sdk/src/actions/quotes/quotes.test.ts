@@ -1028,7 +1028,7 @@ describe('quotes', () => {
 
   test("types an entry's error as an optional SdkError", () => {
     expectTypeOf<Sdk.QuoteEntry['error']>().toEqualTypeOf<
-      Sdk.SdkError | undefined
+      Sdk.AnySdkError | undefined
     >()
     expectTypeOf<{
       data: Sdk.Quote
